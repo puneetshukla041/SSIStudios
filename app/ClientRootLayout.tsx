@@ -73,6 +73,7 @@ function AppLayout({ children }: { children: ReactNode }) {
   const themeBg =
     pathname === "/bgremover"
       ? "bg-black text-gray-900"
+
       : theme === "light"
       ? "bg-white text-gray-900"
       : "relative overflow-hidden text-gray-900"; // Blossom
