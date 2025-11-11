@@ -98,7 +98,7 @@ function AppLayout({ children }: { children: ReactNode }) {
                   ? "Templates"
                   : pathname.startsWith("/settings")
                   ? "Settings"
-                  : "App"}
+                  : ""}
               </h1>
               <button
                 onClick={toggleSidebar}
