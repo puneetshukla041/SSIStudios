@@ -15,20 +15,6 @@ import {
 } from "@heroicons/react/24/outline";
 import { motion, AnimatePresence } from "framer-motion";
 
-/**
- * Big upgrade for BgRemover UI + logic
- * - paste support
- * - upload & processing progress
- * - cancel jobs
- * - file validation
- * - preview + download
- * - toasts + friendly messages
- *
- * NOTE: requires an API route at /api/remove-bg that accepts `image` FormData
- * and returns the processed image blob (PNG ideally). Adjust `axios` config
- * if your API returns a wrapped JSON containing a URL instead.
- */
-
 const MAX_FILE_SIZE_BYTES = 8 * 1024 * 1024; // 8 MB
 const ALLOWED_TYPES = ["image/png", "image/jpeg", "image/jpg", "image/webp"];
 
@@ -42,13 +28,22 @@ export default function BgRemoverFullPage() {
   const [outputUrl, setOutputUrl] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
   const [uploadProgress, setUploadProgress] = useState<number>(0);
-  const [processingProgress, setProcessingProgress] = useState<number | null>(null);
+  const [processingProgress, setProcessingProgress] = useState<number | null>(
+    null
+  );
   const [dragActive, setDragActive] = useState(false);
   const [toasts, setToasts] = useState<Toast[]>([]);
   const [fitMode, setFitMode] = useState<"contain" | "cover">("contain");
   const [optimiseForWeb, setOptimiseForWeb] = useState(true);
   const [downloadState, setDownloadState] = useState<
-    "idle" | "downloading" | "downloaded" | "uploading_s3" | "uploaded_s3" | "saving_workspace" | "saved_workspace" | "error"
+    | "idle"
+    | "downloading"
+    | "downloaded"
+    | "uploading_s3"
+    | "uploaded_s3"
+    | "saving_workspace"
+    | "saved_workspace"
+    | "error"
   >("idle");
 
   // helper: show toast
@@ -84,7 +79,12 @@ export default function BgRemoverFullPage() {
     }
 
     if (f.size > MAX_FILE_SIZE_BYTES) {
-      pushToast("error", `File too large. Max ${(MAX_FILE_SIZE_BYTES / 1024 / 1024).toFixed(0)} MB.`);
+      pushToast(
+        "error",
+        `File too large. Max ${(MAX_FILE_SIZE_BYTES / 1024 / 1024).toFixed(
+          0
+        )} MB.`
+      );
       return;
     }
 
@@ -243,25 +243,29 @@ export default function BgRemoverFullPage() {
       pushToast("success", "File downloaded to your PC!");
 
       // Step 2: Upload to S3
-// Step 2: Upload to S3
-setDownloadState("uploading_s3");
-const arrayBuffer = await blob.arrayBuffer();
-const base64 = btoa(
-  new Uint8Array(arrayBuffer).reduce((data, byte) => data + String.fromCharCode(byte), "")
-);
-const fileName = `bg-removed-${Date.now()}.${blob.type.split("/")[1] || "png"}`;
+      setDownloadState("uploading_s3");
+      const arrayBuffer = await blob.arrayBuffer();
+      const base64 = btoa(
+        new Uint8Array(arrayBuffer).reduce(
+          (data, byte) => data + String.fromCharCode(byte),
+          ""
+        )
+      );
+      const fileName = `bg-removed-${Date.now()}.${
+        blob.type.split("/")[1] || "png"
+      }`;
 
-// Pass mimeType
-const res = await fetch("/api/upload", {
-  method: "POST",
-  headers: { "Content-Type": "application/json" },
-  body: JSON.stringify({
-    fileBase64: base64,
-    fileName,
-    folder: "bg-removed",
-    mimeType: blob.type, // ✅ Pass MIME type dynamically
-  }),
-});
+      // Pass mimeType
+      const res = await fetch("/api/upload", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          fileBase64: base64,
+          fileName,
+          folder: "bg-removed",
+          mimeType: blob.type, // ✅ Pass MIME type dynamically
+        }),
+      });
 
       const data = await res.json();
       if (res.ok && data.url) {
@@ -276,7 +280,6 @@ const res = await fetch("/api/upload", {
       await new Promise((resolve) => setTimeout(resolve, 1500));
       setDownloadState("saved_workspace");
       pushToast("success", "Saved to your workspace!");
-
     } catch (err) {
       console.error(err);
       setDownloadState("error");
@@ -290,6 +293,9 @@ const res = await fetch("/api/upload", {
   const handleCopyLink = async () => {
     if (!outputUrl) return pushToast("error", "No result to copy.");
     try {
+      // NOTE: Cannot copy a blob URL directly via clipboard.writeText
+      // For a real app, you'd want to copy the S3 link if it's available.
+      // For this example, we'll stick to the current implementation.
       await navigator.clipboard.writeText(outputUrl);
       pushToast("success", "Result URL copied to clipboard.");
     } catch {
@@ -299,15 +305,14 @@ const res = await fetch("/api/upload", {
 
   return (
     <div
-      className="min-h-screen w-full flex flex-col items-center justify-start p-6 
-                 bg-transparent text-white mt-10 ml-[-30px]"
+      className="min-h-screen w-full flex flex-col items-center justify-start p-4 md:p-6 lg:p-10 
+                 bg-transparent text-white"
     >
       <div className="w-full max-w-6xl">
-
-
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
           {/* Left: uploader + controls */}
           <div className="lg:col-span-7">
+            {/* Uploader Box */}
             <div
               onDragOver={handleDrag}
               onDragLeave={handleDrag}
@@ -318,8 +323,12 @@ const res = await fetch("/api/upload", {
               onKeyDown={(e) => {
                 if (e.key === "Enter") fileInput.current?.click();
               }}
-              className={`relative h-80 rounded-2xl border-2 border-dashed transition-all duration-200 flex items-center justify-center p-6 cursor-pointer
-                ${dragActive ? "border-cyan-400 bg-slate-800/60" : "border-slate-700 bg-slate-900/40"}`}
+              className={`relative h-80 rounded-2xl border-2 border-dashed transition-all duration-200 flex items-center justify-center p-4 md:p-6 cursor-pointer
+                ${
+                  dragActive
+                    ? "border-cyan-400 bg-slate-800/60"
+                    : "border-slate-700 bg-slate-900/40"
+                }`}
             >
               <input
                 ref={fileInput}
@@ -331,38 +340,33 @@ const res = await fetch("/api/upload", {
 
               {/* If no file: show upload prompt */}
               {!previewUrl ? (
-                <div className="flex flex-col items-center gap-3 text-slate-300 select-none">
+                <div className="flex flex-col items-center gap-3 text-slate-300 select-none px-4 text-center">
                   <div className="p-3 rounded-full bg-gradient-to-br from-cyan-600/20 to-blue-600/20 border border-slate-700">
-                    <CloudArrowUpIcon className="h-12 w-12 text-cyan-400" />
+                    <CloudArrowUpIcon className="h-10 w-10 md:h-12 md:w-12 text-cyan-400" />
                   </div>
-                  <div className="text-lg font-semibold">Drag & drop, paste, or click to upload</div>
+                  <div className="text-base md:text-lg font-semibold">
+                    Drag & drop, paste, or click to upload
+                  </div>
                   <div className="text-sm text-slate-400">
-                    PNG / JPG / WEBP — up to {(MAX_FILE_SIZE_BYTES / 1024 / 1024).toFixed(0)} MB
+                    PNG / JPG / WEBP — up to{" "}
+                    {(MAX_FILE_SIZE_BYTES / 1024 / 1024).toFixed(0)} MB
                   </div>
-                  <div className="mt-3 flex gap-2">
+                  <div className="mt-3 flex flex-col sm:flex-row gap-2">
                     <button
                       onClick={(e) => {
                         e.stopPropagation();
                         fileInput.current?.click();
                       }}
-                      className="px-4 py-2 bg-cyan-600 text-black rounded-md font-medium hover:scale-[1.02] transition"
+                      className="px-4 py-2 bg-cyan-600 text-black rounded-md font-medium hover:scale-[1.02] transition w-full sm:w-auto"
                     >
                       Select File
                     </button>
-                    <button
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        pushToast("info", "Tip: press Ctrl/Cmd+V to paste an image from clipboard.");
-                      }}
-                      className="px-3 py-2 border border-slate-700 rounded-md text-sm text-slate-300 hover:bg-slate-800"
-                    >
-                      How to paste
-                    </button>
+                    {/* Removed "How to paste" button */}
                   </div>
                 </div>
               ) : (
-                <div className="w-full h-full flex items-center justify-center">
-                  <div className="relative w-full h-full rounded-lg overflow-hidden bg-black/40 border border-slate-700 p-3">
+                <div className="w-full h-full flex items-center justify-center p-2">
+                  <div className="relative w-full h-full rounded-lg overflow-hidden bg-black/40 border border-slate-700 p-2 md:p-3">
                     <img
                       src={previewUrl}
                       alt="preview"
@@ -370,22 +374,28 @@ const res = await fetch("/api/upload", {
                       style={{ transform: "translateZ(0)" }}
                     />
                     {/* file info */}
-                    <div className="absolute left-3 top-3 bg-slate-900/60 px-2 py-1 rounded-md text-xs">
-                      <div className="font-medium">{file?.name}</div>
-                      <div className="text-slate-400">{Math.round((file?.size || 0) / 1024)} KB</div>
+                    <div className="absolute left-2 top-2 bg-slate-900/60 px-2 py-1 rounded-md text-xs">
+                      <div className="font-medium truncate max-w-[100px] sm:max-w-none">
+                        {file?.name}
+                      </div>
+                      <div className="text-slate-400">
+                        {Math.round((file?.size || 0) / 1024)} KB
+                      </div>
                     </div>
 
                     {/* small action buttons on preview */}
-                    <div className="absolute right-3 top-3 flex flex-col gap-2">
+                    <div className="absolute right-2 top-2 flex flex-col gap-2">
                       <button
                         onClick={(e) => {
                           e.stopPropagation();
-                          setFitMode((m) => (m === "contain" ? "cover" : "contain"));
+                          setFitMode((m) =>
+                            m === "contain" ? "cover" : "contain"
+                          );
                         }}
                         title="Toggle fit"
-                        className="bg-slate-800/70 p-2 rounded-md hover:bg-slate-700"
+                        className="bg-slate-800/70 p-1 md:p-2 rounded-md hover:bg-slate-700"
                       >
-                        <PhotoIcon className="h-5 w-5 text-slate-200" />
+                        <PhotoIcon className="h-4 w-4 md:h-5 md:w-5 text-slate-200" />
                       </button>
                       <button
                         onClick={(e) => {
@@ -393,9 +403,9 @@ const res = await fetch("/api/upload", {
                           handleReset();
                         }}
                         title="Reset"
-                        className="bg-red-700/80 p-2 rounded-md hover:bg-red-600"
+                        className="bg-red-700/80 p-1 md:p-2 rounded-md hover:bg-red-600"
                       >
-                        <TrashIcon className="h-5 w-5 text-white" />
+                        <TrashIcon className="h-4 w-4 md:h-5 md:w-5 text-white" />
                       </button>
                     </div>
                   </div>
@@ -405,6 +415,7 @@ const res = await fetch("/api/upload", {
 
             {/* Controls */}
             <div className="mt-4 flex flex-col sm:flex-row items-stretch sm:items-center gap-3">
+              {/* Reset/Add buttons - Full width on small screens */}
               <div className="flex-1 flex gap-3">
                 <button
                   onClick={() => fileInput.current?.click()}
@@ -421,37 +432,43 @@ const res = await fetch("/api/upload", {
                 </button>
               </div>
 
-              <div className="flex gap-2 items-center">
-                <label className="flex items-center gap-2 text-sm text-slate-300">
+              {/* Optimization and Process buttons - Wrap on small screen */}
+              <div className="flex flex-col sm:flex-row gap-2 sm:items-center w-full sm:w-auto">
+                {/* Optimization checkbox */}
+                <label className="flex items-center gap-2 text-sm text-slate-300 py-2 sm:py-0">
                   <input
                     type="checkbox"
                     checked={optimiseForWeb}
                     onChange={(e) => setOptimiseForWeb(e.target.checked)}
                     className="accent-cyan-500"
                   />
-                  Optimize output
+                  <span className="whitespace-nowrap">Optimize output</span>
                 </label>
 
+                {/* Remove BG Button */}
                 <button
                   onClick={handleRemoveBG}
                   disabled={!file || loading}
-                  className={`px-4 py-3 rounded-xl font-semibold text-black bg-gradient-to-r from-cyan-400 to-blue-500 shadow-lg transition transform ${
-                    !file || loading ? "opacity-60 cursor-not-allowed" : "hover:scale-[1.02]"
+                  className={`flex-1 px-4 py-3 rounded-xl font-semibold text-black bg-gradient-to-r from-cyan-400 to-blue-500 shadow-lg transition transform ${
+                    !file || loading
+                      ? "opacity-60 cursor-not-allowed"
+                      : "hover:scale-[1.02]"
                   }`}
                 >
                   {loading ? (
-                    <span className="flex items-center gap-2">
+                    <span className="flex items-center justify-center gap-2">
                       <ArrowPathIcon className="h-5 w-5 animate-spin text-white" />
                       Processing...
                     </span>
                   ) : (
-                    <span className="flex items-center gap-2">
+                    <span className="flex items-center justify-center gap-2">
                       <SparklesIcon className="h-5 w-5 text-white" />
                       Remove Background
                     </span>
                   )}
                 </button>
 
+                {/* Cancel Button */}
                 {loading && (
                   <button
                     onClick={cancelProcessing}
@@ -465,7 +482,7 @@ const res = await fetch("/api/upload", {
               </div>
             </div>
 
-            {/* Progress bars */}
+            {/* Progress bars - already responsive */}
             <div className="mt-4">
               <AnimatePresence>
                 {(uploadProgress > 0 && uploadProgress < 100) || loading ? (
@@ -479,7 +496,9 @@ const res = await fetch("/api/upload", {
                     {/* Upload */}
                     {uploadProgress > 0 && (
                       <div>
-                        <div className="text-xs text-slate-300 mb-1">Upload: {uploadProgress}%</div>
+                        <div className="text-xs text-slate-300 mb-1">
+                          Upload: {uploadProgress}%
+                        </div>
                         <div className="w-full h-2 bg-slate-700 rounded-full overflow-hidden">
                           <div
                             className="h-2 bg-cyan-400 transition-all"
@@ -489,17 +508,21 @@ const res = await fetch("/api/upload", {
                       </div>
                     )}
 
-                    {/* Processing (indeterminate if server not providing) */}
+                    {/* Processing */}
                     {loading && uploadProgress >= 100 && (
                       <div>
                         <div className="flex items-center justify-between text-xs text-slate-300 mb-1">
                           <div>Processing</div>
-                          <div>{processingProgress ? `${processingProgress}%` : "..."}</div>
+                          <div>
+                            {processingProgress ? `${processingProgress}%` : "..."}
+                          </div>
                         </div>
                         <div className="w-full h-2 bg-slate-700 rounded-full overflow-hidden">
                           <div
                             className="h-2 bg-blue-500 animate-[pulse_2s_infinite] opacity-80"
-                            style={{ width: processingProgress ? `${processingProgress}%` : "50%" }}
+                            style={{
+                              width: processingProgress ? `${processingProgress}%` : "50%",
+                            }}
                           />
                         </div>
                       </div>
@@ -511,41 +534,58 @@ const res = await fetch("/api/upload", {
           </div>
 
           {/* Right: preview results */}
-          <div className="lg:col-span-5 flex flex-col gap-4">
-            <div className="rounded-2xl border border-slate-700 bg-slate-900/40 p-4 min-h-[180px] flex flex-col">
-              <div className="flex items-start justify-between gap-2">
-                <div>
-                  <div className="text-sm text-slate-300 font-semibold">Result Preview</div>
-                  <div className="text-xs text-slate-400">Original vs processed</div>
+          <div className="lg:col-span-5 flex flex-col gap-6">
+            <div className="rounded-2xl border border-slate-700 bg-slate-900/40 p-4 flex flex-col">
+              <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 sm:gap-2">
+                <div className="sm:block">
+                  {/* HIDDEN: The label is hidden on small screens and shown on larger ones */}
+                  <div className="text-sm text-slate-300 font-semibold hidden sm:block">
+                    Result Preview
+                  </div>
+                  {/* HIDDEN: Description is also hidden on small screens */}
+                  <div className="text-xs text-slate-400 hidden sm:block">
+                    Original vs processed
+                  </div>
                 </div>
-                <div className="flex gap-2">
-                  <button
-                    onClick={handleCopyLink}
-                    disabled={!outputUrl || downloadState !== "idle"}
-                    className={`px-3 py-2 rounded-md border border-slate-700 text-sm ${
-                      !outputUrl || downloadState !== "idle" ? "opacity-50 cursor-not-allowed" : "hover:bg-slate-800"
-                    }`}
-                    title="Copy result URL"
-                  >
-                    Copy Link
-                  </button>
-                </div>
+                <button
+                  onClick={handleCopyLink}
+                  disabled={!outputUrl || downloadState !== "idle"}
+                  className={`px-3 py-2 rounded-md border border-slate-700 text-sm w-full sm:w-auto ${
+                    !outputUrl || downloadState !== "idle"
+                      ? "opacity-50 cursor-not-allowed"
+                      : "hover:bg-slate-800"
+                  }`}
+                  title="Copy result URL"
+                >
+                  Copy Link
+                </button>
               </div>
 
-              <div className="mt-3 flex-1 grid grid-cols-1 md:grid-cols-2 gap-3">
+              {/* Previews */}
+              <div className="mt-3 flex-1 grid grid-cols-2 gap-3 min-h-[160px]">
+                {/* Original Preview */}
                 <div className="rounded-lg overflow-hidden border border-slate-800 bg-slate-900/60 p-2 flex flex-col items-center justify-center">
                   <div className="text-xs text-slate-400 mb-2">Original</div>
                   {previewUrl ? (
-                    <img src={previewUrl} alt="original" className="max-h-40 object-contain" />
+                    <img
+                      src={previewUrl}
+                      alt="original"
+                      className="max-h-full object-contain"
+                    />
                   ) : (
                     <div className="text-slate-500 text-sm">No file</div>
                   )}
                 </div>
 
+                {/* Result Preview */}
                 <div className="rounded-lg overflow-hidden border border-slate-800 bg-slate-900/60 p-2 flex flex-col items-center justify-center">
                   <div className="text-xs text-slate-400 mb-2">Result</div>
                   {outputUrl ? (
-                    <img src={outputUrl} alt="result" className="max-h-40 object-contain" />
+                    <img
+                      src={outputUrl}
+                      alt="result"
+                      className="max-h-full object-contain"
+                    />
                   ) : (
                     <div className="text-slate-500 text-sm">No result yet</div>
                   )}
@@ -553,21 +593,19 @@ const res = await fetch("/api/upload", {
               </div>
             </div>
 
-            {/* New: "Next Level" Download Progress UI */}
+            {/* Download Progress UI */}
             {outputUrl && (
               <div className="rounded-xl border border-slate-700 bg-slate-800/60 p-4">
                 <div className="flex items-center justify-between">
                   <div className="text-sm font-semibold text-slate-300">
                     Download Options
                   </div>
-      
+
                   <div
                     className={`flex flex-col items-center justify-center p-3 rounded-md transition-colors ${
                       downloadState === "saving_workspace" ? "bg-purple-900/40" : ""
                     }`}
-                  >
-                    
-                  </div>
+                  ></div>
                 </div>
 
                 {/* The main download button */}
@@ -575,7 +613,9 @@ const res = await fetch("/api/upload", {
                   onClick={handleDownload}
                   disabled={downloadState !== "idle"}
                   className={`w-full mt-4 px-4 py-3 rounded-xl font-semibold text-black bg-gradient-to-r from-cyan-400 to-blue-500 shadow-lg transition transform ${
-                    downloadState !== "idle" ? "opacity-60 cursor-not-allowed" : "hover:scale-[1.02]"
+                    downloadState !== "idle"
+                      ? "opacity-60 cursor-not-allowed"
+                      : "hover:scale-[1.02]"
                   }`}
                 >
                   <span className="flex items-center justify-center gap-2">
@@ -585,12 +625,11 @@ const res = await fetch("/api/upload", {
                 </motion.button>
               </div>
             )}
-            
           </div>
         </div>
 
-        {/* Toasts */}
-        <div className="fixed right-6 bottom-6 z-50 flex flex-col gap-2">
+        {/* Toasts - already responsive (fixed position) */}
+        <div className="fixed right-4 sm:right-6 bottom-4 sm:bottom-6 z-50 flex flex-col gap-2">
           <AnimatePresence>
             {toasts.map((t) => (
               <motion.div
