@@ -69,8 +69,11 @@ function AppLayout({ children }: { children: ReactNode }) {
     };
   }, [isSidebarOpen]);
 
+  // ✅ Only change: add black background for /bgremover
   const themeBg =
-    theme === "light"
+    pathname === "/bgremover"
+      ? "bg-black text-gray-900"
+      : theme === "light"
       ? "bg-white text-gray-900"
       : "relative overflow-hidden text-gray-900"; // Blossom
 

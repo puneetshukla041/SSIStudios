@@ -303,15 +303,7 @@ const res = await fetch("/api/upload", {
                  bg-transparent text-white mt-10 ml-[-30px]"
     >
       <div className="w-full max-w-6xl">
-        <motion.h1
-          initial={{ opacity: 0, y: -10 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.35 }}
-          className="text-4xl sm:text-5xl font-extrabold mb-6 
-                      -mt-6 text-transparent bg-clip-text bg-gradient-to-r from-cyan-400 to-blue-500"
-        >
-          Background Remover
-        </motion.h1>
+
 
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
           {/* Left: uploader + controls */}
@@ -568,83 +560,13 @@ const res = await fetch("/api/upload", {
                   <div className="text-sm font-semibold text-slate-300">
                     Download Options
                   </div>
-                  {downloadState !== "idle" && (
-                    <motion.button
-                      initial={{ opacity: 0 }}
-                      animate={{ opacity: 1 }}
-                      onClick={() => setDownloadState("idle")}
-                      className="text-slate-400 hover:text-white transition"
-                      title="Reset"
-                    >
-                      <ArrowPathIcon className="h-5 w-5" />
-                    </motion.button>
-                  )}
-                </div>
-                <div className="mt-3 grid grid-cols-1 sm:grid-cols-3 gap-3">
-                  {/* Download to PC */}
-                  <div
-                    className={`flex flex-col items-center justify-center p-3 rounded-md transition-colors ${
-                      downloadState === "downloading" ? "bg-cyan-900/40" : ""
-                    }`}
-                  >
-                    <ArrowDownTrayIcon
-                      className={`h-6 w-6 transition-all ${
-                        downloadState === "downloading" ? "text-cyan-400 animate-bounce" : "text-slate-500"
-                      }`}
-                    />
-                    <div className="text-sm text-slate-300 mt-2">
-                      Download to PC
-                      {downloadState === "downloading" && (
-                        <span className="text-xs text-cyan-400 ml-1">...</span>
-                      )}
-                      {downloadState === "downloaded" && (
-                        <CheckCircleIcon className="h-4 w-4 text-green-500 ml-1 inline" />
-                      )}
-                    </div>
-                  </div>
-
-                  {/* Upload to AWS S3 */}
-                  <div
-                    className={`flex flex-col items-center justify-center p-3 rounded-md transition-colors ${
-                      downloadState === "uploading_s3" ? "bg-blue-900/40" : ""
-                    }`}
-                  >
-                    <CloudArrowUpIcon
-                      className={`h-6 w-6 transition-all ${
-                        downloadState === "uploading_s3" ? "text-blue-400 animate-pulse" : "text-slate-500"
-                      }`}
-                    />
-                    <div className="text-sm text-slate-300 mt-2">
-                      Upload to S3
-                      {downloadState === "uploading_s3" && (
-                        <span className="text-xs text-blue-400 ml-1">...</span>
-                      )}
-                      {downloadState === "uploaded_s3" && (
-                        <CheckCircleIcon className="h-4 w-4 text-green-500 ml-1 inline" />
-                      )}
-                    </div>
-                  </div>
-
-                  {/* Save to Workspace */}
+      
                   <div
                     className={`flex flex-col items-center justify-center p-3 rounded-md transition-colors ${
                       downloadState === "saving_workspace" ? "bg-purple-900/40" : ""
                     }`}
                   >
-                    <SparklesIcon
-                      className={`h-6 w-6 transition-all ${
-                        downloadState === "saving_workspace" ? "text-purple-400 animate-spin" : "text-slate-500"
-                      }`}
-                    />
-                    <div className="text-sm text-slate-300 mt-2">
-                      Save to Workspace
-                      {downloadState === "saving_workspace" && (
-                        <span className="text-xs text-purple-400 ml-1">...</span>
-                      )}
-                      {downloadState === "saved_workspace" && (
-                        <CheckCircleIcon className="h-4 w-4 text-green-500 ml-1 inline" />
-                      )}
-                    </div>
+                    
                   </div>
                 </div>
 
@@ -664,16 +586,6 @@ const res = await fetch("/api/upload", {
               </div>
             )}
             
-            {/* Small notes / actions */}
-            <div className="rounded-2xl border border-slate-700 p-3 text-slate-300">
-              <div className="flex items-center gap-3">
-                <XCircleIcon className="h-5 w-5 text-red-500" />
-                <div className="text-sm">Removal is automatic - results depend on image complexity.</div>
-              </div>
-              <div className="mt-2 text-xs text-slate-400">
-                For best results: high-contrast subject, moderate resolution, avoid extreme compression or tiny faces.
-              </div>
-            </div>
           </div>
         </div>
 

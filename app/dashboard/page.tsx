@@ -3,12 +3,11 @@ import { useState } from "react";
 import { motion } from "framer-motion";
 import { useRouter } from "next/navigation";
 import {
-  Mail,
   Plus,
   Upload,
   LayoutGrid,
   Palette,
-  FileText,
+  Eraser,
   Settings,
 } from "lucide-react";
 
@@ -16,11 +15,11 @@ import { useAuth } from "@/contexts/AuthContext";
 import Header from "@/components/dashboard/Header";
 import Usernameheader from "@/components/dashboard/usernameheader";
 import Templates from "@/components/dashboard/Templates";
-0
+
 export default function DashboardPage() {
   const { user } = useAuth();
   const router = useRouter(); // ✅ Add router hook
-  const [isBugCardOpen, setIsBugCardOpen] = useState(false);
+  // const [isBugCardOpen, setIsBugCardOpen] = useState(false); // ❌ Removed state for bug card
 
   interface QuickAction {
     id: string;
@@ -46,16 +45,16 @@ export default function DashboardPage() {
       action: () => navigateTo("/poster/editor"),
     },
     {
-      id: "generate-card",
-      label: "Generate Certificates",
-      icon: <FileText size={20} />,
+      id: "bg-remover",
+      label: "bgremover",
+      icon: <Eraser size={20} />,
       color: "bg-green-500/20 border-green-400/40 text-green-700",
       hoverColor: "hover:bg-green-500/30 hover:border-green-400/60",
-      action: () => navigateTo("/selector/certificate"),
+      action: () => navigateTo("/bgremover"),
     },
     {
-      id: "manage-templates",
-      label: "Generate ID Cards",
+      id: "reportabug",
+      label: "Report a Bug",
       icon: <LayoutGrid size={20} />,
       color: "bg-purple-500/20 border-purple-400/40 text-purple-700",
       hoverColor: "hover:bg-purple-500/30 hover:border-purple-400/60",
@@ -63,14 +62,14 @@ export default function DashboardPage() {
     },
     {
       id: "upload-asset",
-      label: "Generate Visiting Cards",
+      label: "Upload-Asset",
       icon: <Upload size={20} />,
       color: "bg-orange-500/20 border-orange-400/40 text-orange-700",
       hoverColor: "hover:bg-orange-500/30 hover:border-orange-400/60",
       action: () => navigateTo("/selector/visitingcard"),
     },
     {
-      id: "design-tools",
+      id: "Themes",
       label: "Design Tools",
       icon: <Palette size={20} />,
       color: "bg-teal-500/20 border-teal-400/40 text-teal-700",
@@ -78,7 +77,7 @@ export default function DashboardPage() {
       action: () => navigateTo("/design-tools"),
     },
     {
-      id: "themes",
+      id: "Settings",
       label: "Themes",
       icon: <Settings size={20} />,
       color: "bg-gray-500/20 border-gray-400/40 text-gray-700",
@@ -89,7 +88,8 @@ export default function DashboardPage() {
 
   return (
     <main className="flex-1 min-h-screen px-4 sm:px-6 lg:px-12 xl:px-20 transition-all duration-300 bg-transparent text-gray-900">
-      {/* Report Bug Button */}
+      {/* Report Bug Button (Removed) */}
+      {/*
       <div className="absolute top-18 right-4 sm:top-10 sm:right-10 z-50 flex flex-col items-center">
         <motion.button
           className="p-3 rounded-full bg-blue-600/90 text-white shadow-lg transition-all duration-300 hover:bg-blue-700/90 hover:scale-105 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 cursor-pointer"
@@ -107,6 +107,7 @@ export default function DashboardPage() {
           Report Bug
         </span>
       </div>
+      */}
 
       {/* Headers */}
       <div className="my-4 cursor-pointer hidden lg:block">
@@ -151,8 +152,6 @@ export default function DashboardPage() {
 
       {/* Templates Section */}
       <Templates />
-
-
     </main>
   );
 }

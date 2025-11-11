@@ -19,7 +19,7 @@ const templateCards: TemplateCard[] = [
   {
     id: "Poster1",
     title: "Poster",
-    imageSrc: "/posters/poster1.jpg",
+    imageSrc: "/posters/images/coverimage.png",
     imageAlt: "Presentation template",
     path: "/poster/editor",
     bgColorClass: "bg-gradient-to-br from-orange-200 to-orange-100",
@@ -28,16 +28,16 @@ const templateCards: TemplateCard[] = [
   {
     id: "ID Card",
     title: "ID Card",
-    imageSrc: "/idcard/idcards.jpg",
+    imageSrc: "/idcard/images/coverimage.png",
     imageAlt: "ID Card template",
-    path: "/idcard",
+    path: "/idcard/images/coverimage.png",
     bgColorClass: "bg-gradient-to-br from-purple-200 to-purple-100",
     textColorClass: "text-gray-900",
   },
   {
     id: "visitingcards",
     title: "VisitingCards(Dark)",
-    imageSrc: "/visitingcards/darkpreview.jpg",
+    imageSrc: "/visitingcard/images/coverimagedark.jpg",
     imageAlt: "Resume template",
     path: "/visitingcards/dark",
     bgColorClass: "bg-gradient-to-br from-pink-200 to-pink-100",
@@ -46,7 +46,7 @@ const templateCards: TemplateCard[] = [
   {
     id: "email",
     title: "Email",
-    imageSrc: "/visitingcards/lightpreview.jpg",
+    imageSrc: "/visitingcard/images/coverimagelight.jpg",
     imageAlt: "Email template",
     path: "/visitingcards/light",
     bgColorClass: "bg-gradient-to-br from-blue-200 to-blue-100",
@@ -55,7 +55,7 @@ const templateCards: TemplateCard[] = [
   {
     id: "certificate1",
     title: "certificate1",
-    imageSrc: "/certificates/certificate.jpg",
+    imageSrc: "/certificates/images/coverimageproctoriong.jpg",
     imageAlt: "certificate1",
     path: "/editor/instagram-post",
     bgColorClass: "bg-gradient-to-br from-rose-200 to-rose-100",
@@ -64,7 +64,7 @@ const templateCards: TemplateCard[] = [
   {
     id: "certificate2",
     title: "certificate2",
-    imageSrc: "/certificates/certificate2.jpg",
+    imageSrc: "/certificates/images/coverimagetraining.jpg",
     imageAlt: "certificate2",
     path: "/editor/video",
     bgColorClass: "bg-gradient-to-br from-violet-200 to-violet-100",

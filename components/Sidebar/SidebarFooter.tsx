@@ -77,10 +77,10 @@ export default function SidebarFooter({ isDesktopHovered, handleLogout, variants
         Download Desktop App
       </a>
       <div className="text-gray-500 text-xs text-center select-none">
-        SSI STUDIOS v.1.08.25
+        SSI STUDIOS v.1.11.25
       </div>
       <div className="text-gray-500 text-xs text-center select-none">
-        Developed By Puneet Shukla
+        Developed By Creative Operations
       </div>
       <div className="text-green-500 text-xs text-center select-none">
         Beta Version
