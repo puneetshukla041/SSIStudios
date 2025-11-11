@@ -5,9 +5,8 @@ import axios from "axios";
 import {
   CloudArrowUpIcon,
   ArrowDownTrayIcon,
-  TrashIcon,
-  XCircleIcon,
   CheckCircleIcon,
+  TrashIcon,
   SparklesIcon,
   PhotoIcon,
   ArrowPathIcon,
@@ -35,15 +34,10 @@ export default function BgRemoverFullPage() {
   const [toasts, setToasts] = useState<Toast[]>([]);
   const [fitMode, setFitMode] = useState<"contain" | "cover">("contain");
   const [optimiseForWeb, setOptimiseForWeb] = useState(true);
+
+  // Simplified downloadState: only tracking local download status
   const [downloadState, setDownloadState] = useState<
-    | "idle"
-    | "downloading"
-    | "downloaded"
-    | "uploading_s3"
-    | "uploaded_s3"
-    | "saving_workspace"
-    | "saved_workspace"
-    | "error"
+    "idle" | "downloading" | "downloaded" | "error"
   >("idle");
 
   // helper: show toast
@@ -72,13 +66,16 @@ export default function BgRemoverFullPage() {
   };
 
   // Validate & set file
-  const handleNewFile = (f: File) => {
-    if (!ALLOWED_TYPES.includes(f.type)) {
+  const handleNewFile = (f: File | Blob) => {
+    // If it's a Blob from paste, we need to treat it as a File for type checking/naming
+    const fileToUse = f instanceof File ? f : new File([f], `pasted-image-${Date.now()}.${f.type.split('/')[1] || 'png'}`, { type: f.type });
+
+    if (!ALLOWED_TYPES.includes(fileToUse.type)) {
       pushToast("error", "Unsupported file type. Use PNG/JPEG/WebP.");
       return;
     }
 
-    if (f.size > MAX_FILE_SIZE_BYTES) {
+    if (fileToUse.size > MAX_FILE_SIZE_BYTES) {
       pushToast(
         "error",
         `File too large. Max ${(MAX_FILE_SIZE_BYTES / 1024 / 1024).toFixed(
@@ -97,11 +94,11 @@ export default function BgRemoverFullPage() {
       setOutputUrl(null);
     }
 
-    setFile(f);
-    setPreviewUrl(URL.createObjectURL(f));
+    setFile(fileToUse);
+    setPreviewUrl(URL.createObjectURL(fileToUse));
     setUploadProgress(0);
     setProcessingProgress(null);
-    pushToast("info", `Loaded ${f.name} — ${Math.round(f.size / 1024)} KB`);
+    pushToast("info", `Loaded ${fileToUse.name} — ${Math.round(fileToUse.size / 1024)} KB`);
   };
 
   // Drag handlers
@@ -138,8 +135,12 @@ export default function BgRemoverFullPage() {
       }
     };
     window.addEventListener("paste", pasteHandler);
+    // Include all state dependencies for handleNewFile via useCallback or pass them as an object/array to the dependency array.
+    // For simplicity and correctness with a complex function like handleNewFile, it's safer to include all dependencies.
+    // However, since handleNewFile uses pushToast (which is memoized with useCallback) and its own internal state setters, 
+    // we only need to include the stable dependencies here.
     return () => window.removeEventListener("paste", pasteHandler);
-  }, [previewUrl, outputUrl, pushToast]);
+  }, [previewUrl, outputUrl, pushToast]); // Depend on related state and stable functions
 
   // Cancel upload/processing
   const cancelProcessing = () => {
@@ -186,6 +187,8 @@ export default function BgRemoverFullPage() {
       });
 
       const blob = res.data as Blob;
+      // Revoke old output URL if any before creating a new one
+      if (outputUrl) URL.revokeObjectURL(outputUrl);
       const objUrl = URL.createObjectURL(blob);
       setOutputUrl(objUrl);
       pushToast("success", "Background removed successfully!");
@@ -221,8 +224,8 @@ export default function BgRemoverFullPage() {
     if (fileInput.current) fileInput.current.value = "";
   };
 
-  // New multi-step download logic
-  const handleDownload = async () => {
+  // Simplified single-step local download logic
+  const handleDownload = () => {
     if (!outputUrl) {
       pushToast("error", "No result to download.");
       return;
@@ -230,72 +233,34 @@ export default function BgRemoverFullPage() {
     setDownloadState("downloading");
 
     try {
-      // Step 1: Download locally
-      const response = await fetch(outputUrl);
-      const blob = await response.blob();
+      // Step: Download locally
       const a = document.createElement("a");
       a.href = outputUrl;
-      a.download = "bg-removed.png";
+      // Use original file name as base if available, otherwise default
+      const originalFileName = file?.name.split('.').slice(0, -1).join('.') || "image";
+      a.download = `${originalFileName}-bg-removed.png`; 
       document.body.appendChild(a);
       a.click();
       a.remove();
+      
       setDownloadState("downloaded");
-      pushToast("success", "File downloaded to your PC!");
-
-      // Step 2: Upload to S3
-      setDownloadState("uploading_s3");
-      const arrayBuffer = await blob.arrayBuffer();
-      const base64 = btoa(
-        new Uint8Array(arrayBuffer).reduce(
-          (data, byte) => data + String.fromCharCode(byte),
-          ""
-        )
-      );
-      const fileName = `bg-removed-${Date.now()}.${
-        blob.type.split("/")[1] || "png"
-      }`;
-
-      // Pass mimeType
-      const res = await fetch("/api/upload", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          fileBase64: base64,
-          fileName,
-          folder: "bg-removed",
-          mimeType: blob.type, // ✅ Pass MIME type dynamically
-        }),
-      });
-
-      const data = await res.json();
-      if (res.ok && data.url) {
-        setDownloadState("uploaded_s3");
-        pushToast("success", `Uploaded to S3: ${data.url}`);
-      } else {
-        throw new Error(data.message || "S3 upload failed.");
-      }
-
-      // Step 3: Simulate saving to workspace
-      setDownloadState("saving_workspace");
-      await new Promise((resolve) => setTimeout(resolve, 1500));
-      setDownloadState("saved_workspace");
-      pushToast("success", "Saved to your workspace!");
-    } catch (err) {
-      console.error(err);
+      pushToast("success", "File downloaded successfully!");
+    } catch (err: any) {
+      console.error("Download error:", err);
       setDownloadState("error");
-      pushToast("error", "An error occurred during the download process.");
+      pushToast("error", "An error occurred during local download.");
     } finally {
-      setTimeout(() => setDownloadState("idle"), 3000); // Reset state after a delay
+      // Reset state after a short delay for visual feedback
+      setTimeout(() => setDownloadState("idle"), 2000); 
     }
   };
 
-  // Copy output link
+  // Copy output link (still copies the Blob URL)
   const handleCopyLink = async () => {
     if (!outputUrl) return pushToast("error", "No result to copy.");
     try {
-      // NOTE: Cannot copy a blob URL directly via clipboard.writeText
-      // For a real app, you'd want to copy the S3 link if it's available.
-      // For this example, we'll stick to the current implementation.
+      // NOTE: Copying a Blob URL to the clipboard is possible but usually not useful outside the current session.
+      // Keeping for functionality parity.
       await navigator.clipboard.writeText(outputUrl);
       pushToast("success", "Result URL copied to clipboard.");
     } catch {
@@ -306,7 +271,7 @@ export default function BgRemoverFullPage() {
   return (
     <div
       className="min-h-screen w-full flex flex-col items-center justify-start p-4 md:p-6 lg:p-10 
-                 bg-transparent text-white"
+                   bg-transparent text-white"
     >
       <div className="w-full max-w-6xl">
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
@@ -361,7 +326,6 @@ export default function BgRemoverFullPage() {
                     >
                       Select File
                     </button>
-                    {/* Removed "How to paste" button */}
                   </div>
                 </div>
               ) : (
@@ -538,11 +502,9 @@ export default function BgRemoverFullPage() {
             <div className="rounded-2xl border border-slate-700 bg-slate-900/40 p-4 flex flex-col">
               <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 sm:gap-2">
                 <div className="sm:block">
-                  {/* HIDDEN: The label is hidden on small screens and shown on larger ones */}
                   <div className="text-sm text-slate-300 font-semibold hidden sm:block">
                     Result Preview
                   </div>
-                  {/* HIDDEN: Description is also hidden on small screens */}
                   <div className="text-xs text-slate-400 hidden sm:block">
                     Original vs processed
                   </div>
@@ -593,19 +555,13 @@ export default function BgRemoverFullPage() {
               </div>
             </div>
 
-            {/* Download Progress UI */}
+            {/* Download Button Only */}
             {outputUrl && (
               <div className="rounded-xl border border-slate-700 bg-slate-800/60 p-4">
                 <div className="flex items-center justify-between">
                   <div className="text-sm font-semibold text-slate-300">
-                    Download Options
+                    Download
                   </div>
-
-                  <div
-                    className={`flex flex-col items-center justify-center p-3 rounded-md transition-colors ${
-                      downloadState === "saving_workspace" ? "bg-purple-900/40" : ""
-                    }`}
-                  ></div>
                 </div>
 
                 {/* The main download button */}
@@ -619,8 +575,18 @@ export default function BgRemoverFullPage() {
                   }`}
                 >
                   <span className="flex items-center justify-center gap-2">
-                    <ArrowDownTrayIcon className="h-5 w-5" />
-                    Download & Save
+                    {downloadState === "downloading" ? (
+                      <ArrowPathIcon className="h-5 w-5 animate-spin" />
+                    ) : downloadState === "downloaded" ? (
+                      <CheckCircleIcon className="h-5 w-5" />
+                    ) : (
+                      <ArrowDownTrayIcon className="h-5 w-5" />
+                    )}
+                    {downloadState === "downloading"
+                      ? "Preparing Download..."
+                      : downloadState === "downloaded"
+                      ? "Downloaded!"
+                      : "Download Result"}
                   </span>
                 </motion.button>
               </div>
