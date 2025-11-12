@@ -24,6 +24,7 @@ import {
     User, // NEW: For Name
     Hospital, // NEW: For Hospital
     Calendar, // NEW: For DOI
+    FileCheck, // NEW: Icon for V1 PDF
 } from 'lucide-react';
 
 // Required for PDF generation on client-side
@@ -51,7 +52,7 @@ interface FetchResponse {
 interface CertificateTableProps {
     refreshKey: number;
     // 💡 CHANGE HERE: Pass data array AND total count
-    onRefresh: (data: ICertificateClient[], totalCount: number) => void; 
+    onRefresh: (data: ICertificateClient[], totalCount: number) => void;
     onAlert: (message: string, isError: boolean) => void;
 }
 
@@ -120,7 +121,8 @@ const CertificateTable: React.FC<CertificateTableProps> = ({ refreshKey, onRefre
     const [deletingId, setDeletingId] = useState<string | null>(null);
 
     // NEW State for PDF Generation
-    const [generatingPdfId, setGeneratingPdfId] = useState<string | null>(null); // Track which cert is generating PDF
+    const [generatingPdfId, setGeneratingPdfId] = useState<string | null>(null); // Track which cert is generating PDF (Template 2)
+    const [generatingPdfV1Id, setGeneratingPdfV1Id] = useState<string | null>(null); // Track which cert is generating PDF (Template 1)
 
     const limit = 10; // Fixed items per page
 
@@ -143,14 +145,14 @@ const CertificateTable: React.FC<CertificateTableProps> = ({ refreshKey, onRefre
             const response = await fetch(`/api/certificates?${params.toString()}`);
             const result: FetchResponse & { success: boolean, message?: string } = await response.json();
 
-if (response.ok && result.success) {
-        setCertificates(result.data);
-        setTotalItems(result.total);
-        setTotalPages(result.totalPages);
-        setUniqueHospitals(result.filters.hospitals);
-        // 💡 CHANGE HERE: Pass result.data AND result.total
-        onRefresh(result.data, result.total); 
-    } else {
+            if (response.ok && result.success) {
+                setCertificates(result.data);
+                setTotalItems(result.total);
+                setTotalPages(result.totalPages);
+                setUniqueHospitals(result.filters.hospitals);
+                // 💡 CHANGE HERE: Pass result.data AND result.total
+                onRefresh(result.data, result.total);
+            } else {
                 onAlert(result.message || 'Failed to fetch certificates.', true);
             }
         } catch (error) {
@@ -370,7 +372,7 @@ if (response.ok && result.success) {
         setEditFormData(prev => ({ ...prev, [field]: value })); // NO CHANGE
     };
 
-    // --- NEW: Add Certificate Handler ---
+    // --- NEW: Add Certificate Handler (NO CHANGE) ---
     const handleAddCertificate = async () => {
         if (isAdding) return;
 
@@ -423,37 +425,39 @@ if (response.ok && result.success) {
         setNewCertificateData(prev => ({ ...prev, [field]: value }));
     };
 
-    // --- NEW: PDF Generation Handler (NO CHANGE) ---
-
+    // --- MODIFIED: PDF Generation Handler (Supports V1 and V2) ---
     const generateCertificatePDF = async (
         certData: ICertificateClient,
-        onAlert: (message: string, isError: boolean) => void
+        onAlert: (message: string, isError: boolean) => void,
+        template: 'certificate1.pdf' | 'certificate2.pdf', // Template selector
+        setLoadingId: React.Dispatch<React.SetStateAction<string | null>> // State setter for loading
     ) => {
-        // ... (PDF Generation Logic remains the same)
         const fullName = certData.name;
         const hospitalName = certData.hospital;
         const certificateNo = certData.certificateNo;
         // Convert DD-MM-YYYY to DD/MM/YYYY for the PDF template logic
         const doi = certData.doi.replace(/-/g, '/');
 
-        // Hardcoded static text from your Editor component's state defaults:
+        // Hardcoded static text (only used for V2 template)
         const programName = "Robotics Training Program";
         const operationText = "to operate the SSI Mantra Surgical Robotic System";
         const providerLineText = "provided by Sudhir Srivastava Innovations Pvt. Ltd";
         const staticLineText = "has successfully completed the";
+        
+        const isV2Template = template === 'certificate2.pdf';
 
         if (!fullName || !certificateNo) {
             onAlert('Missing essential data (Name or Certificate No) for PDF generation.', true);
             return;
         }
 
-        setGeneratingPdfId(certData._id); // Start loading state
+        setLoadingId(certData._id); // Start loading state
 
         try {
             // 2. Fetch Resources
             const [existingPdfBytes, soraBytes, soraSemiBoldBytes] = await Promise.all([
-                fetch("/certificates/certificate2.pdf").then((res) => {
-                    if (!res.ok) throw new Error('Failed to fetch certificate template.');
+                fetch(`/certificates/${template}`).then((res) => { // Use the template variable
+                    if (!res.ok) throw new Error(`Failed to fetch certificate template: ${template}.`);
                     return res.arrayBuffer();
                 }),
                 fetch("/fonts/Sora-Regular.ttf").then((res) => {
@@ -478,7 +482,7 @@ if (response.ok && result.success) {
             const pageWidth = firstPage.getWidth();
             const pageHeight = firstPage.getHeight();
 
-            // 4. Drawing Logic (matching your Editor component's positions)
+            // 4. Drawing Logic
             let y = pageHeight - 180;
             const x = 55;
             const margin = 40;
@@ -506,50 +510,54 @@ if (response.ok && result.success) {
                 color: colorBlack,
             });
 
-            // Static Line: "has successfully completed the" (y: 355)
-            firstPage.drawText(staticLineText, {
-                x,
-                y: y - 64,
-                size: fontSizeSmall,
-                font: soraFont,
-                color: colorGray,
-                maxWidth: 350,
-                lineHeight: 10,
-            });
+            // 💡 CONDITIONAL DRAWING LOGIC: Only draw static text for V2 template
+            if (isV2Template) {
+                // Static Line: "has successfully completed the" (y: 355)
+                firstPage.drawText(staticLineText, {
+                    x,
+                    y: y - 64,
+                    size: fontSizeSmall,
+                    font: soraFont,
+                    color: colorGray,
+                    maxWidth: 350,
+                    lineHeight: 10,
+                });
 
-            // Program Name (y: 343)
-            firstPage.drawText(programName, {
-                x,
-                y: y - 76,
-                size: fontSizeSmall,
-                font: soraSemiBoldFont,
-                color: colorBlack,
-            });
+                // Program Name (y: 343)
+                firstPage.drawText(programName, {
+                    x,
+                    y: y - 76,
+                    size: fontSizeSmall,
+                    font: soraSemiBoldFont,
+                    color: colorBlack,
+                });
 
-            // Provider Line: "provided by Sudhir..." (y: 331)
-            firstPage.drawText(providerLineText, {
-                x,
-                y: y - 88,
-                size: fontSizeSmall,
-                font: soraFont,
-                color: colorGray,
-                maxWidth: 350,
-                lineHeight: 10,
-            });
+                // Provider Line: "provided by Sudhir..." (y: 331)
+                firstPage.drawText(providerLineText, {
+                    x,
+                    y: y - 88,
+                    size: fontSizeSmall,
+                    font: soraFont,
+                    color: colorGray,
+                    maxWidth: 350,
+                    lineHeight: 10,
+                });
 
-            // Operation Text (y: 319)
-            firstPage.drawText(operationText, {
-                x,
-                y: y - 100,
-                size: fontSizeSmall,
-                font: soraSemiBoldFont,
-                color: colorBlack,
-            });
+                // Operation Text (y: 319)
+                firstPage.drawText(operationText, {
+                    x,
+                    y: y - 100,
+                    size: fontSizeSmall,
+                    font: soraSemiBoldFont,
+                    color: colorBlack,
+                });
+            }
+
 
             // Date of Issue - DOI (Bottom Left - needs centering adjustment)
             const doiTextWidth = soraSemiBoldFont.widthOfTextAtSize(doi, fontSizeSmall);
             firstPage.drawText(doi, {
-                x: Math.max(margin, (pageWidth - doiTextWidth) / 2) - 65,
+                x: Math.max(margin, (pageWidth - doiTextWidth) / 2) - 75,
                 y: margin + 45,
                 size: fontSizeSmall,
                 font: soraSemiBoldFont,
@@ -560,7 +568,7 @@ if (response.ok && result.success) {
             // Certificate No. (Bottom Right)
             const certTextWidth = soraSemiBoldFont.widthOfTextAtSize(certificateNo, fontSizeSmall);
             firstPage.drawText(certificateNo, {
-                x: pageWidth - certTextWidth - margin - 105,
+                x: pageWidth - certTextWidth - margin - 70,
                 y: margin + 45,
                 size: fontSizeSmall,
                 font: soraSemiBoldFont,
@@ -577,7 +585,7 @@ if (response.ok && result.success) {
             const link = document.createElement("a");
             link.href = url;
             // Clean up file name for safe download
-            const fileName = `${certificateNo.replace(/[^a-zA-Z0-9-]/g, '_')}-${fullName.replace(/[^a-zA-Z0-9-]/g, '_')}.pdf`;
+            const fileName = `${certificateNo.replace(/[^a-zA-Z0-9-]/g, '_')}-${fullName.replace(/[^a-zA-Z0-9-]/g, '_')}-${isV2Template ? 'v2' : 'v1'}.pdf`;
             link.setAttribute("download", fileName);
             document.body.appendChild(link);
             link.click();
@@ -590,14 +598,22 @@ if (response.ok && result.success) {
             console.error('PDF Generation Error:', error);
             onAlert(`Failed to generate PDF. Check console for details.`, true);
         } finally {
-            setGeneratingPdfId(null); // End loading state
+            setLoadingId(null); // End loading state
         }
     };
 
-    const handleGeneratePDF = (cert: ICertificateClient) => {
+    // Handler for Template 2 (Original Purple Button)
+    const handleGeneratePDF_V2 = (cert: ICertificateClient) => {
         if (generatingPdfId === cert._id) return; // Prevent multiple clicks
-        generateCertificatePDF(cert, onAlert);
+        generateCertificatePDF(cert, onAlert, 'certificate2.pdf', setGeneratingPdfId);
     };
+
+    // Handler for Template 1 (NEW Green Button)
+    const handleGeneratePDF_V1 = (cert: ICertificateClient) => {
+        if (generatingPdfV1Id === cert._id) return; // Prevent multiple clicks
+        generateCertificatePDF(cert, onAlert, 'certificate1.pdf', setGeneratingPdfV1Id);
+    };
+
 
     // --- Download Functionality (NO CHANGE) ---
     const handleDownload = useCallback(() => {
@@ -734,9 +750,9 @@ if (response.ok && result.success) {
     const AddCertificateForm = () => {
         // Helper component for cleaner, consistent input fields
         const InputField = ({ icon: Icon, placeholder, value, onChange, type = 'text' }: {
-            icon: React.ElementType, 
-            placeholder: string, 
-            value: string, 
+            icon: React.ElementType,
+            placeholder: string,
+            value: string,
             onChange: (e: React.ChangeEvent<HTMLInputElement>) => void,
             type?: string
         }) => (
@@ -748,16 +764,16 @@ if (response.ok && result.success) {
                     value={value}
                     onChange={onChange}
                     className="
-                        w-full p-3 pl-10 
-                        border border-sky-300/60 
-                        rounded-xl 
-                        bg-white/70 
-                        text-gray-800 
-                        placeholder-gray-500/90 
-                        focus:ring-2 focus:ring-sky-500 focus:border-sky-500 
-                        transition duration-300 
+                        w-full p-3 pl-10
+                        border border-sky-300/60
+                        rounded-xl
+                        bg-white/70
+                        text-gray-800
+                        placeholder-gray-500/90
+                        focus:ring-2 focus:ring-sky-500 focus:border-sky-500
+                        transition duration-300
                         shadow-md hover:shadow-lg
-                        focus:bg-white/90 
+                        focus:bg-white/90
                         text-sm
                         outline-none
                     "
@@ -770,10 +786,10 @@ if (response.ok && result.success) {
                 <h3 className="text-xl font-extrabold text-sky-700 mb-5 flex items-center border-b pb-2 border-sky-300/40">
                     <Plus className="w-5 h-5 mr-2 text-sky-600" /> Manually Add New Certificate
                 </h3>
-                
+
                 {/* Grid is responsive: 1 col on mobile, 2 cols on small screens, 4 cols on large screens */}
                 <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-                    
+
                     {/* Certificate No */}
                     <InputField
                         icon={Tag}
@@ -781,7 +797,7 @@ if (response.ok && result.success) {
                         value={newCertificateData.certificateNo}
                         onChange={(e) => handleNewCertChange('certificateNo', e.target.value)}
                     />
-                    
+
                     {/* Name */}
                     <InputField
                         icon={User}
@@ -789,7 +805,7 @@ if (response.ok && result.success) {
                         value={newCertificateData.name}
                         onChange={(e) => handleNewCertChange('name', e.target.value)}
                     />
-                    
+
                     {/* Hospital */}
                     <InputField
                         icon={Hospital}
@@ -797,7 +813,7 @@ if (response.ok && result.success) {
                         value={newCertificateData.hospital}
                         onChange={(e) => handleNewCertChange('hospital', e.target.value)}
                     />
-                    
+
                     {/* DOI */}
                     <InputField
                         icon={Calendar}
@@ -808,7 +824,7 @@ if (response.ok && result.success) {
                         onChange={(e) => handleNewCertChange('doi', dateInputToDoi(e.target.value))}
                     />
                 </div>
-                
+
                 {/* Action Buttons */}
                 <div className="flex flex-col sm:flex-row justify-end space-y-3 sm:space-y-0 sm:space-x-3 mt-6">
                     <button
@@ -964,7 +980,7 @@ if (response.ok && result.success) {
                                             </div>
                                         </th>
                                     ))}
-                                    <th className="px-4 py-3 text-left text-xs font-bold text-gray-700 uppercase tracking-wider border-b border-gray-300 min-w-[180px]">
+                                    <th className="px-4 py-3 text-left text-xs font-bold text-gray-700 uppercase tracking-wider border-b border-gray-300 min-w-[250px]">
                                         Actions
                                     </th>
                                 </tr>
@@ -1062,15 +1078,32 @@ if (response.ok && result.success) {
                                                     </div>
                                                 ) : (
                                                     <div className="flex space-x-2">
-                                                        {/* NEW: Generate PDF Button */}
+                                                        {/* NEW: Generate PDF Button (Template V1 - Green) */}
                                                         <button
-                                                            onClick={() => handleGeneratePDF(cert)}
+                                                            onClick={() => handleGeneratePDF_V1(cert)}
+                                                            disabled={generatingPdfV1Id === cert._id}
+                                                            className={`text-white p-2 rounded-full w-8 h-8 flex items-center justify-center transition transform hover:scale-110 cursor-pointer shadow-md hover:shadow-lg ${
+                                                                generatingPdfV1Id === cert._id ? 'bg-yellow-500/70' : 'bg-emerald-600/90 hover:bg-emerald-700'
+                                                            }`}
+                                                            title="Generate PDF (V1)"
+                                                            aria-label="Generate and download PDF certificate (Version 1)"
+                                                        >
+                                                            {generatingPdfV1Id === cert._id ? (
+                                                                <Loader2 className="w-4 h-4 animate-spin" />
+                                                            ) : (
+                                                                <FileCheck className="w-4 h-4" />
+                                                            )}
+                                                        </button>
+
+                                                        {/* Generate PDF Button (Template V2 - Original Purple) */}
+                                                        <button
+                                                            onClick={() => handleGeneratePDF_V2(cert)}
                                                             disabled={generatingPdfId === cert._id}
                                                             className={`text-white p-2 rounded-full w-8 h-8 flex items-center justify-center transition transform hover:scale-110 cursor-pointer shadow-md hover:shadow-lg ${
                                                                 generatingPdfId === cert._id ? 'bg-yellow-500/70' : 'bg-purple-600/90 hover:bg-purple-700'
                                                             }`}
-                                                            title="Generate PDF"
-                                                            aria-label="Generate and download PDF certificate"
+                                                            title="Generate PDF (V2)"
+                                                            aria-label="Generate and download PDF certificate (Version 2)"
                                                         >
                                                             {generatingPdfId === cert._id ? (
                                                                 <Loader2 className="w-4 h-4 animate-spin" />
