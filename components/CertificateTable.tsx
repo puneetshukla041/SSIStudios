@@ -13,9 +13,11 @@ import {
     Trash2,
     Search,
     Filter,
-    ArrowUpDown, // For sorting header
-    BadgeCheck, // For bulk actions feedback and visual checkbox
-    Square, // For visual checkbox
+    ArrowUpDown, 
+    BadgeCheck, 
+    Square, 
+    ChevronLeft, // New for professional pagination
+    ChevronRight, // New for professional pagination
 } from 'lucide-react';
 
 // Extend the DB interface with the Mongoose _id for client-side use
@@ -54,15 +56,15 @@ const dateInputToDoi = (dateInput: string): string => {
     return parts.length === 3 ? `${parts[2]}-${parts[1]}-${parts[0]}` : '';
 };
 
-// Helper to generate a consistent color hash for hospital names (Badges)
+// Helper to generate a consistent, PROFESSIONAL color hash for hospital names (Badges)
 const getHospitalColor = (hospital: string) => {
     const colors = [
-        'bg-blue-100 text-blue-800', 
-        'bg-green-100 text-green-800', 
-        'bg-purple-100 text-purple-800', 
-        'bg-yellow-100 text-yellow-800', 
-        'bg-pink-100 text-pink-800', 
-        'bg-red-100 text-red-800',
+        'bg-sky-100 text-sky-800', 
+        'bg-emerald-100 text-emerald-800', 
+        'bg-indigo-100 text-indigo-800', 
+        'bg-amber-100 text-amber-800', 
+        'bg-fuchsia-100 text-fuchsia-800', 
+        'bg-rose-100 text-rose-800',
         'bg-cyan-100 text-cyan-800',
         'bg-orange-100 text-orange-800',
     ];
@@ -86,8 +88,8 @@ const CertificateTable: React.FC<CertificateTableProps> = ({ refreshKey, onRefre
     const [uniqueHospitals, setUniqueHospitals] = useState<string[]>([]);
     const [editingId, setEditingId] = useState<string | null>(null);
     const [editFormData, setEditFormData] = useState<Partial<ICertificateClient>>({});
-    const [selectedIds, setSelectedIds] = useState<string[]>([]); // State for bulk select
-    const [sortConfig, setSortConfig] = useState<{ key: keyof ICertificateClient; direction: 'asc' | 'desc' } | null>(null); // State for sorting
+    const [selectedIds, setSelectedIds] = useState<string[]>([]); 
+    const [sortConfig, setSortConfig] = useState<{ key: keyof ICertificateClient; direction: 'asc' | 'desc' } | null>(null); 
     
     // NEW State for Animation
     const [flashId, setFlashId] = useState<string | null>(null);
@@ -204,7 +206,6 @@ const CertificateTable: React.FC<CertificateTableProps> = ({ refreshKey, onRefre
             return;
         }
 
-        // Using custom modal is better than window.confirm, but sticking to existing pattern for now
         if (!window.confirm(`Are you sure you want to delete ${selectedIds.length} certificate(s)?`)) return;
 
         const idsToDelete = [...selectedIds];
@@ -324,7 +325,6 @@ const CertificateTable: React.FC<CertificateTableProps> = ({ refreshKey, onRefre
 
 
     // --- Skeleton Loader Component ---
-    // (Using a placeholder for the LoadingSpinner as its definition is external)
     const SkeletonLoader = () => (
         <div className="animate-pulse space-y-4 p-6 rounded-xl shadow-lg border border-gray-200 bg-white">
             {/* Search/Filter Skeletons */}
@@ -355,7 +355,7 @@ const CertificateTable: React.FC<CertificateTableProps> = ({ refreshKey, onRefre
                 <div className="h-4 bg-gray-200 rounded w-48"></div>
                 <div className="flex space-x-2">
                     <div className="h-8 w-16 bg-gray-200 rounded-md"></div>
-                    <div className="h-8 w-10 bg-indigo-500 rounded-md"></div>
+                    <div className="h-8 w-10 bg-slate-700 rounded-md"></div>
                     <div className="h-8 w-16 bg-gray-200 rounded-md"></div>
                 </div>
             </div>
@@ -370,18 +370,17 @@ const CertificateTable: React.FC<CertificateTableProps> = ({ refreshKey, onRefre
     }
 
     const Pagination = () => (
-        <div className="flex flex-col sm:flex-row justify-between items-center mt-4 p-2">
-            <p className="text-sm text-gray-600 mb-2 sm:mb-0">
-                Showing **{(currentPage - 1) * limit + 1}** to **{Math.min(currentPage * limit, totalItems)}** of **{totalItems}** entries
-            </p>
-            <div className="flex space-x-1 border border-gray-200 rounded-xl p-1 shadow-inner bg-gray-50">
+        <div className="flex flex-col sm:flex-row justify-end items-center mt-4 p-2">
+            {/* REMOVED: Showing **1** to **10** of **19** entries */}
+            <div className="flex space-x-1 border border-gray-200 rounded-lg p-1 shadow-inner bg-gray-50">
                 <button
                     onClick={() => setCurrentPage(prev => Math.max(1, prev - 1))}
                     disabled={currentPage === 1}
-                    className="px-3 py-1 text-sm font-medium rounded-lg bg-white text-indigo-600 hover:bg-gray-100 disabled:text-gray-400 disabled:hover:bg-white transition cursor-pointer"
+                    className="p-2 text-sm font-medium rounded-lg bg-white text-slate-700 hover:bg-gray-100 disabled:text-gray-400 disabled:hover:bg-white transition cursor-pointer flex items-center"
                     aria-label="Previous Page"
                 >
-                    &larr; Previous
+                    <ChevronLeft className="w-4 h-4 mr-1" />
+                    Previous
                 </button>
                 {/* Render a few page numbers for better navigation */}
                 {Array.from({ length: totalPages }, (_, i) => i + 1)
@@ -392,7 +391,7 @@ const CertificateTable: React.FC<CertificateTableProps> = ({ refreshKey, onRefre
                             onClick={() => setCurrentPage(page)}
                             className={`px-3 py-1 text-sm font-medium rounded-lg transition cursor-pointer ${
                                 page === currentPage
-                                    ? 'bg-indigo-600 text-white shadow-md'
+                                    ? 'bg-slate-700 text-white shadow-md'
                                     : 'bg-white text-gray-700 hover:bg-gray-100'
                             }`}
                         >
@@ -406,10 +405,11 @@ const CertificateTable: React.FC<CertificateTableProps> = ({ refreshKey, onRefre
                 <button
                     onClick={() => setCurrentPage(prev => Math.min(totalPages, prev + 1))}
                     disabled={currentPage === totalPages || totalPages === 0}
-                    className="px-3 py-1 text-sm font-medium rounded-lg bg-white text-indigo-600 hover:bg-gray-100 disabled:text-gray-400 disabled:hover:bg-white transition cursor-pointer"
+                    className="p-2 text-sm font-medium rounded-lg bg-white text-slate-700 hover:bg-gray-100 disabled:text-gray-400 disabled:hover:bg-white transition cursor-pointer flex items-center"
                     aria-label="Next Page"
                 >
-                    Next &rarr;
+                    Next 
+                    <ChevronRight className="w-4 h-4 ml-1" />
                 </button>
             </div>
         </div>
@@ -420,7 +420,7 @@ const CertificateTable: React.FC<CertificateTableProps> = ({ refreshKey, onRefre
             return <ArrowUpDown className="w-4 h-4 ml-1 text-gray-400" />;
         }
         return (
-            <span className="ml-1">
+            <span className="ml-1 text-slate-700">
                 {sortConfig.direction === 'asc' ? '↑' : '↓'}
             </span>
         );
@@ -439,7 +439,7 @@ const CertificateTable: React.FC<CertificateTableProps> = ({ refreshKey, onRefre
                         placeholder="Search Certificate, Name, Hospital..."
                         value={searchQuery}
                         onChange={(e) => setSearchQuery(e.target.value)}
-                        className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-xl bg-gray-50 focus:ring-indigo-500 focus:border-indigo-500 transition duration-200 outline-none hover:border-indigo-400"
+                        className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg bg-white focus:ring-slate-500 focus:border-slate-500 transition duration-200 outline-none hover:border-slate-400 shadow-sm"
                     />
                 </div>
 
@@ -448,7 +448,7 @@ const CertificateTable: React.FC<CertificateTableProps> = ({ refreshKey, onRefre
                     <select
                         value={hospitalFilter}
                         onChange={(e) => setHospitalFilter(e.target.value)}
-                        className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-xl bg-gray-50 focus:ring-indigo-500 focus:border-indigo-500 transition duration-200 appearance-none outline-none hover:border-indigo-400 cursor-pointer"
+                        className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg bg-white focus:ring-slate-500 focus:border-slate-500 transition duration-200 appearance-none outline-none hover:border-slate-400 cursor-pointer shadow-sm"
                     >
                         <option value="">All Hospitals (Filter)</option>
                         {uniqueHospitals.map(hospital => (
@@ -458,36 +458,37 @@ const CertificateTable: React.FC<CertificateTableProps> = ({ refreshKey, onRefre
                 </div>
                 
                 <div className="flex space-x-3">
-                    {/* New: Bulk Delete Button */}
+                    {/* Bulk Delete Button - Retained red for danger action */}
                     {selectedIds.length > 0 && (
                         <button
                             onClick={handleBulkDelete}
-                            className="px-4 py-2 text-sm font-semibold rounded-xl bg-red-500 text-white hover:bg-red-600 transition duration-200 shadow-md flex items-center transform hover:scale-[1.02] cursor-pointer"
+                            className="px-4 py-2 text-sm font-semibold rounded-lg bg-red-600 text-white hover:bg-red-700 transition duration-200 shadow-md flex items-center transform hover:scale-[1.02] cursor-pointer"
                         >
                             <Trash2 className="w-4 h-4 mr-2" /> Delete {selectedIds.length}
                         </button>
                     )}
 
+                    {/* Export Buttons - Changed to professional slate/teal colors */}
                     <button
                         onClick={() => handleDownload('xlsx')}
-                        className="px-4 py-2 text-sm font-semibold rounded-xl bg-green-500 text-white hover:bg-green-600 transition duration-200 shadow-md flex items-center transform hover:scale-[1.02] cursor-pointer"
+                        className="px-4 py-2 text-sm font-semibold rounded-lg bg-teal-600 text-white hover:bg-teal-700 transition duration-200 shadow-md flex items-center transform hover:scale-[1.02] cursor-pointer"
                     >
                         <Download className="w-4 h-4 mr-2" /> Export Excel
                     </button>
                     <button
                         onClick={() => handleDownload('csv')}
-                        className="px-4 py-2 text-sm font-semibold rounded-xl bg-yellow-500 text-white hover:bg-yellow-600 transition duration-200 shadow-md flex items-center transform hover:scale-[1.02] cursor-pointer"
+                        className="px-4 py-2 text-sm font-semibold rounded-lg bg-sky-600 text-white hover:bg-sky-700 transition duration-200 shadow-md flex items-center transform hover:scale-[1.02] cursor-pointer"
                     >
                         <Download className="w-4 h-4 mr-2" /> Export CSV
                     </button>
                 </div>
             </div>
 
-            {/* Selection Summary Notification */}
+            {/* Selection Summary Notification - Updated color to professional slate */}
             {selectedIds.length > 0 && (
-                <div className="p-3 bg-indigo-50 border-l-4 border-indigo-500 text-indigo-800 rounded-xl shadow-md flex items-center justify-between transition duration-300">
+                <div className="p-3 bg-slate-100 border-l-4 border-slate-700 text-slate-800 rounded-lg shadow-md flex items-center justify-between transition duration-300">
                     <div className="flex items-center">
-                        <BadgeCheck className="w-5 h-5 mr-3 flex-shrink-0" />
+                        <BadgeCheck className="w-5 h-5 mr-3 flex-shrink-0 text-slate-700" />
                         <span className="font-medium">
                             **{selectedIds.length}** certificates selected for action.
                         </span>
@@ -511,22 +512,22 @@ const CertificateTable: React.FC<CertificateTableProps> = ({ refreshKey, onRefre
                     <div className="overflow-x-auto rounded-xl shadow-xl border border-gray-300">
                         <table 
                             className="min-w-full bg-white"
-                            style={{ borderCollapse: 'collapse' }} // Enforces cell borders to touch
+                            style={{ borderCollapse: 'collapse' }} 
                         >
-                            <thead className="bg-gray-100">
+                            <thead className="bg-gray-50"> 
                                 <tr>
                                     {/* Checkbox Header for Select All */}
                                     <th className="px-3 py-3 text-center text-xs font-bold text-gray-700 uppercase tracking-wider w-12 border-b border-r border-gray-300">
                                         <label className="cursor-pointer flex items-center justify-center"> 
                                             <input
                                                 type="checkbox"
-                                                className="hidden" // Hide native input
+                                                className="hidden" 
                                                 checked={selectedIds.length === certificates.length && certificates.length > 0}
                                                 onChange={(e) => handleSelectAll(e.target.checked)}
                                                 aria-label="Select All"
                                             />
                                             {selectedIds.length === certificates.length && certificates.length > 0 ? (
-                                                <BadgeCheck className="w-5 h-5 text-indigo-600" />
+                                                <BadgeCheck className="w-5 h-5 text-slate-700" />
                                             ) : (
                                                 <Square className="w-5 h-5 text-gray-400" />
                                             )}
@@ -537,7 +538,7 @@ const CertificateTable: React.FC<CertificateTableProps> = ({ refreshKey, onRefre
                                         <th
                                             key={fieldKey}
                                             onClick={() => requestSort(fieldKey)}
-                                            className="px-6 py-3 text-left text-xs font-bold text-gray-700 uppercase tracking-wider cursor-pointer hover:bg-gray-200 transition duration-150 whitespace-nowrap border-b border-r border-gray-300" // Added border-b/r and hover
+                                            className="px-6 py-3 text-left text-xs font-bold text-gray-700 uppercase tracking-wider cursor-pointer hover:bg-gray-100 transition duration-150 whitespace-nowrap border-b border-r border-gray-300"
                                         >
                                             <div className="flex items-center">
                                                 {fieldKey === 'doi' ? 'Date of Issue' : fieldKey.charAt(0).toUpperCase() + fieldKey.slice(1).replace(/([A-Z])/g, ' $1')}
@@ -550,7 +551,7 @@ const CertificateTable: React.FC<CertificateTableProps> = ({ refreshKey, onRefre
                                     </th>
                                 </tr>
                             </thead>
-                            <tbody className=""> {/* Removed dividing class from tbody, applied to cells instead */}
+                            <tbody className="divide-y divide-gray-200"> 
                                 {sortedCertificates.map((cert) => {
                                     const isSelected = selectedIds.includes(cert._id);
                                     const isEditing = editingId === cert._id;
@@ -563,9 +564,9 @@ const CertificateTable: React.FC<CertificateTableProps> = ({ refreshKey, onRefre
                                     const rowClasses = `
                                         transition-all duration-300 ease-in-out bg-white
                                         ${isDeleting ? 'opacity-0 transform translate-x-1/2 scale-x-95 pointer-events-none h-0' : ''}
-                                        ${isFlashing ? 'bg-green-100/70 shadow-lg' : ''} 
+                                        ${isFlashing ? 'bg-emerald-50/70 shadow-lg' : ''} 
                                         hover:bg-gray-50 hover:shadow-sm
-                                        ${isSelected && !isFlashing ? 'bg-indigo-50' : ''}
+                                        ${isSelected && !isFlashing ? 'bg-slate-50' : ''}
                                     `;
 
                                     return (
@@ -575,7 +576,7 @@ const CertificateTable: React.FC<CertificateTableProps> = ({ refreshKey, onRefre
                                             style={{ transitionProperty: 'opacity, transform, background-color, box-shadow' }} 
                                         >
                                             {/* Checkbox for individual selection */}
-                                            <td className="px-3 py-3 text-center whitespace-nowrap w-12 border-b border-r border-gray-200">
+                                            <td className="px-3 py-3 text-center whitespace-nowrap w-12 border-r border-gray-200">
                                                 <label className="cursor-pointer flex items-center justify-center">
                                                     <input
                                                         type="checkbox"
@@ -585,7 +586,7 @@ const CertificateTable: React.FC<CertificateTableProps> = ({ refreshKey, onRefre
                                                         aria-label={`Select certificate ${cert.certificateNo}`}
                                                     />
                                                     {isSelected ? (
-                                                        <BadgeCheck className="w-5 h-5 text-indigo-600" />
+                                                        <BadgeCheck className="w-5 h-5 text-slate-700" />
                                                     ) : (
                                                         <Square className="w-5 h-5 text-gray-400" />
                                                     )}
@@ -597,18 +598,18 @@ const CertificateTable: React.FC<CertificateTableProps> = ({ refreshKey, onRefre
                                                 const field = fieldKey as keyof ICertificateClient;
                                                 
                                                 return (
-                                                    <td key={field} className="px-6 py-3 whitespace-nowrap text-sm text-gray-800 border-b border-r border-gray-200">
+                                                    <td key={field} className="px-6 py-3 whitespace-nowrap text-sm text-gray-800 border-r border-gray-200">
                                                         {isEditing ? (
                                                             <input
                                                                 type={field === 'doi' ? 'date' : 'text'}
                                                                 value={field === 'doi' ? doiToDateInput(editFormData[field] as string || '') : editFormData[field] as string}
                                                                 onChange={(e) => handleChange(field, field === 'doi' ? dateInputToDoi(e.target.value) : e.target.value)}
                                                                 // Streamlined edit field for cleaner look
-                                                                className="w-full p-1 border border-indigo-300 rounded-md focus:ring-1 focus:ring-indigo-500 transition duration-150 shadow-inner bg-white text-gray-800"
+                                                                className="w-full p-1 border border-sky-300 rounded-md focus:ring-1 focus:ring-sky-500 transition duration-150 shadow-inner bg-white text-gray-800"
                                                                 aria-label={`Edit ${fieldKey}`}
                                                             />
                                                         ) : field === 'hospital' ? (
-                                                            // Hospital Badge
+                                                            // Hospital Badge using professional colors
                                                             <span className={`inline-flex items-center px-3 py-1 rounded-full text-xs font-semibold ${getHospitalColor(cert.hospital)}`}>
                                                                 {cert.hospital}
                                                             </span>
@@ -621,12 +622,12 @@ const CertificateTable: React.FC<CertificateTableProps> = ({ refreshKey, onRefre
                                             })}
 
                                             {/* Action Buttons */}
-                                            <td className="px-6 py-3 whitespace-nowrap text-sm font-medium border-b border-gray-200">
+                                            <td className="px-6 py-3 whitespace-nowrap text-sm font-medium">
                                                 {isEditing ? (
                                                     <div className="flex space-x-2">
                                                         <button
                                                             onClick={() => handleSave(cert._id)}
-                                                            className="text-white bg-green-500 hover:bg-green-600 p-2 rounded-lg w-10 h-10 flex items-center justify-center transition transform hover:scale-105 shadow-md cursor-pointer" 
+                                                            className="text-white bg-green-600 hover:bg-green-700 p-2 rounded-full w-9 h-9 flex items-center justify-center transition transform hover:scale-110 shadow-md cursor-pointer" 
                                                             title="Save"
                                                             aria-label="Save changes"
                                                         >
@@ -634,7 +635,7 @@ const CertificateTable: React.FC<CertificateTableProps> = ({ refreshKey, onRefre
                                                         </button>
                                                         <button
                                                             onClick={() => setEditingId(null)}
-                                                            className="text-white bg-gray-500 hover:bg-gray-600 p-2 rounded-lg w-10 h-10 flex items-center justify-center transition transform hover:scale-105 shadow-md cursor-pointer" 
+                                                            className="text-white bg-gray-500 hover:bg-gray-600 p-2 rounded-full w-9 h-9 flex items-center justify-center transition transform hover:scale-110 shadow-md cursor-pointer" 
                                                             title="Cancel"
                                                             aria-label="Cancel editing"
                                                         >
@@ -645,7 +646,7 @@ const CertificateTable: React.FC<CertificateTableProps> = ({ refreshKey, onRefre
                                                     <div className="flex space-x-2">
                                                         <button
                                                             onClick={() => handleEdit(cert)}
-                                                            className="text-indigo-600 hover:text-white bg-indigo-100 hover:bg-indigo-600 p-2 rounded-lg w-10 h-10 flex items-center justify-center transition transform hover:scale-105 cursor-pointer" 
+                                                            className="text-slate-700 hover:text-white bg-slate-100 hover:bg-slate-700 p-2 rounded-full w-9 h-9 flex items-center justify-center transition transform hover:scale-110 cursor-pointer" 
                                                             title="Edit"
                                                             aria-label="Edit certificate"
                                                         >
@@ -653,7 +654,7 @@ const CertificateTable: React.FC<CertificateTableProps> = ({ refreshKey, onRefre
                                                         </button>
                                                         <button
                                                             onClick={() => handleDelete(cert._id)}
-                                                            className="text-red-600 hover:text-white bg-red-100 hover:bg-red-600 p-2 rounded-lg w-10 h-10 flex items-center justify-center transition transform hover:scale-105 cursor-pointer" 
+                                                            className="text-red-600 hover:text-white bg-red-100 hover:bg-red-600 p-2 rounded-full w-9 h-9 flex items-center justify-center transition transform hover:scale-110 cursor-pointer" 
                                                             title="Delete"
                                                             aria-label="Delete certificate"
                                                         >
