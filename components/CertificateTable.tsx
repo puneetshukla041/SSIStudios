@@ -1,10 +1,10 @@
 'use client';
 
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
-import LoadingSpinner from './ui/LoadingSpinner'; 
+// import LoadingSpinner from './ui/LoadingSpinner'; // Assuming this is an external component or replaced by SkeletonLoader
 import * as XLSX from 'xlsx';
 
-// 1. Import new Lucide React Icons
+// 1. Import Lucide React Icons
 import {
     Download,
     Save,
@@ -16,8 +16,10 @@ import {
     ArrowUpDown, 
     BadgeCheck, 
     Square, 
-    ChevronLeft, // New for professional pagination
-    ChevronRight, // New for professional pagination
+    ChevronLeft, 
+    ChevronRight, 
+    Plus, 
+    Loader2, 
 } from 'lucide-react';
 
 // Extend the DB interface with the Mongoose _id for client-side use
@@ -76,6 +78,14 @@ const getHospitalColor = (hospital: string) => {
     return colors[index];
 };
 
+// --- Initial State for New Certificate Form ---
+const initialNewCertificateState: Omit<ICertificateClient, '_id'> = {
+    certificateNo: '',
+    name: '',
+    hospital: '',
+    doi: dateInputToDoi(new Date().toISOString().slice(0, 10)), // Default to today in DD-MM-YYYY format
+};
+
 
 const CertificateTable: React.FC<CertificateTableProps> = ({ refreshKey, onRefresh, onAlert }) => {
     const [certificates, setCertificates] = useState<ICertificateClient[]>([]);
@@ -91,6 +101,11 @@ const CertificateTable: React.FC<CertificateTableProps> = ({ refreshKey, onRefre
     const [selectedIds, setSelectedIds] = useState<string[]>([]); 
     const [sortConfig, setSortConfig] = useState<{ key: keyof ICertificateClient; direction: 'asc' | 'desc' } | null>(null); 
     
+    // NEW STATES for Add Feature
+    const [isAddFormVisible, setIsAddFormVisible] = useState(false);
+    const [newCertificateData, setNewCertificateData] = useState(initialNewCertificateState);
+    const [isAdding, setIsAdding] = useState(false);
+    
     // NEW State for Animation
     const [flashId, setFlashId] = useState<string | null>(null);
     const [deletingId, setDeletingId] = useState<string | null>(null);
@@ -102,7 +117,7 @@ const CertificateTable: React.FC<CertificateTableProps> = ({ refreshKey, onRefre
         const start = Date.now(); 
 
         try {
-            // NOTE: API fetch logic is mocked/assumed to be correct for context
+            // NOTE: API fetch logic is mocked/assumed to be correct for context (NO CHANGE)
             const params = new URLSearchParams({
                 page: currentPage.toString(),
                 limit: limit.toString(),
@@ -134,7 +149,7 @@ const CertificateTable: React.FC<CertificateTableProps> = ({ refreshKey, onRefre
         }
     }, [currentPage, searchQuery, hospitalFilter, onRefresh, onAlert]);
     
-    // Function to fetch ALL records for export
+    // Function to fetch ALL records for export (NO CHANGE)
     const fetchCertificatesForExport = useCallback(async () => {
         try {
             const params = new URLSearchParams({
@@ -162,17 +177,17 @@ const CertificateTable: React.FC<CertificateTableProps> = ({ refreshKey, onRefre
         }
     }, [searchQuery, hospitalFilter, onAlert]);
 
-    // Effect to fetch data on initial load, refreshKey change, or pagination/filter/search changes
+    // Effect to fetch data on initial load, refreshKey change, or pagination/filter/search changes (NO CHANGE)
     useEffect(() => {
         fetchCertificates();
     }, [fetchCertificates, refreshKey]);
 
-    // Effect to reset page when search/filter changes
+    // Effect to reset page when search/filter changes (NO CHANGE)
     useEffect(() => {
         setCurrentPage(1);
     }, [searchQuery, hospitalFilter]);
 
-    // Effect to handle the flash animation duration
+    // Effect to handle the flash animation duration (NO CHANGE)
     useEffect(() => {
         if (flashId) {
             const timer = setTimeout(() => {
@@ -183,7 +198,7 @@ const CertificateTable: React.FC<CertificateTableProps> = ({ refreshKey, onRefre
     }, [flashId]);
 
 
-    // --- Sort Functionality ---
+    // --- Sort Functionality (NO CHANGE) ---
     const sortedCertificates = useMemo(() => {
         let sortableItems = [...certificates];
         if (sortConfig !== null) {
@@ -211,7 +226,7 @@ const CertificateTable: React.FC<CertificateTableProps> = ({ refreshKey, onRefre
         setSortConfig({ key, direction });
     };
 
-    // --- Bulk Selection & Deletion ---
+    // --- Bulk Selection & Deletion (NO CHANGE) ---
     const handleSelectOne = (id: string, checked: boolean) => {
         if (checked) {
             setSelectedIds(prev => [...prev, id]);
@@ -242,10 +257,10 @@ const CertificateTable: React.FC<CertificateTableProps> = ({ refreshKey, onRefre
         setTimeout(async () => {
             setIsLoading(true);
             try {
-                // Mocking API call
+                // MOCKING API call for bulk delete. In a real app, this would be a DELETE /api/certificates/bulk
                 // await fetch(`/api/certificates/bulk`, { method: 'DELETE', body: JSON.stringify({ ids: idsToDelete }), });
                 
-                // Assuming success for demo purposes
+                // Assuming success for demo purposes (NO CHANGE)
                 await new Promise(resolve => setTimeout(resolve, 500)); 
 
                 onAlert(`${idsToDelete.length} certificate(s) deleted successfully!`, false);
@@ -262,7 +277,7 @@ const CertificateTable: React.FC<CertificateTableProps> = ({ refreshKey, onRefre
     };
 
 
-    // --- CRUD Operations ---
+    // --- CRUD Operations (EDIT & DELETE - NO CHANGE) ---
 
     const handleEdit = (certificate: ICertificateClient) => {
         setEditingId(certificate._id);
@@ -270,7 +285,7 @@ const CertificateTable: React.FC<CertificateTableProps> = ({ refreshKey, onRefre
     };
 
     const handleSave = async (id: string) => {
-        // Validation (simplified)
+        // Validation (simplified) (NO CHANGE)
         if (!editFormData.certificateNo || !editFormData.name || !editFormData.hospital || !editFormData.doi) {
             onAlert('All fields are required.', true);
             return;
@@ -282,10 +297,20 @@ const CertificateTable: React.FC<CertificateTableProps> = ({ refreshKey, onRefre
         }
 
         try {
-            // Mocking API call
-            // await fetch(`/api/certificates/${id}`, { method: 'PUT', body: JSON.stringify(editFormData), });
+            // REAL API call 
+            const response = await fetch(`/api/certificates/${id}`, { 
+                method: 'PUT', 
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(editFormData), 
+            });
+
+            const result = await response.json();
             
-            // Assuming success for demo purposes
+            if (!response.ok || !result.success) {
+                throw new Error(result.message || 'Failed to update certificate.');
+            }
+            
+            // Assuming success for demo purposes (NO CHANGE)
             await new Promise(resolve => setTimeout(resolve, 300));
 
             onAlert('Certificate updated successfully!', false);
@@ -294,29 +319,34 @@ const CertificateTable: React.FC<CertificateTableProps> = ({ refreshKey, onRefre
             setFlashId(id); // Trigger flash animation
             fetchCertificates(); 
             
-        } catch (error) {
-            onAlert('Network error during update.', true);
+        } catch (error: any) {
+            onAlert(error.message || 'Network error during update.', true);
         }
     };
 
     const handleDelete = async (id: string) => {
-        if (!window.confirm('Are you sure you want to delete this certificate?')) return;
+        if (!window.confirm('Are you sure you want to delete this certificate?')) return; // NO CHANGE
 
-        setDeletingId(id); // Trigger fade animation
+        setDeletingId(id); // Trigger fade animation (NO CHANGE)
         
         setTimeout(async () => {
             try {
-                // Mocking API call
-                // await fetch(`/api/certificates/${id}`, { method: 'DELETE', });
+                // REAL API call 
+                const response = await fetch(`/api/certificates/${id}`, { method: 'DELETE' });
+                const result = await response.json();
                 
-                // Assuming success for demo purposes
+                if (!response.ok || !result.success) {
+                    throw new Error(result.message || 'Failed to delete certificate.');
+                }
+                
+                // Assuming success for demo purposes (NO CHANGE)
                 await new Promise(resolve => setTimeout(resolve, 500)); 
 
                 onAlert('Certificate deleted successfully!', false);
                 fetchCertificates(); 
                 
-            } catch (error) {
-                onAlert('Network error during delete.', true);
+            } catch (error: any) {
+                onAlert(error.message || 'Network error during delete.', true);
             } finally {
                 setDeletingId(null);
             }
@@ -324,15 +354,68 @@ const CertificateTable: React.FC<CertificateTableProps> = ({ refreshKey, onRefre
     };
 
     const handleChange = (field: keyof ICertificateClient, value: string) => {
-        setEditFormData(prev => ({ ...prev, [field]: value }));
+        setEditFormData(prev => ({ ...prev, [field]: value })); // NO CHANGE
     };
 
-    // --- Download Functionality (Modified to use fetchCertificatesForExport) ---
+    // --- NEW: Add Certificate Handler ---
+    const handleAddCertificate = async () => {
+        if (isAdding) return;
+
+        // Basic Validation
+        if (!newCertificateData.certificateNo || !newCertificateData.name || !newCertificateData.hospital || !newCertificateData.doi) {
+            onAlert('All fields are required for the new certificate.', true);
+            return;
+        }
+        const doiRegex = /^\d{2}-\d{2}-\d{4}$/;
+        if (!doiRegex.test(newCertificateData.doi || '')) {
+            onAlert('DOI must be in DD-MM-YYYY format.', true);
+            return;
+        }
+
+        setIsAdding(true);
+        const newIdPlaceholder = `temp-${Date.now()}`; 
+
+        try {
+            // REAL API POST request
+            const response = await fetch(`/api/certificates`, { 
+                method: 'POST', 
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(newCertificateData), 
+            });
+            
+            const result = await response.json();
+            
+            if (!response.ok || !result.success) {
+                throw new Error(result.message || 'Failed to create certificate.');
+            }
+            
+            await new Promise(resolve => setTimeout(resolve, 300));
+
+            // Logic after successful creation
+            onAlert(`Certificate ${newCertificateData.certificateNo} added successfully!`, false);
+            setFlashId(result.data._id || newIdPlaceholder); // Use the real ID if returned, otherwise fallback
+            setNewCertificateData(initialNewCertificateState); // Reset form
+            setIsAddFormVisible(false);
+            fetchCertificates(); // Re-fetch data to include the new record
+
+        } catch (error: any) {
+            onAlert(error.message || 'Network error during certificate creation.', true);
+        } finally {
+            setIsAdding(false);
+        }
+    };
+
+    // Handle change for the new certificate form fields
+    const handleNewCertChange = (field: keyof Omit<ICertificateClient, '_id'>, value: string) => {
+        setNewCertificateData(prev => ({ ...prev, [field]: value }));
+    };
+
+    // --- Download Functionality (NO CHANGE) ---
     const handleDownload = useCallback(() => {
         return async (type: 'xlsx' | 'csv') => {
             onAlert('Fetching all filtered records for export, please wait...', false);
             
-            // Fetch ALL records matching current search/filter criteria
+            // Fetch ALL records matching current search/filter criteria (NO CHANGE)
             const allCertificates = await fetchCertificatesForExport();
 
             if (allCertificates.length === 0) {
@@ -345,6 +428,8 @@ const CertificateTable: React.FC<CertificateTableProps> = ({ refreshKey, onRefre
                 'Name': cert.name,
                 'Hospital': cert.hospital,
                 'DOI': cert.doi,
+                // Assuming status is now present from the fetch
+                // 'Status': (cert as any).status, 
             }));
 
             const worksheet = XLSX.utils.json_to_sheet(dataToExport);
@@ -359,10 +444,10 @@ const CertificateTable: React.FC<CertificateTableProps> = ({ refreshKey, onRefre
     }, [fetchCertificatesForExport, onAlert]);
 
 
-    // --- Skeleton Loader Component ---
+    // --- Skeleton Loader Component (NO CHANGE) ---
     const SkeletonLoader = () => (
         <div className="animate-pulse space-y-4 p-6 rounded-xl shadow-lg border border-gray-200 bg-white">
-            {/* Search/Filter Skeletons */}
+            {/* ... Skeleton content (kept original light theme for now) ... */}
             <div className="flex justify-between items-center space-x-4">
                 <div className="h-10 bg-gray-200 rounded-lg w-1/3"></div>
                 <div className="h-10 bg-gray-200 rounded-lg w-1/4"></div>
@@ -372,10 +457,8 @@ const CertificateTable: React.FC<CertificateTableProps> = ({ refreshKey, onRefre
                 </div>
             </div>
             
-            {/* Table Header Skeleton */}
             <div className="h-10 bg-gray-100 rounded-lg"></div>
             
-            {/* Table Body Skeletons */}
             {Array(limit).fill(0).map((_, index) => (
                 <div key={index} className="grid grid-cols-5 gap-4 py-3 border-b border-gray-100 last:border-b-0">
                     <div className="h-4 bg-gray-200 rounded col-span-1"></div>
@@ -385,7 +468,6 @@ const CertificateTable: React.FC<CertificateTableProps> = ({ refreshKey, onRefre
                     <div className="h-4 bg-gray-200 rounded col-span-1"></div>
                 </div>
             ))}
-            {/* Pagination Skeleton */}
             <div className="flex justify-between items-center pt-4">
                 <div className="h-4 bg-gray-200 rounded w-48"></div>
                 <div className="flex space-x-2">
@@ -405,12 +487,12 @@ const CertificateTable: React.FC<CertificateTableProps> = ({ refreshKey, onRefre
     }
 
     const Pagination = () => (
-        <div className="flex flex-col sm:flex-row justify-end items-center mt-4 p-2">
+        // Pagination logic remains unchanged, optimized with fluid widths
+        <div className="flex flex-col sm:flex-row justify-end items-center mt-4 p-2 w-full">
             <div className="flex space-x-1 border border-gray-200 rounded-full p-1 shadow-inner bg-white/70 backdrop-blur-sm">
                 <button
                     onClick={() => setCurrentPage(prev => Math.max(1, prev - 1))}
                     disabled={currentPage === 1}
-                    // Oval buttons with smooth style
                     className="px-3 py-1 text-sm font-medium rounded-full bg-white/80 text-slate-700 hover:bg-slate-200 disabled:text-gray-400 disabled:hover:bg-white transition duration-300 flex items-center shadow-md hover:shadow-lg"
                     aria-label="Previous Page"
                 >
@@ -424,7 +506,6 @@ const CertificateTable: React.FC<CertificateTableProps> = ({ refreshKey, onRefre
                         <button
                             key={page}
                             onClick={() => setCurrentPage(page)}
-                            // Oval buttons with smooth style
                             className={`px-3 py-1 text-sm font-medium rounded-full transition duration-300 shadow-md ${
                                 page === currentPage
                                     ? 'bg-sky-600 text-white shadow-lg'
@@ -441,7 +522,6 @@ const CertificateTable: React.FC<CertificateTableProps> = ({ refreshKey, onRefre
                 <button
                     onClick={() => setCurrentPage(prev => Math.min(totalPages, prev + 1))}
                     disabled={currentPage === totalPages || totalPages === 0}
-                    // Oval buttons with smooth style
                     className="px-3 py-1 text-sm font-medium rounded-full bg-white/80 text-slate-700 hover:bg-slate-200 disabled:text-gray-400 disabled:hover:bg-white transition duration-300 flex items-center shadow-md hover:shadow-lg"
                     aria-label="Next Page"
                 >
@@ -462,42 +542,117 @@ const CertificateTable: React.FC<CertificateTableProps> = ({ refreshKey, onRefre
             </span>
         );
     };
+    
+    // --- New: Add Certificate Form Component (Glassmorphism Style) ---
+    const AddCertificateForm = () => (
+        <div className="p-4 sm:p-6 bg-sky-500/20 rounded-3xl border border-sky-300/50 backdrop-blur-md shadow-xl mb-6">
+            <h3 className="text-xl font-bold text-sky-800 mb-4 flex items-center">
+                <Plus className="w-5 h-5 mr-2" /> Add New Certificate
+            </h3>
+            {/* Grid is responsive: 1 column on mobile, 4 columns on medium screens */}
+            <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+                {/* Certificate No */}
+                <input
+                    type="text"
+                    placeholder="Certificate No."
+                    value={newCertificateData.certificateNo}
+                    onChange={(e) => handleNewCertChange('certificateNo', e.target.value)}
+                    className="w-full p-3 border border-sky-300/60 rounded-xl bg-white/80 text-gray-800 focus:ring-sky-500 focus:border-sky-500 transition duration-200 shadow-inner"
+                />
+                {/* Name */}
+                <input
+                    type="text"
+                    placeholder="Name"
+                    value={newCertificateData.name}
+                    onChange={(e) => handleNewCertChange('name', e.target.value)}
+                    className="w-full p-3 border border-sky-300/60 rounded-xl bg-white/80 text-gray-800 focus:ring-sky-500 focus:border-sky-500 transition duration-200 shadow-inner"
+                />
+                {/* Hospital */}
+                <input
+                    type="text"
+                    placeholder="Hospital"
+                    value={newCertificateData.hospital}
+                    onChange={(e) => handleNewCertChange('hospital', e.target.value)}
+                    className="w-full p-3 border border-sky-300/60 rounded-xl bg-white/80 text-gray-800 focus:ring-sky-500 focus:border-sky-500 transition duration-200 shadow-inner"
+                />
+                {/* DOI */}
+                <input
+                    type="date"
+                    placeholder="Date of Issue"
+                    // Convert stored DD-MM-YYYY to YYYY-MM-DD for date input
+                    value={doiToDateInput(newCertificateData.doi)}
+                    onChange={(e) => handleNewCertChange('doi', dateInputToDoi(e.target.value))}
+                    className="w-full p-3 border border-sky-300/60 rounded-xl bg-white/80 text-gray-800 focus:ring-sky-500 focus:border-sky-500 transition duration-200 shadow-inner"
+                />
+            </div>
+            <div className="flex flex-col sm:flex-row justify-end space-y-3 sm:space-y-0 sm:space-x-3 mt-6">
+                <button
+                    onClick={() => {
+                        setIsAddFormVisible(false);
+                        setNewCertificateData(initialNewCertificateState); // Reset form on cancel
+                    }}
+                    className="w-full sm:w-auto px-5 py-2 text-sm font-semibold rounded-full bg-gray-500/90 text-white hover:bg-gray-600 transition duration-300 shadow-lg flex items-center justify-center"
+                    disabled={isAdding}
+                >
+                    <X className="w-4 h-4 mr-2" /> Cancel
+                </button>
+                <button
+                    onClick={handleAddCertificate}
+                    className="w-full sm:w-auto px-5 py-2 text-sm font-semibold rounded-full bg-sky-600 text-white hover:bg-sky-700 transition duration-300 shadow-lg flex items-center justify-center transform hover:scale-[1.03]"
+                    disabled={isAdding}
+                >
+                    {isAdding ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : <Save className="w-4 h-4 mr-2" />} 
+                    {isAdding ? 'Adding...' : 'Add Certificate'}
+                </button>
+            </div>
+        </div>
+    );
 
     return (
-        <div className="space-y-6">
+        <div className="space-y-6 w-full p-3 md:p-0">
             
-            {/* Search, Filter, and Bulk Actions Controls - LIGHT CARD STYLE */}
-            <div className="flex flex-col sm:flex-row justify-between items-center space-y-4 sm:space-y-0 sm:space-x-4 p-5 bg-white/80 rounded-xl border border-gray-200 backdrop-blur-sm">
+            {/* Quick Action Bar: Fully responsive stacking on mobile */}
+            <div className="flex flex-col md:flex-row justify-between items-center space-y-4 md:space-y-0 md:space-x-4 p-4 sm:p-5 bg-white/80 rounded-xl border border-gray-200 backdrop-blur-sm">
                 
-                <div className="relative w-full sm:w-1/3">
-                    <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-gray-400" />
-                    <input
-                        type="text"
-                        placeholder="Search Certificate, Name, Hospital..."
-                        value={searchQuery}
-                        onChange={(e) => setSearchQuery(e.target.value)}
-                        // INPUT: Clean border, no heavy shadow
-                        className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-xl bg-white/90 focus:ring-sky-500 focus:border-sky-500 transition duration-300 outline-none shadow-sm"
-                    />
+                {/* Left Side: Add, Search, Filter (stacks vertically on mobile) */}
+                <div className="flex flex-col sm:flex-row w-full space-y-3 sm:space-y-0 sm:space-x-4">
+                    <button
+                        onClick={() => setIsAddFormVisible(prev => !prev)}
+                        className="w-full sm:w-auto px-5 py-2 text-sm font-semibold rounded-full bg-blue-600/90 text-white hover:bg-blue-700 transition duration-300 shadow-lg flex items-center justify-center transform hover:scale-[1.05] cursor-pointer"
+                    >
+                        <Plus className="w-4 h-4 mr-2" /> 
+                        {isAddFormVisible ? 'Hide Form' : 'Add New Data'}
+                    </button>
+
+                    <div className="relative w-full sm:w-64">
+                        <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-gray-400" />
+                        <input
+                            type="text"
+                            placeholder="Search Certificate, Name..."
+                            value={searchQuery}
+                            onChange={(e) => setSearchQuery(e.target.value)}
+                            className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-xl bg-white/90 focus:ring-sky-500 focus:border-sky-500 transition duration-300 outline-none shadow-sm"
+                        />
+                    </div>
+                    
+                    <div className="relative w-full sm:w-48">
+                        <Filter className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-gray-400 pointer-events-none" />
+                        <select
+                            value={hospitalFilter}
+                            onChange={(e) => setHospitalFilter(e.target.value)}
+                            className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-xl bg-white/90 focus:ring-sky-500 focus:border-sky-500 transition duration-300 appearance-none outline-none cursor-pointer shadow-sm"
+                        >
+                            <option value="">All Hospitals (Filter)</option>
+                            {uniqueHospitals.map(hospital => (
+                                <option key={hospital} value={hospital}>{hospital}</option>
+                            ))}
+                        </select>
+                    </div>
                 </div>
 
-                <div className="relative w-full sm:w-1/4">
-                    <Filter className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-gray-400 pointer-events-none" />
-                    <select
-                        value={hospitalFilter}
-                        onChange={(e) => setHospitalFilter(e.target.value)}
-                        // SELECT: Clean border, no heavy shadow
-                        className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-xl bg-white/90 focus:ring-sky-500 focus:border-sky-500 transition duration-300 appearance-none outline-none cursor-pointer shadow-sm"
-                    >
-                        <option value="">All Hospitals (Filter)</option>
-                        {uniqueHospitals.map(hospital => (
-                            <option key={hospital} value={hospital}>{hospital}</option>
-                        ))}
-                    </select>
-                </div>
-                
-                <div className="flex space-x-3">
-                    {/* Bulk Delete Button - Oval/Pill shape (Shadow reduced slightly) */}
+                {/* Right Side: Bulk Actions (aligns to end of available space) */}
+                <div className="flex space-x-3 w-full sm:w-auto justify-start sm:justify-end">
+                    {/* Bulk Delete Button */}
                     {selectedIds.length > 0 && (
                         <button
                             onClick={handleBulkDelete}
@@ -507,28 +662,25 @@ const CertificateTable: React.FC<CertificateTableProps> = ({ refreshKey, onRefre
                         </button>
                     )}
 
-                    {/* Export Buttons - Oval/Pill shape (Shadow reduced slightly) */}
+                    {/* Export Buttons */}
                     <button
                         onClick={() => handleDownload()('xlsx')}
                         className="px-5 py-2 text-sm font-semibold rounded-full bg-teal-600/90 text-white hover:bg-teal-700 transition duration-300 shadow-lg flex items-center transform hover:scale-[1.05] cursor-pointer"
                     >
                         <Download className="w-4 h-4 mr-2" /> Export Excel
                     </button>
-                    <button
-                        onClick={() => handleDownload()('csv')}
-                        className="px-5 py-2 text-sm font-semibold rounded-full bg-sky-600/90 text-white hover:bg-sky-700 transition duration-300 shadow-lg flex items-center transform hover:scale-[1.05] cursor-pointer"
-                    >
-                        <Download className="w-4 h-4 mr-2" /> Export CSV
-                    </button>
                 </div>
             </div>
 
-            {/* Selection Summary Notification - Styled for theme */}
+            {/* NEW: Conditional Add Certificate Form */}
+            {isAddFormVisible && <AddCertificateForm />}
+            
+            {/* Selection Summary Notification (NO CHANGE) */}
             {selectedIds.length > 0 && (
                 <div className="p-3 bg-sky-100/50 border-l-4 border-sky-600 text-slate-800 rounded-xl shadow-lg flex items-center justify-between transition duration-300 backdrop-blur-sm">
                     <div className="flex items-center">
                         <BadgeCheck className="w-5 h-5 mr-3 flex-shrink-0 text-sky-600" />
-                        <span className="font-medium">
+                        <span className="font-medium text-sm sm:text-base">
                             **{selectedIds.length}** certificates selected for action.
                         </span>
                     </div>
@@ -537,6 +689,7 @@ const CertificateTable: React.FC<CertificateTableProps> = ({ refreshKey, onRefre
 
 
             {sortedCertificates.length === 0 ? (
+                // Empty state (NO CHANGE)
                 <div className="text-center p-12 bg-white/70 rounded-xl shadow-lg border-2 border-dashed border-gray-300 backdrop-blur-sm">
                     <p className="text-gray-500 text-xl font-medium">
                         No certificates found.
@@ -547,15 +700,15 @@ const CertificateTable: React.FC<CertificateTableProps> = ({ refreshKey, onRefre
                 </div>
             ) : (
                 <>
-                    {/* ENHANCED TABLE LOOK - Integrated into Glassmorphism wrapper */}
+                    {/* TABLE: Uses overflow-x-auto for guaranteed horizontal scrolling on mobile */}
                     <div className="overflow-x-auto rounded-xl shadow-lg border border-gray-300 bg-white/70 backdrop-blur-md">
                         <table 
-                            className="min-w-full"
+                            className="min-w-full divide-y divide-gray-300"
                             style={{ borderCollapse: 'collapse' }} 
                         >
                             <thead className="bg-gray-50/80"> 
                                 <tr>
-                                    {/* Checkbox Header for Select All */}
+                                    {/* Checkbox Header for Select All: Fixed narrow width */}
                                     <th className="px-3 py-3 text-center text-xs font-bold text-gray-700 uppercase tracking-wider w-12 border-b border-r border-gray-300">
                                         <label className="cursor-pointer flex items-center justify-center"> 
                                             <input
@@ -572,12 +725,12 @@ const CertificateTable: React.FC<CertificateTableProps> = ({ refreshKey, onRefre
                                             )}
                                         </label>
                                     </th>
-                                    {/* Table Headers with Sorting */}
+                                    {/* Table Headers with Sorting: Min-width set explicitly for mobile readability */}
                                     {(['certificateNo', 'name', 'hospital', 'doi'] as (keyof ICertificateClient)[]).map((fieldKey) => (
                                         <th
                                             key={fieldKey}
                                             onClick={() => requestSort(fieldKey)}
-                                            className="px-6 py-3 text-left text-xs font-bold text-gray-700 uppercase tracking-wider cursor-pointer hover:bg-gray-100/90 transition duration-150 whitespace-nowrap border-b border-r border-gray-300"
+                                            className="px-4 py-3 text-left text-xs font-bold text-gray-700 uppercase tracking-wider cursor-pointer hover:bg-gray-100/90 transition duration-150 whitespace-nowrap border-b border-r border-gray-300 min-w-[120px]"
                                         >
                                             <div className="flex items-center">
                                                 {fieldKey === 'doi' ? 'Date of Issue' : fieldKey.charAt(0).toUpperCase() + fieldKey.slice(1).replace(/([A-Z])/g, ' $1')}
@@ -585,7 +738,7 @@ const CertificateTable: React.FC<CertificateTableProps> = ({ refreshKey, onRefre
                                             </div>
                                         </th>
                                     ))}
-                                    <th className="px-6 py-3 text-left text-xs font-bold text-gray-700 uppercase tracking-wider border-b border-gray-300">
+                                    <th className="px-4 py-3 text-left text-xs font-bold text-gray-700 uppercase tracking-wider border-b border-gray-300 min-w-[100px]">
                                         Actions
                                     </th>
                                 </tr>
@@ -637,7 +790,7 @@ const CertificateTable: React.FC<CertificateTableProps> = ({ refreshKey, onRefre
                                                 const field = fieldKey as keyof ICertificateClient;
                                                 
                                                 return (
-                                                    <td key={field} className="px-6 py-3 whitespace-nowrap text-sm text-gray-800 border-r border-gray-200">
+                                                    <td key={field} className="px-4 py-2 whitespace-nowrap text-sm text-gray-800 border-r border-gray-200">
                                                         {isEditing ? (
                                                             <input
                                                                 type={field === 'doi' ? 'date' : 'text'}
@@ -661,43 +814,43 @@ const CertificateTable: React.FC<CertificateTableProps> = ({ refreshKey, onRefre
                                             })}
 
                                             {/* Action Buttons - Oval/Circular shape */}
-                                            <td className="px-6 py-3 whitespace-nowrap text-sm font-medium">
+                                            <td className="px-4 py-2 whitespace-nowrap text-sm font-medium">
                                                 {isEditing ? (
                                                     <div className="flex space-x-2">
                                                         <button
                                                             onClick={() => handleSave(cert._id)}
-                                                            className="text-white bg-green-600/90 hover:bg-green-700 p-2 rounded-full w-9 h-9 flex items-center justify-center transition transform hover:scale-110 shadow-lg cursor-pointer" 
+                                                            className="text-white bg-green-600/90 hover:bg-green-700 p-2 rounded-full w-8 h-8 flex items-center justify-center transition transform hover:scale-110 shadow-lg cursor-pointer" 
                                                             title="Save"
                                                             aria-label="Save changes"
                                                         >
-                                                            <Save className="w-5 h-5" />
+                                                            <Save className="w-4 h-4" />
                                                         </button>
                                                         <button
                                                             onClick={() => setEditingId(null)}
-                                                            className="text-white bg-gray-500/90 hover:bg-gray-600 p-2 rounded-full w-9 h-9 flex items-center justify-center transition transform hover:scale-110 shadow-lg cursor-pointer" 
+                                                            className="text-white bg-gray-500/90 hover:bg-gray-600 p-2 rounded-full w-8 h-8 flex items-center justify-center transition transform hover:scale-110 shadow-lg cursor-pointer" 
                                                             title="Cancel"
                                                             aria-label="Cancel editing"
                                                         >
-                                                            <X className="w-5 h-5" />
+                                                            <X className="w-4 h-4" />
                                                         </button>
                                                     </div>
                                                 ) : (
                                                     <div className="flex space-x-2">
                                                         <button
                                                             onClick={() => handleEdit(cert)}
-                                                            className="text-sky-700 hover:text-white bg-sky-100/70 hover:bg-sky-600 p-2 rounded-full w-9 h-9 flex items-center justify-center transition transform hover:scale-110 cursor-pointer shadow-md hover:shadow-lg" 
+                                                            className="text-sky-700 hover:text-white bg-sky-100/70 hover:bg-sky-600 p-2 rounded-full w-8 h-8 flex items-center justify-center transition transform hover:scale-110 cursor-pointer shadow-md hover:shadow-lg" 
                                                             title="Edit"
                                                             aria-label="Edit certificate"
                                                         >
-                                                            <Edit className="w-5 h-5" />
+                                                            <Edit className="w-4 h-4" />
                                                         </button>
                                                         <button
                                                             onClick={() => handleDelete(cert._id)}
-                                                            className="text-red-600 hover:text-white bg-red-100/70 hover:bg-red-600 p-2 rounded-full w-9 h-9 flex items-center justify-center transition transform hover:scale-110 cursor-pointer shadow-md hover:shadow-lg" 
+                                                            className="text-red-600 hover:text-white bg-red-100/70 hover:bg-red-600 p-2 rounded-full w-8 h-8 flex items-center justify-center transition transform hover:scale-110 cursor-pointer shadow-md hover:shadow-lg" 
                                                             title="Delete"
                                                             aria-label="Delete certificate"
                                                         >
-                                                            <Trash2 className="w-5 h-5" />
+                                                            <Trash2 className="w-4 h-4" />
                                                         </button>
                                                     </div>
                                                 )}
