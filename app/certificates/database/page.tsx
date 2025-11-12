@@ -11,7 +11,6 @@ const CertificateDatabasePage: React.FC = () => {
     const [certificateData, setCertificateData] = useState<ICertificateClient[]>([]);
     const [isRefreshing, setIsRefreshing] = useState(false);
 
-    // Clear alerts automatically
     const clearAlert = useCallback(() => {
         setTimeout(() => setAlert(null), 4000);
     }, []);
@@ -24,17 +23,15 @@ const CertificateDatabasePage: React.FC = () => {
         [clearAlert]
     );
 
-    // Effect to manage the 'isRefreshing' state (using a heuristic timeout)
     useEffect(() => {
         if (isRefreshing) {
             const timeout = setTimeout(() => {
                 setIsRefreshing(false);
-            }, 1000); 
+            }, 1000);
             return () => clearTimeout(timeout);
         }
     }, [isRefreshing]);
 
-    // Upload handlers
     const handleUploadSuccess = (message: string) => {
         handleAlert(message, false);
         setRefreshKey((prev) => prev + 1);
@@ -51,55 +48,64 @@ const CertificateDatabasePage: React.FC = () => {
         handleAlert('Refreshing table data...', false);
     };
 
-    const handleTableDataUpdate = useCallback((data: ICertificateClient[]) => {
-        setCertificateData(data);
-        setIsRefreshing(false);
-        if (alert?.message === 'Refreshing table data...') {
-             handleAlert('Table data synchronized.', false);
-        }
-    }, [alert, handleAlert]);
+    const handleTableDataUpdate = useCallback(
+        (data: ICertificateClient[]) => {
+            setCertificateData(data);
+            setIsRefreshing(false);
+            if (alert?.message === 'Refreshing table data...') {
+                handleAlert('Table data synchronized.', false);
+            }
+        },
+        [alert, handleAlert]
+    );
 
     return (
-        // Reduced horizontal padding on container (px-4 sm:px-8 to px-3 sm:px-6)
-        <div className="min-h-screen bg-gray-50 p-3 py-5 px-3 sm:px-6"> 
-            {/* Added max-w-screen-2xl (1536px) to limit the width but make it wider than 7xl (1280px) */}
-            <main className="max-w-screen-2xl mx-auto space-y-3"> 
+        <div className="min-h-screen bg-gray-50 px-4 sm:px-6 py-3">
+            {/* ✅ Added narrower width for laptop screens */}
+            <main className="mx-auto space-y-3 w-full max-w-[1200px] lg:max-w-[1100px] xl:max-w-[1280px] 2xl:max-w-screen-2xl">
                 
-                {/* 🚀 COMBINED HEADER ROW: Total Records and Controls 🚀 */}
-                <div className="flex items-center justify-between py-2">
+                {/* Header Row */}
+                <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 py-2">
                     
-                    {/* 1. Total Records (Left side) */}
+                    {/* Total Records */}
                     <div className="flex-shrink-0">
-                        <p className="text-base font-semibold text-gray-700"> 
-                            Total Records: <strong className="text-indigo-600">{certificateData.length}</strong>
+                        <p className="text-sm sm:text-base font-semibold text-gray-700 text-center sm:text-left">
+                            Total Records:{' '}
+                            <strong className="text-indigo-600">{certificateData.length}</strong>
                         </p>
                     </div>
 
-                    {/* 2. Main Controls (Right side group) */}
-                    <div className="flex space-x-3 items-center">
+                    {/* Controls */}
+                    <div className="flex flex-wrap justify-center sm:justify-end items-center gap-2 sm:gap-3">
                         
-                        {/* Upload Component */}
-                        <UploadButton
-                            onUploadSuccess={handleUploadSuccess}
-                            onUploadError={handleUploadError}
-                        />
-                        
-                        {/* Refresh Button with Loading Spinner Animation */}
-                        <button
-                            onClick={handleRefresh}
-                            disabled={isRefreshing}
-                            className={`
-                                flex items-center justify-center px-3 py-1.5 text-sm font-semibold rounded-lg shadow-md 
-                                transition-all duration-300 bg-indigo-600 hover:bg-indigo-700 text-white 
-                                focus:outline-none focus:ring-4 focus:ring-indigo-500 focus:ring-opacity-50 
-                                disabled:bg-indigo-400 disabled:cursor-wait
-                            `}
-                        >
-                            <FiRefreshCw 
-                                className={`mr-2 h-4 w-4 ${isRefreshing ? 'animate-spin' : ''}`} 
+                        {/* Left group: Upload + Sync */}
+                        <div className="flex flex-wrap justify-center sm:justify-start items-center gap-2">
+                            <UploadButton
+                                onUploadSuccess={handleUploadSuccess}
+                                onUploadError={handleUploadError}
                             />
-                            {isRefreshing ? 'Syncing...' : 'Sync Data'}
-                        </button>
+
+                            <button
+                                onClick={handleRefresh}
+                                disabled={isRefreshing}
+                                className={`
+                                    flex items-center justify-center px-3 sm:px-4 py-1.5 sm:py-2 text-sm sm:text-base font-semibold rounded-lg shadow-md 
+                                    transition-all duration-300 bg-indigo-600 hover:bg-indigo-700 text-white 
+                                    focus:outline-none focus:ring-4 focus:ring-indigo-500 focus:ring-opacity-50 
+                                    disabled:bg-indigo-400 disabled:cursor-wait
+                                `}
+                            >
+                                <FiRefreshCw
+                                    className={`mr-2 h-4 w-4 ${isRefreshing ? 'animate-spin' : ''}`}
+                                />
+                                {isRefreshing ? 'Syncing...' : 'Sync Data'}
+                            </button>
+                        </div>
+
+                        {/* Right group: Export Excel */}
+                        <div className="flex justify-center sm:justify-end">
+                            {/* Keep your existing Export Excel button here */}
+                        </div>
                     </div>
                 </div>
 
@@ -119,8 +125,8 @@ const CertificateDatabasePage: React.FC = () => {
                     </div>
                 )}
 
-                {/* Certificate Table */}
-                <div className="bg-white rounded-xl shadow-xl border border-gray-100 p-4"> 
+                {/* Table Section */}
+                <div className="bg-white rounded-xl shadow-xl border border-gray-100 p-3 sm:p-4 overflow-x-auto">
                     <CertificateTable
                         refreshKey={refreshKey}
                         onRefresh={handleTableDataUpdate}

@@ -1,7 +1,6 @@
 'use client';
 
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
-// import LoadingSpinner from './ui/LoadingSpinner'; // Assuming this is an external component or replaced by SkeletonLoader
 import * as XLSX from 'xlsx';
 
 // 1. Import Lucide React Icons
@@ -20,7 +19,14 @@ import {
     ChevronRight, 
     Plus, 
     Loader2, 
+    FileText, // Import FileText for the PDF button
 } from 'lucide-react';
+
+// Required for PDF generation on client-side
+// Import 'pdf-lib' and a fontkit shim (assuming it's available globally or in a local file)
+// Since this is a React component, we must assume pdf-lib and fontkit are available in the project environment.
+import fontkit from "@pdf-lib/fontkit";
+import { PDFDocument, rgb } from "pdf-lib";
 
 // Extend the DB interface with the Mongoose _id for client-side use
 export interface ICertificateClient {
@@ -109,6 +115,9 @@ const CertificateTable: React.FC<CertificateTableProps> = ({ refreshKey, onRefre
     // NEW State for Animation
     const [flashId, setFlashId] = useState<string | null>(null);
     const [deletingId, setDeletingId] = useState<string | null>(null);
+
+    // NEW State for PDF Generation
+    const [generatingPdfId, setGeneratingPdfId] = useState<string | null>(null); // Track which cert is generating PDF
 
     const limit = 10; // Fixed items per page
 
@@ -410,6 +419,182 @@ const CertificateTable: React.FC<CertificateTableProps> = ({ refreshKey, onRefre
         setNewCertificateData(prev => ({ ...prev, [field]: value }));
     };
 
+    // --- NEW: PDF Generation Handler ---
+
+    const generateCertificatePDF = async (
+        certData: ICertificateClient, 
+        onAlert: (message: string, isError: boolean) => void
+    ) => {
+        // 1. Prepare Data
+        const fullName = certData.name;
+        const hospitalName = certData.hospital;
+        const certificateNo = certData.certificateNo;
+        // Convert DD-MM-YYYY to DD/MM/YYYY for the PDF template logic
+        const doi = certData.doi.replace(/-/g, '/'); 
+
+        // Hardcoded static text from your Editor component's state defaults:
+        const programName = "Robotics Training Program";
+        const operationText = "to operate the SSI Mantra Surgical Robotic System";
+        const providerLineText = "provided by Sudhir Srivastava Innovations Pvt. Ltd";
+        const staticLineText = "has successfully completed the";
+        // The placeholder values for the 4 data points are certData.certificateNo, certData.name, certData.hospital, certData.doi
+
+        if (!fullName || !certificateNo) {
+            onAlert('Missing essential data (Name or Certificate No) for PDF generation.', true);
+            return;
+        }
+
+        setGeneratingPdfId(certData._id); // Start loading state
+
+        try {
+            // 2. Fetch Resources
+            const [existingPdfBytes, soraBytes, soraSemiBoldBytes] = await Promise.all([
+                fetch("/certificates/certificate2.pdf").then((res) => {
+                    if (!res.ok) throw new Error('Failed to fetch certificate template.');
+                    return res.arrayBuffer();
+                }),
+                fetch("/fonts/Sora-Regular.ttf").then((res) => {
+                    if (!res.ok) throw new Error('Failed to fetch Sora-Regular font.');
+                    return res.arrayBuffer();
+                }),
+                fetch("/fonts/Sora-SemiBold.ttf").then((res) => {
+                    if (!res.ok) throw new Error('Failed to fetch Sora-SemiBold font.');
+                    return res.arrayBuffer();
+                }),
+            ]);
+
+            // 3. Setup PDF
+            const pdfDoc = await PDFDocument.load(existingPdfBytes);
+            pdfDoc.registerFontkit(fontkit);
+
+            const soraFont = await pdfDoc.embedFont(soraBytes);
+            const soraSemiBoldFont = await pdfDoc.embedFont(soraSemiBoldBytes);
+
+            const pages = pdfDoc.getPages();
+            const firstPage = pages[0];
+            const pageWidth = firstPage.getWidth();
+            const pageHeight = firstPage.getHeight();
+
+            // 4. Drawing Logic (matching your Editor component's positions)
+            let y = pageHeight - 180;
+            const x = 55;
+            const margin = 40;
+            const fontSizeSmall = 7;
+            const fontSizeMedium = 8;
+            const fontSizeLarge = 18;
+            const colorGray = rgb(0.5, 0.5, 0.5);
+            const colorBlack = rgb(0, 0, 0);
+
+            // Full Name (y: 419)
+            firstPage.drawText(fullName, {
+                x,
+                y,
+                size: fontSizeLarge,
+                font: soraFont,
+                color: colorBlack,
+            });
+
+            // Hospital Name (y: 399)
+            firstPage.drawText(hospitalName, {
+                x,
+                y: y - 20, 
+                size: fontSizeMedium,
+                font: soraSemiBoldFont,
+                color: colorBlack,
+            });
+            
+            // Static Line: "has successfully completed the" (y: 355)
+            firstPage.drawText(staticLineText, {
+                x,
+                y: y - 64, 
+                size: fontSizeSmall,
+                font: soraFont, 
+                color: colorGray, 
+                maxWidth: 350,
+                lineHeight: 10,
+            });
+
+            // Program Name (y: 343)
+            firstPage.drawText(programName, {
+                x,
+                y: y - 76, 
+                size: fontSizeSmall,
+                font: soraSemiBoldFont,
+                color: colorBlack,
+            });
+            
+            // Provider Line: "provided by Sudhir..." (y: 331)
+            firstPage.drawText(providerLineText, {
+                x,
+                y: y - 88, 
+                size: fontSizeSmall,
+                font: soraFont, 
+                color: colorGray, 
+                maxWidth: 350,
+                lineHeight: 10,
+            });
+
+            // Operation Text (y: 319)
+            firstPage.drawText(operationText, {
+                x,
+                y: y - 100,
+                size: fontSizeSmall,
+                font: soraSemiBoldFont,
+                color: colorBlack,
+            });
+            
+            // Date of Issue - DOI (Bottom Left - needs centering adjustment)
+            const doiTextWidth = soraSemiBoldFont.widthOfTextAtSize(doi, fontSizeSmall);
+            firstPage.drawText(doi, {
+                x: Math.max(margin, (pageWidth - doiTextWidth) / 2) - 65,
+                y: margin + 45,
+                size: fontSizeSmall,
+                font: soraSemiBoldFont,
+                color: colorBlack,
+                maxWidth: pageWidth - margin * 2,
+            });
+
+            // Certificate No. (Bottom Right)
+            const certTextWidth = soraSemiBoldFont.widthOfTextAtSize(certificateNo, fontSizeSmall);
+            firstPage.drawText(certificateNo, {
+                x: pageWidth - certTextWidth - margin - 105,
+                y: margin + 45,
+                size: fontSizeSmall,
+                font: soraSemiBoldFont,
+                color: colorBlack,
+            });
+            
+            // 5. Save and Download
+            const pdfBytes = await pdfDoc.save();
+            const blob = new Blob([new Uint8Array(pdfBytes)], { type: "application/pdf" });
+
+            // Trigger Download
+            const url = window.URL.createObjectURL(blob);
+            const link = document.createElement("a");
+            link.href = url;
+            // Clean up file name for safe download
+            const fileName = `${certificateNo.replace(/[^a-zA-Z0-9-]/g, '_')}-${fullName.replace(/[^a-zA-Z0-9-]/g, '_')}.pdf`;
+            link.setAttribute("download", fileName);
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+            window.URL.revokeObjectURL(url);
+            
+            onAlert(`Successfully generated and downloaded PDF: ${fileName}`, false);
+
+        } catch (error) {
+            console.error('PDF Generation Error:', error);
+            onAlert(`Failed to generate PDF. Check console for details.`, true);
+        } finally {
+            setGeneratingPdfId(null); // End loading state
+        }
+    };
+    
+    const handleGeneratePDF = (cert: ICertificateClient) => {
+        if (generatingPdfId === cert._id) return; // Prevent multiple clicks
+        generateCertificatePDF(cert, onAlert);
+    };
+
     // --- Download Functionality (NO CHANGE) ---
     const handleDownload = useCallback(() => {
         return async (type: 'xlsx' | 'csv') => {
@@ -681,7 +866,7 @@ const CertificateTable: React.FC<CertificateTableProps> = ({ refreshKey, onRefre
                     <div className="flex items-center">
                         <BadgeCheck className="w-5 h-5 mr-3 flex-shrink-0 text-sky-600" />
                         <span className="font-medium text-sm sm:text-base">
-                            **{selectedIds.length}** certificates selected for action.
+                            {selectedIds.length} certificates selected for action.
                         </span>
                     </div>
                 </div>
@@ -738,7 +923,7 @@ const CertificateTable: React.FC<CertificateTableProps> = ({ refreshKey, onRefre
                                             </div>
                                         </th>
                                     ))}
-                                    <th className="px-4 py-3 text-left text-xs font-bold text-gray-700 uppercase tracking-wider border-b border-gray-300 min-w-[100px]">
+                                    <th className="px-4 py-3 text-left text-xs font-bold text-gray-700 uppercase tracking-wider border-b border-gray-300 min-w-[180px]">
                                         Actions
                                     </th>
                                 </tr>
@@ -836,6 +1021,24 @@ const CertificateTable: React.FC<CertificateTableProps> = ({ refreshKey, onRefre
                                                     </div>
                                                 ) : (
                                                     <div className="flex space-x-2">
+                                                        {/* NEW: Generate PDF Button */}
+                                                        <button
+                                                            onClick={() => handleGeneratePDF(cert)}
+                                                            disabled={generatingPdfId === cert._id}
+                                                            className={`text-white p-2 rounded-full w-8 h-8 flex items-center justify-center transition transform hover:scale-110 cursor-pointer shadow-md hover:shadow-lg ${
+                                                                generatingPdfId === cert._id ? 'bg-yellow-500/70' : 'bg-purple-600/90 hover:bg-purple-700'
+                                                            }`}
+                                                            title="Generate PDF"
+                                                            aria-label="Generate and download PDF certificate"
+                                                        >
+                                                            {generatingPdfId === cert._id ? (
+                                                                <Loader2 className="w-4 h-4 animate-spin" />
+                                                            ) : (
+                                                                <FileText className="w-4 h-4" />
+                                                            )}
+                                                        </button>
+
+                                                        {/* Edit Button */}
                                                         <button
                                                             onClick={() => handleEdit(cert)}
                                                             className="text-sky-700 hover:text-white bg-sky-100/70 hover:bg-sky-600 p-2 rounded-full w-8 h-8 flex items-center justify-center transition transform hover:scale-110 cursor-pointer shadow-md hover:shadow-lg" 
@@ -844,6 +1047,8 @@ const CertificateTable: React.FC<CertificateTableProps> = ({ refreshKey, onRefre
                                                         >
                                                             <Edit className="w-4 h-4" />
                                                         </button>
+                                                        
+                                                        {/* Delete Button */}
                                                         <button
                                                             onClick={() => handleDelete(cert._id)}
                                                             className="text-red-600 hover:text-white bg-red-100/70 hover:bg-red-600 p-2 rounded-full w-8 h-8 flex items-center justify-center transition transform hover:scale-110 cursor-pointer shadow-md hover:shadow-lg" 
