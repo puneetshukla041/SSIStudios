@@ -9,6 +9,8 @@ const CertificateDatabasePage: React.FC = () => {
     const [refreshKey, setRefreshKey] = useState(0);
     const [alert, setAlert] = useState<{ message: string; isError: boolean } | null>(null);
     const [certificateData, setCertificateData] = useState<ICertificateClient[]>([]);
+    // 💡 NEW STATE: To hold the true total count from the database
+    const [totalRecords, setTotalRecords] = useState(0); 
     const [isRefreshing, setIsRefreshing] = useState(false);
 
     const clearAlert = useCallback(() => {
@@ -48,9 +50,12 @@ const CertificateDatabasePage: React.FC = () => {
         handleAlert('Refreshing table data...', false);
     };
 
+    // 💡 MODIFIED: handleTableDataUpdate must now accept the full FetchResponse payload
+    // to extract the 'total' count.
     const handleTableDataUpdate = useCallback(
-        (data: ICertificateClient[]) => {
+        (data: ICertificateClient[], totalCount: number) => {
             setCertificateData(data);
+            setTotalRecords(totalCount); // 💡 UPDATE totalRecords state
             setIsRefreshing(false);
             if (alert?.message === 'Refreshing table data...') {
                 handleAlert('Table data synchronized.', false);
@@ -61,17 +66,16 @@ const CertificateDatabasePage: React.FC = () => {
 
     return (
         <div className="min-h-screen bg-gray-50 px-4 sm:px-6 py-3">
-            {/* ✅ Added narrower width for laptop screens */}
             <main className="mx-auto space-y-3 w-full max-w-[1200px] lg:max-w-[1100px] xl:max-w-[1280px] 2xl:max-w-screen-2xl">
                 
                 {/* Header Row */}
                 <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 py-2">
                     
-                    {/* Total Records */}
+                    {/* Total Records - 💡 USING totalRecords STATE */}
                     <div className="flex-shrink-0">
                         <p className="text-sm sm:text-base font-semibold text-gray-700 text-center sm:text-left">
                             Total Records:{' '}
-                            <strong className="text-indigo-600">{certificateData.length}</strong>
+                            <strong className="text-indigo-600">{totalRecords}</strong>
                         </p>
                     </div>
 
@@ -125,11 +129,11 @@ const CertificateDatabasePage: React.FC = () => {
                     </div>
                 )}
 
-                {/* Table Section */}
+                {/* Certificate Table */}
                 <div className="bg-white rounded-xl shadow-xl border border-gray-100 p-3 sm:p-4 overflow-x-auto">
                     <CertificateTable
                         refreshKey={refreshKey}
-                        onRefresh={handleTableDataUpdate}
+                        onRefresh={handleTableDataUpdate} // Now expects two arguments
                         onAlert={handleAlert}
                     />
                 </div>

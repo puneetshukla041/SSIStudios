@@ -49,8 +49,9 @@ interface FetchResponse {
 }
 
 interface CertificateTableProps {
-    refreshKey: number; // Used to manually trigger refresh
-    onRefresh: (data: ICertificateClient[]) => void;
+    refreshKey: number;
+    // 💡 CHANGE HERE: Pass data array AND total count
+    onRefresh: (data: ICertificateClient[], totalCount: number) => void; 
     onAlert: (message: string, isError: boolean) => void;
 }
 
@@ -142,13 +143,14 @@ const CertificateTable: React.FC<CertificateTableProps> = ({ refreshKey, onRefre
             const response = await fetch(`/api/certificates?${params.toString()}`);
             const result: FetchResponse & { success: boolean, message?: string } = await response.json();
 
-            if (response.ok && result.success) {
-                setCertificates(result.data);
-                setTotalItems(result.total);
-                setTotalPages(result.totalPages);
-                setUniqueHospitals(result.filters.hospitals);
-                onRefresh(result.data);
-            } else {
+if (response.ok && result.success) {
+        setCertificates(result.data);
+        setTotalItems(result.total);
+        setTotalPages(result.totalPages);
+        setUniqueHospitals(result.filters.hospitals);
+        // 💡 CHANGE HERE: Pass result.data AND result.total
+        onRefresh(result.data, result.total); 
+    } else {
                 onAlert(result.message || 'Failed to fetch certificates.', true);
             }
         } catch (error) {
