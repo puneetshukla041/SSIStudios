@@ -53,6 +53,7 @@
     "react-spring": "^10.0.3",
     "react-tooltip": "^5.29.1",
     "sharp": "^0.34.3",
+    "swr": "^2.3.6",
     "tailwind-merge": "^3.3.1",
     "xlsx": "^0.18.5",
     "zustand": "^5.0.8"
