@@ -1,6 +1,6 @@
 // D:\ssistudios\ssistudios\components\Certificates\utils\helpers.ts
 
-import { ICertificateClient, SortKey, SortConfig, DateFilterOption } from './constants'; // 💡 Import DateFilterOption
+import { ICertificateClient, SortKey, SortConfig } from './constants';
 
 // Helper to convert DD-MM-YYYY to YYYY-MM-DD for date input type
 export const doiToDateInput = (doi: string): string => {
@@ -17,37 +17,6 @@ export const dateInputToDoi = (dateInput: string): string => {
 // Helper to get today's date in DD-MM-YYYY format
 export const getTodayDoi = (): string => {
     return dateInputToDoi(new Date().toISOString().slice(0, 10));
-};
-
-// 💡 NEW HELPER: Calculates the start date (YYYY-MM-DD) for a given date filter option
-export const getDateFilterStart = (filter: DateFilterOption): string | null => {
-    if (filter === 'All Time') {
-        return null;
-    }
-    
-    // Use the start of today for consistent range calculation
-    const today = new Date();
-    today.setHours(0, 0, 0, 0); 
-    
-    let startDate = new Date(today.getTime());
-
-    if (filter === 'Last 7 Days') {
-        // Subtract 6 days to include today (7-day range: today + 6 previous days)
-        startDate.setDate(today.getDate() - 6); 
-    } else if (filter === 'Last 30 Days') {
-        // Subtract 29 days
-        startDate.setDate(today.getDate() - 29);
-    } else if (filter === 'Last 90 Days') {
-        // Subtract 89 days
-        startDate.setDate(today.getDate() - 89);
-    } else if (filter === 'Last 365 Days') {
-        // Subtract 364 days
-        startDate.setDate(today.getDate() - 364);
-    } 
-    // If filter is 'Today', startDate remains 'today'
-
-    // Convert the start date to YYYY-MM-DD format for API consumption
-    return startDate.toISOString().split('T')[0];
 };
 
 // Helper to generate a consistent, PROFESSIONAL color hash for hospital names (Badges)

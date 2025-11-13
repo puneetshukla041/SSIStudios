@@ -32,9 +32,6 @@ export interface SortConfig {
     direction: 'asc' | 'desc';
 }
 
-// 💡 NEW DATE FILTER TYPES
-export type DateFilterOption = 'All Time' | 'Today' | 'Last 7 Days' | 'Last 30 Days' | 'Last 90 Days' | 'Last 365 Days';
-
 // --- Constants ---
 
 // Default limit for pagination
@@ -47,13 +44,3 @@ export const initialNewCertificateState: Omit<ICertificateClient, '_id'> = {
     hospital: '',
     doi: '', // Will be set to today's date in helpers
 };
-
-// 💡 NEW DATE FILTER OPTIONS
-export const DATE_FILTER_OPTIONS: DateFilterOption[] = [
-    'All Time',
-    'Today',
-    'Last 7 Days',
-    'Last 30 Days',
-    'Last 90 Days',
-    'Last 365 Days',
-];

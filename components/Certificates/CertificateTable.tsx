@@ -7,6 +7,7 @@ import { BadgeCheck, Loader2, Square, ChevronLeft, ChevronRight } from 'lucide-r
 // Import Hooks and Utils
 import { useCertificateData } from './hooks/useCertificateData';
 import { useCertificateActions } from './hooks/useCertificateActions';
+import { useMailCertificate } from './hooks/useMailCertificate'; 
 import { ICertificateClient, CertificateTableProps, PAGE_LIMIT } from './utils/constants';
 
 // Import UI Components
@@ -14,6 +15,7 @@ import AddCertificateForm from './ui/AddCertificateForm';
 import QuickActionBar from './ui/QuickActionBar';
 import TableHeader from './ui/TableHeader';
 import TableRow from './ui/TableRow';
+import MailComposer from './ui/MailComposer'; 
 
 
 // --- Skeleton Loader Component ---
@@ -61,7 +63,6 @@ const CertificateTable: React.FC<CertificateTableProps> = ({ refreshKey, onRefre
         totalPages,
         searchQuery,
         hospitalFilter,
-        dateFilter, // 💡 MUST DESTRUCTURE dateFilter
         uniqueHospitals,
         sortConfig,
         selectedIds,
@@ -70,7 +71,6 @@ const CertificateTable: React.FC<CertificateTableProps> = ({ refreshKey, onRefre
         setCurrentPage,
         setSearchQuery,
         setHospitalFilter,
-        setDateFilter, // 💡 MUST DESTRUCTURE setDateFilter
         setSelectedIds,
         requestSort,
         sortedCertificates,
@@ -119,18 +119,29 @@ const CertificateTable: React.FC<CertificateTableProps> = ({ refreshKey, onRefre
         setIsLoading,
     });
     
-    // Effect to handle the flash animation duration (Moved here from the hook for UI concern)
+    // 3. Mail Action Management
+    const {
+        isMailComposerOpen,
+        mailComposerCert,
+        mailComposerPdfBlob,
+        isSending,
+        handleOpenMailComposer,
+        handleSendMail,
+        handleCloseMailComposer,
+    } = useMailCertificate(onAlert);
+
+    // Effect to handle the flash animation duration 
     useEffect(() => {
         if (flashId) {
             const timer = setTimeout(() => {
                 setFlashId(null);
-            }, 1000); // Flash for 1 second
+            }, 1000); 
             return () => clearTimeout(timer);
         }
     }, [flashId, setFlashId]);
 
 
-    // --- Pagination Component (Kept here as it's purely a display/navigation UI) ---
+    // --- Pagination Component ---
     const Pagination = () => (
         <div className="flex flex-col sm:flex-row justify-end items-center mt-4 p-2 w-full">
             <div className="flex space-x-1 border border-gray-200 rounded-full p-1 shadow-inner bg-white/70 backdrop-blur-sm">
@@ -183,110 +194,122 @@ const CertificateTable: React.FC<CertificateTableProps> = ({ refreshKey, onRefre
     }
 
     return (
-        <div className="space-y-6 w-full p-3 md:p-0">
+        <>
+            <div className="space-y-6 w-full p-3 md:p-0">
 
-            {/* Quick Action Bar (Search, Filter, Add, Export, Bulk Delete) */}
-            <QuickActionBar
-                isAddFormVisible={isAddFormVisible}
-                selectedIds={selectedIds}
-                uniqueHospitals={uniqueHospitals}
-                searchQuery={searchQuery}
-                hospitalFilter={hospitalFilter}
-                dateFilter={dateFilter} // 💡 ADDED MISSING PROP
-                setDateFilter={setDateFilter} // 💡 ADDED MISSING PROP
-                setIsAddFormVisible={setIsAddFormVisible}
-                setSearchQuery={setSearchQuery}
-                setHospitalFilter={setHospitalFilter}
-                handleBulkDelete={handleBulkDelete}
-                handleDownload={handleDownload}
-                // 💡 PASS NEW BULK PDF PROPS
-                isBulkGeneratingV1={isBulkGeneratingV1}
-                isBulkGeneratingV2={isBulkGeneratingV2}
-                handleBulkGeneratePDF_V1={handleBulkGeneratePDF_V1}
-                handleBulkGeneratePDF_V2={handleBulkGeneratePDF_V2}
-            />
-
-            {/* Conditional Add Certificate Form */}
-            {isAddFormVisible && (
-                <AddCertificateForm
-                    newCertificateData={newCertificateData}
-                    isAdding={isAdding}
-                    handleNewCertChange={handleNewCertChange}
-                    handleAddCertificate={handleAddCertificate}
+                {/* Quick Action Bar (Search, Filter, Add, Export, Bulk Delete) */}
+                <QuickActionBar
+                    isAddFormVisible={isAddFormVisible}
+                    selectedIds={selectedIds}
+                    uniqueHospitals={uniqueHospitals}
+                    searchQuery={searchQuery}
+                    hospitalFilter={hospitalFilter}
                     setIsAddFormVisible={setIsAddFormVisible}
-                    setNewCertificateData={setNewCertificateData}
+                    setSearchQuery={setSearchQuery}
+                    setHospitalFilter={setHospitalFilter}
+                    handleBulkDelete={handleBulkDelete}
+                    handleDownload={handleDownload}
+                    isBulkGeneratingV1={isBulkGeneratingV1}
+                    isBulkGeneratingV2={isBulkGeneratingV2}
+                    handleBulkGeneratePDF_V1={handleBulkGeneratePDF_V1}
+                    handleBulkGeneratePDF_V2={handleBulkGeneratePDF_V2}
+                />
+
+                {/* Conditional Add Certificate Form */}
+                {isAddFormVisible && (
+                    <AddCertificateForm
+                        newCertificateData={newCertificateData}
+                        isAdding={isAdding}
+                        handleNewCertChange={handleNewCertChange}
+                        handleAddCertificate={handleAddCertificate}
+                        setIsAddFormVisible={setIsAddFormVisible}
+                        setNewCertificateData={setNewCertificateData}
+                    />
+                )}
+
+                {/* Selection Summary Notification */}
+                {selectedIds.length > 0 && (
+                    <div className="p-3 bg-sky-100/50 border-l-4 border-sky-600 text-slate-800 rounded-xl shadow-lg flex items-center justify-between transition duration-300 backdrop-blur-sm">
+                        <div className="flex items-center">
+                            <BadgeCheck className="w-5 h-5 mr-3 flex-shrink-0 text-sky-600" />
+                            <span className="font-medium text-sm sm:text-base">
+                                {selectedIds.length} certificates selected for action.
+                            </span>
+                        </div>
+                    </div>
+                )}
+
+
+                {sortedCertificates.length === 0 ? (
+                    // Empty state
+                    <div className="text-center p-12 bg-white/70 rounded-xl shadow-lg border-2 border-dashed border-gray-300 backdrop-blur-sm">
+                        <p className="text-gray-500 text-xl font-medium">
+                            No certificates found.
+                        </p>
+                        <p className="text-gray-400 mt-2">
+                            Try adjusting your search criteria or adding new data.
+                        </p>
+                    </div>
+                ) : (
+                    <>
+                        {/* TABLE Container */}
+                        <div className="overflow-x-auto rounded-xl shadow-lg border border-gray-300 bg-white/70 backdrop-blur-md">
+                            <table
+                                className="min-w-full divide-y divide-gray-300"
+                                style={{ borderCollapse: 'collapse' }}
+                            >
+                                <TableHeader
+                                    certificates={certificates}
+                                    selectedIds={selectedIds}
+                                    sortConfig={sortConfig}
+                                    requestSort={requestSort}
+                                    handleSelectAll={handleSelectAll}
+                                />
+                                <tbody className="divide-y divide-gray-200">
+                                    {sortedCertificates.map((cert: ICertificateClient, index: number) => ( 
+                                        <TableRow
+                                            key={cert._id}
+                                            cert={cert}
+                                            index={index} 
+                                            currentPage={currentPage} 
+                                            isSelected={selectedIds.includes(cert._id)}
+                                            isEditing={editingId === cert._id}
+                                            isFlashing={flashId === cert._id}
+                                            isDeleting={deletingId === cert._id || (deletingId !== null && selectedIds.includes(cert._id))}
+                                            generatingPdfId={generatingPdfId}
+                                            generatingPdfV1Id={generatingPdfV1Id}
+                                            editFormData={editFormData}
+                                            handleSelectOne={handleSelectOne}
+                                            handleEdit={handleEdit}
+                                            handleSave={handleSave}
+                                            handleDelete={handleDelete}
+                                            handleChange={handleChange}
+                                            setEditingId={setEditingId}
+                                            handleGeneratePDF_V1={handleGeneratePDF_V1}
+                                            handleGeneratePDF_V2={handleGeneratePDF_V2}
+                                            handleMailCertificate={handleOpenMailComposer}
+                                        />
+                                    ))}
+                                </tbody>
+                            </table>
+                        </div>
+                        <Pagination />
+                    </>
+                )}
+            </div>
+            
+            {/* Mail Composer Modal */}
+            {isMailComposerOpen && mailComposerCert && (
+                <MailComposer
+                    certData={mailComposerCert}
+                    pdfBlob={mailComposerPdfBlob}
+                    isSending={isSending}
+                    onClose={handleCloseMailComposer}
+                    onSend={handleSendMail}
+                    onAlert={onAlert}
                 />
             )}
-
-            {/* Selection Summary Notification */}
-            {selectedIds.length > 0 && (
-                <div className="p-3 bg-sky-100/50 border-l-4 border-sky-600 text-slate-800 rounded-xl shadow-lg flex items-center justify-between transition duration-300 backdrop-blur-sm">
-                    <div className="flex items-center">
-                        <BadgeCheck className="w-5 h-5 mr-3 flex-shrink-0 text-sky-600" />
-                        <span className="font-medium text-sm sm:text-base">
-                            {selectedIds.length} certificates selected for action.
-                        </span>
-                    </div>
-                </div>
-            )}
-
-
-            {sortedCertificates.length === 0 ? (
-                // Empty state
-                <div className="text-center p-12 bg-white/70 rounded-xl shadow-lg border-2 border-dashed border-gray-300 backdrop-blur-sm">
-                    <p className="text-gray-500 text-xl font-medium">
-                        No certificates found.
-                    </p>
-                    <p className="text-gray-400 mt-2">
-                        Try adjusting your search criteria or adding new data.
-                    </p>
-                </div>
-            ) : (
-                <>
-                    {/* TABLE Container */}
-                    <div className="overflow-x-auto rounded-xl shadow-lg border border-gray-300 bg-white/70 backdrop-blur-md">
-                        <table
-                            className="min-w-full divide-y divide-gray-300"
-                            style={{ borderCollapse: 'collapse' }}
-                        >
-                            <TableHeader
-                                certificates={certificates}
-                                selectedIds={selectedIds}
-                                sortConfig={sortConfig}
-                                requestSort={requestSort}
-                                handleSelectAll={handleSelectAll}
-                            />
-                            <tbody className="divide-y divide-gray-200">
-                                {sortedCertificates.map((cert: ICertificateClient, index: number) => ( 
-                                    <TableRow
-                                        key={cert._id}
-                                        cert={cert}
-                                        index={index} 
-                                        currentPage={currentPage} 
-                                        isSelected={selectedIds.includes(cert._id)}
-                                        isEditing={editingId === cert._id}
-                                        isFlashing={flashId === cert._id}
-                                        isDeleting={deletingId === cert._id || (deletingId !== null && selectedIds.includes(cert._id))}
-                                        generatingPdfId={generatingPdfId}
-                                        generatingPdfV1Id={generatingPdfV1Id}
-                                        editFormData={editFormData}
-                                        handleSelectOne={handleSelectOne}
-                                        handleEdit={handleEdit}
-                                        handleSave={handleSave}
-                                        handleDelete={handleDelete}
-                                        handleChange={handleChange}
-                                        setEditingId={setEditingId}
-                                        handleGeneratePDF_V1={handleGeneratePDF_V1}
-                                        handleGeneratePDF_V2={handleGeneratePDF_V2}
-                                    />
-                                ))}
-                            </tbody>
-                        </table>
-                    </div>
-                    <Pagination />
-                </>
-            )}
-        </div>
+        </>
     );
 };
 

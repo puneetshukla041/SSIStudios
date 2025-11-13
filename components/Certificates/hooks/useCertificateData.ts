@@ -9,9 +9,8 @@ import {
     SortConfig,
     SortKey,
     PAGE_LIMIT,
-    DateFilterOption, // 💡 IMPORT NEW TYPE
 } from '../utils/constants';
-import { sortCertificates, getDateFilterStart } from '../utils/helpers'; // 💡 IMPORT NEW HELPER
+import { sortCertificates } from '../utils/helpers'; // Removed getDateFilterStart
 
 interface UseCertificateDataResult {
     certificates: ICertificateClient[];
@@ -21,16 +20,14 @@ interface UseCertificateDataResult {
     totalPages: number;
     searchQuery: string;
     hospitalFilter: string;
-    dateFilter: DateFilterOption; // 💡 NEW STATE
     uniqueHospitals: string[];
     sortConfig: SortConfig | null;
     selectedIds: string[];
     fetchCertificates: () => Promise<void>;
-    fetchCertificatesForExport: (isBulkPdfExport?: boolean, idsToFetch?: string[]) => Promise<ICertificateClient[]>; // MODIFIED
+    fetchCertificatesForExport: (isBulkPdfExport?: boolean, idsToFetch?: string[]) => Promise<ICertificateClient[]>;
     setCurrentPage: React.Dispatch<React.SetStateAction<number>>;
     setSearchQuery: React.Dispatch<React.SetStateAction<string>>;
     setHospitalFilter: React.Dispatch<React.SetStateAction<string>>;
-    setDateFilter: React.Dispatch<React.SetStateAction<DateFilterOption>>; // 💡 NEW SETTER
     setSelectedIds: React.Dispatch<React.SetStateAction<string[]>>;
     requestSort: (key: SortKey) => void;
     sortedCertificates: ICertificateClient[];
@@ -49,7 +46,6 @@ export const useCertificateData = (
     const [totalPages, setTotalPages] = useState(1);
     const [searchQuery, setSearchQuery] = useState('');
     const [hospitalFilter, setHospitalFilter] = useState('');
-    const [dateFilter, setDateFilter] = useState<DateFilterOption>('All Time'); // 💡 NEW STATE: Default to 'All Time'
     const [uniqueHospitals, setUniqueHospitals] = useState<string[]>([]);
     const [selectedIds, setSelectedIds] = useState<string[]>([]);
     const [sortConfig, setSortConfig] = useState<SortConfig | null>(null);
@@ -58,7 +54,7 @@ export const useCertificateData = (
     const fetchCertificates = useCallback(async () => {
         setIsLoading(true);
         const start = Date.now();
-        const startDateParam = getDateFilterStart(dateFilter); // 💡 GET START DATE
+        // Removed: const startDateParam = getDateFilterStart(dateFilter); 
 
         try {
             const params = new URLSearchParams({
@@ -71,9 +67,7 @@ export const useCertificateData = (
                 params.append('hospital', hospitalFilter);
             }
             
-            if (startDateParam) { // 💡 ADD DATE FILTER PARAM
-                params.append('dateStart', startDateParam);
-            }
+            // Removed: if (startDateParam) { params.append('dateStart', startDateParam); }
 
             const response = await fetch(`/api/certificates?${params.toString()}`);
             const result: FetchResponse & { success: boolean, message?: string } = await response.json();
@@ -94,12 +88,12 @@ export const useCertificateData = (
             const duration = Date.now() - start;
             setTimeout(() => setIsLoading(false), Math.max(500 - duration, 0));
         }
-    }, [currentPage, searchQuery, hospitalFilter, dateFilter, onRefresh, onAlert]); // 💡 ADD dateFilter DEPENDENCY
+    }, [currentPage, searchQuery, hospitalFilter, onRefresh, onAlert]); // Removed dateFilter dependency
 
     // --- Fetch ALL Data Logic (For Export) ---
-    const fetchCertificatesForExport = useCallback(async (isBulkPdfExport = false, idsToFetch: string[] = []) => { // MODIFIED SIGNATURE
+    const fetchCertificatesForExport = useCallback(async (isBulkPdfExport = false, idsToFetch: string[] = []) => {
         try {
-            const startDateParam = getDateFilterStart(dateFilter); // 💡 GET START DATE
+            // Removed: const startDateParam = getDateFilterStart(dateFilter); 
             
             const params = new URLSearchParams({
                 q: searchQuery,
@@ -110,9 +104,7 @@ export const useCertificateData = (
                 params.append('hospital', hospitalFilter);
             }
             
-            if (startDateParam) { // 💡 ADD DATE FILTER PARAM
-                params.append('dateStart', startDateParam);
-            }
+            // Removed: if (startDateParam) { params.append('dateStart', startDateParam); }
             
             // Handle bulk export: only fetch selected IDs
             if (isBulkPdfExport && idsToFetch.length > 0) {
@@ -136,7 +128,7 @@ export const useCertificateData = (
             onAlert('Network error while fetching data for export.', true);
             return [];
         }
-    }, [searchQuery, hospitalFilter, dateFilter, onAlert]); // 💡 ADD dateFilter DEPENDENCY
+    }, [searchQuery, hospitalFilter, onAlert]); // Removed dateFilter dependency
 
     // Effect to fetch data on dependency changes
     useEffect(() => {
@@ -148,9 +140,9 @@ export const useCertificateData = (
     // Effect to reset page when search/filter changes
     useEffect(() => {
         setCurrentPage(1);
-    }, [searchQuery, hospitalFilter, dateFilter]); // 💡 ADD dateFilter
+    }, [searchQuery, hospitalFilter]); // Removed dateFilter dependency
 
-    // --- Sort Functionality (UNCHANGED) ---
+    // --- Sort Functionality ---
     const sortedCertificates = useMemo(() => {
         return sortCertificates(certificates, sortConfig);
     }, [certificates, sortConfig]);
@@ -171,7 +163,6 @@ export const useCertificateData = (
         totalPages,
         searchQuery,
         hospitalFilter,
-        dateFilter, // 💡 EXPORT NEW STATE
         uniqueHospitals,
         sortConfig,
         selectedIds,
@@ -180,7 +171,6 @@ export const useCertificateData = (
         setCurrentPage,
         setSearchQuery,
         setHospitalFilter,
-        setDateFilter, // 💡 EXPORT NEW SETTER
         setSelectedIds,
         requestSort,
         sortedCertificates,
