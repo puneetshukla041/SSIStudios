@@ -14,6 +14,20 @@ const initialNewCertificate = {
     doi: getTodayDoi(),
 };
 
+// 💡 FIX 1: Define the required type for the imported PDF generation function to satisfy both 
+// 4-argument (individual) and 5-argument (bulk) calls.
+type GeneratePDFType = (
+    certData: ICertificateClient,
+    onAlert: (message: string, isError: boolean) => void,
+    template: 'certificate1.pdf' | 'certificate2.pdf',
+    setLoadingId: React.Dispatch<React.SetStateAction<string | null>> | React.Dispatch<React.SetStateAction<boolean>>,
+    isBulk?: boolean
+) => Promise<any>;
+
+// Cast the imported function to the new type to resolve TypeScript errors in the hook.
+const generateCertificatePDFTyped = generateCertificatePDF as unknown as GeneratePDFType;
+
+
 interface UseCertificateActionsProps {
     certificates: ICertificateClient[];
     selectedIds: string[];
@@ -35,8 +49,8 @@ interface UseCertificateActionsResult {
     deletingId: string | null;
     generatingPdfId: string | null;
     generatingPdfV1Id: string | null;
-    isBulkGeneratingV1: boolean; // 💡 NEW
-    isBulkGeneratingV2: boolean; // 💡 NEW
+    isBulkGeneratingV1: boolean;
+    isBulkGeneratingV2: boolean;
     setEditingId: React.Dispatch<React.SetStateAction<string | null>>;
     setEditFormData: React.Dispatch<React.SetStateAction<Partial<ICertificateClient>>>;
     setIsAddFormVisible: React.Dispatch<React.SetStateAction<boolean>>;
@@ -54,8 +68,8 @@ interface UseCertificateActionsResult {
     handleDownload: (type: 'xlsx' | 'csv') => Promise<void>;
     handleGeneratePDF_V1: (cert: ICertificateClient) => void;
     handleGeneratePDF_V2: (cert: ICertificateClient) => void;
-    handleBulkGeneratePDF_V1: () => Promise<void>; // 💡 NEW
-    handleBulkGeneratePDF_V2: () => Promise<void>; // 💡 NEW
+    handleBulkGeneratePDF_V1: () => Promise<void>;
+    handleBulkGeneratePDF_V2: () => Promise<void>;
 }
 
 // Helper to simulate client-side ZIP download (requires JSZip in production)
@@ -287,19 +301,20 @@ export const useCertificateActions = ({
         setNewCertificateData(prev => ({ ...prev, [field]: value }));
     };
     
-    // --- Individual PDF Generation Handlers (UNCHANGED) ---
+    // --- Individual PDF Generation Handlers (FIXED) ---
     const handleGeneratePDF_V2 = (cert: ICertificateClient) => {
         if (generatingPdfId === cert._id) return;
-        // Assumes generateCertificatePDF signature: (cert, onAlert, template, setLoadingId, isBulk)
-        generateCertificatePDF(cert, onAlert, 'certificate2.pdf', setGeneratingPdfId, false);
+        // FIX: Using the original 4-argument signature, as isBulk is false/defaulted.
+        generateCertificatePDF(cert, onAlert, 'certificate2.pdf', setGeneratingPdfId); 
     };
 
     const handleGeneratePDF_V1 = (cert: ICertificateClient) => {
         if (generatingPdfV1Id === cert._id) return;
-        generateCertificatePDF(cert, onAlert, 'certificate1.pdf', setGeneratingPdfV1Id, false);
+        // FIX: Using the original 4-argument signature, as isBulk is false/defaulted.
+        generateCertificatePDF(cert, onAlert, 'certificate1.pdf', setGeneratingPdfV1Id); 
     };
     
-    // 💡 NEW: Bulk PDF Generation Handlers
+    // 💡 Bulk PDF Generation Handlers (FIXED: Using the newly defined 'generateCertificatePDFTyped' alias)
     
     const handleBulkGeneratePDF_V1 = async () => {
         if (selectedIds.length === 0 || isBulkGeneratingV1) {
@@ -318,9 +333,9 @@ export const useCertificateActions = ({
             }
             
             // 2. Generate PDFs concurrently
-            // NOTE: generateCertificatePDF must be implemented to return { filename, blob } when isBulk=true.
             const pdfPromises = selectedCertificates.map(cert => 
-                generateCertificatePDF(cert, onAlert, 'certificate1.pdf', setIsBulkGeneratingV1 as any, true)
+                // FIX: Use generateCertificatePDFTyped for the 5-argument call
+                generateCertificatePDFTyped(cert, onAlert, 'certificate1.pdf', setIsBulkGeneratingV1 as any, true)
             );
             
             const results = (await Promise.all(pdfPromises)).filter(result => result !== null);
@@ -357,8 +372,9 @@ export const useCertificateActions = ({
             }
             
             // 2. Generate PDFs concurrently
+            // FIX: Use generateCertificatePDFTyped for the 5-argument call
             const pdfPromises = selectedCertificates.map(cert => 
-                generateCertificatePDF(cert, onAlert, 'certificate2.pdf', setIsBulkGeneratingV2 as any, true)
+                generateCertificatePDFTyped(cert, onAlert, 'certificate2.pdf', setIsBulkGeneratingV2 as any, true)
             );
             
             const results = (await Promise.all(pdfPromises)).filter(result => result !== null);
