@@ -12,11 +12,13 @@ import {
     FileText,
     FileCheck,
 } from 'lucide-react';
-import { ICertificateClient } from '../utils/constants';
+import { ICertificateClient, PAGE_LIMIT } from '../utils/constants'; // 💡 Import PAGE_LIMIT
 import { getHospitalColor, doiToDateInput, dateInputToDoi } from '../utils/helpers';
 
 interface TableRowProps {
     cert: ICertificateClient;
+    index: number; // 💡 NEW PROP
+    currentPage: number; // 💡 NEW PROP
     isSelected: boolean;
     isEditing: boolean;
     isFlashing: boolean;
@@ -36,6 +38,8 @@ interface TableRowProps {
 
 const TableRow: React.FC<TableRowProps> = ({
     cert,
+    index, // 💡 DESTRUCTURE
+    currentPage, // 💡 DESTRUCTURE
     isSelected,
     isEditing,
     isFlashing,
@@ -60,6 +64,9 @@ const TableRow: React.FC<TableRowProps> = ({
         hover:bg-white hover:shadow-sm
         ${isSelected && !isFlashing ? 'bg-sky-100/50' : ''}
     `;
+    
+    // 💡 CALCULATE SERIAL NUMBER
+    const serialNumber = (currentPage - 1) * PAGE_LIMIT + index + 1;
 
     return (
         <tr
@@ -83,6 +90,11 @@ const TableRow: React.FC<TableRowProps> = ({
                         <Square className="w-5 h-5 text-gray-400" />
                     )}
                 </label>
+            </td>
+            
+            {/* 💡 SERIAL NUMBER COLUMN */}
+            <td className="px-4 py-2 whitespace-nowrap text-sm font-semibold text-gray-600 border-r border-gray-200 w-16 text-center">
+                {serialNumber}
             </td>
 
             {/* Data Cells */}
@@ -116,7 +128,7 @@ const TableRow: React.FC<TableRowProps> = ({
                 );
             })}
 
-            {/* Action Buttons */}
+            {/* Action Buttons (UNCHANGED) */}
             <td className="px-4 py-2 whitespace-nowrap text-sm font-medium">
                 {isEditing ? (
                     <div className="flex space-x-2">

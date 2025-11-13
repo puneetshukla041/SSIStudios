@@ -1,11 +1,7 @@
-// D:\ssistudios\ssistudios\components\Certificates\ui\TableHeader.tsx
+// D:\ssistudios\ssistudios\components\Certificates\ui\TableHeader.tsx (ASSUMED FILE)
 
 import React from 'react';
-import {
-    ArrowUpDown,
-    BadgeCheck,
-    Square,
-} from 'lucide-react';
+import { ChevronUp, ChevronDown, Square, BadgeCheck } from 'lucide-react';
 import { ICertificateClient, SortConfig, SortKey } from '../utils/constants';
 
 interface TableHeaderProps {
@@ -23,51 +19,65 @@ const TableHeader: React.FC<TableHeaderProps> = ({
     requestSort,
     handleSelectAll,
 }) => {
-    const getSortIndicator = (key: SortKey) => {
-        if (!sortConfig || sortConfig.key !== key) {
-            return <ArrowUpDown className="w-4 h-4 ml-1 text-gray-400" />;
-        }
-        return (
-            <span className="ml-1 text-slate-700">
-                {sortConfig.direction === 'asc' ? '↑' : '↓'}
-            </span>
-        );
+    // Check if all displayed certificates are selected
+    const allSelected = certificates.length > 0 && certificates.every(cert => selectedIds.includes(cert._id));
+    
+    // Toggle state for select all/none
+    const toggleSelectAll = () => {
+        handleSelectAll(!allSelected);
     };
 
+    const getSortIcon = (key: SortKey) => {
+        if (!sortConfig || sortConfig.key !== key) return null;
+        return sortConfig.direction === 'asc' ? <ChevronUp className="w-3 h-3 ml-1" /> : <ChevronDown className="w-3 h-3 ml-1" />;
+    };
+
+    const headerItems: { label: string; key: SortKey | null; sortable: boolean }[] = [
+        { label: 'S. No.', key: null, sortable: false }, // 💡 NEW: Serial No. column
+        { label: 'Certificate No.', key: 'certificateNo', sortable: true },
+        { label: 'Name', key: 'name', sortable: true },
+        { label: 'Hospital', key: 'hospital', sortable: true },
+        { label: 'DOI', key: 'doi', sortable: true },
+    ];
+
     return (
-        <thead className="bg-gray-50/80">
+        <thead className="bg-gray-50 border-b border-gray-300">
             <tr>
-                {/* Checkbox Header for Select All: Fixed narrow width */}
-                <th className="px-3 py-3 text-center text-xs font-bold text-gray-700 uppercase tracking-wider w-12 border-b border-r border-gray-300">
+                {/* Checkbox Header */}
+                <th scope="col" className="px-3 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider w-12 border-r border-gray-300">
                     <label className="cursor-pointer flex items-center justify-center">
                         <input
                             type="checkbox"
                             className="hidden"
-                            checked={selectedIds.length === certificates.length && certificates.length > 0}
-                            onChange={(e) => handleSelectAll(e.target.checked)}
-                            aria-label="Select All"
+                            checked={allSelected}
+                            onChange={toggleSelectAll}
+                            aria-label="Select all certificates"
                         />
-                        {selectedIds.length === certificates.length && certificates.length > 0 ? (
+                        {allSelected && certificates.length > 0 ? (
                             <BadgeCheck className="w-5 h-5 text-sky-600" />
                         ) : (
                             <Square className="w-5 h-5 text-gray-400" />
                         )}
                     </label>
                 </th>
-                {/* Table Headers with Sorting */}
-                {(['certificateNo', 'name', 'hospital', 'doi'] as SortKey[]).map((fieldKey) => (
+
+                {/* Data Headers */}
+                {headerItems.map(item => (
                     <th
-                        key={fieldKey}
-                        onClick={() => requestSort(fieldKey)}
-                        className="px-4 py-3 text-left text-xs font-bold text-gray-700 uppercase tracking-wider cursor-pointer hover:bg-gray-100/90 transition duration-150 whitespace-nowrap border-b border-r border-gray-300 min-w-[120px]"
+                        key={item.label}
+                        scope="col"
+                        className={`px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider ${item.key ? 'cursor-pointer hover:bg-gray-100 transition-colors' : ''} border-r border-gray-300 last:border-r-0`}
+                        onClick={item.sortable ? () => requestSort(item.key as SortKey) : undefined}
                     >
                         <div className="flex items-center">
-                            {fieldKey === 'doi' ? 'Date of Issue' : fieldKey.charAt(0).toUpperCase() + fieldKey.slice(1).replace(/([A-Z])/g, ' $1')}
-                            {getSortIndicator(fieldKey)}
+                            {item.label}
+                            {item.sortable && getSortIcon(item.key as SortKey)}
                         </div>
                     </th>
                 ))}
-                <th className="px-4 py-3 text-left text-xs font-bold text-gray-700 uppercase tracking-wider border-b border-gray-300 min-w-[250px]">
+
+                {/* Actions Header */}
+                <th scope="col" className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-40">
                     Actions
                 </th>
             </tr>

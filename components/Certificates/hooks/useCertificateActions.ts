@@ -304,17 +304,17 @@ export const useCertificateActions = ({
     // --- Individual PDF Generation Handlers (FIXED) ---
     const handleGeneratePDF_V2 = (cert: ICertificateClient) => {
         if (generatingPdfId === cert._id) return;
-        // FIX: Using the original 4-argument signature, as isBulk is false/defaulted.
+        // FIX: Using the original 4-argument signature.
         generateCertificatePDF(cert, onAlert, 'certificate2.pdf', setGeneratingPdfId); 
     };
 
     const handleGeneratePDF_V1 = (cert: ICertificateClient) => {
         if (generatingPdfV1Id === cert._id) return;
-        // FIX: Using the original 4-argument signature, as isBulk is false/defaulted.
+        // FIX: Using the original 4-argument signature.
         generateCertificatePDF(cert, onAlert, 'certificate1.pdf', setGeneratingPdfV1Id); 
     };
     
-    // 💡 Bulk PDF Generation Handlers (FIXED: Using the newly defined 'generateCertificatePDFTyped' alias)
+    // 💡 Bulk PDF Generation Handlers (FIXED: Filter logic updated to be more robust against undefined/null)
     
     const handleBulkGeneratePDF_V1 = async () => {
         if (selectedIds.length === 0 || isBulkGeneratingV1) {
@@ -334,11 +334,12 @@ export const useCertificateActions = ({
             
             // 2. Generate PDFs concurrently
             const pdfPromises = selectedCertificates.map(cert => 
-                // FIX: Use generateCertificatePDFTyped for the 5-argument call
+                // Use generateCertificatePDFTyped for the 5-argument call
                 generateCertificatePDFTyped(cert, onAlert, 'certificate1.pdf', setIsBulkGeneratingV1 as any, true)
             );
             
-            const results = (await Promise.all(pdfPromises)).filter(result => result !== null);
+            // 💡 FIX 2: Use implicit truthiness check (Boolean) to filter out null AND undefined
+            const results = (await Promise.all(pdfPromises)).filter(Boolean);
 
             if (results.length > 0) {
                 // 3. Trigger bulk ZIP download
@@ -372,12 +373,12 @@ export const useCertificateActions = ({
             }
             
             // 2. Generate PDFs concurrently
-            // FIX: Use generateCertificatePDFTyped for the 5-argument call
             const pdfPromises = selectedCertificates.map(cert => 
                 generateCertificatePDFTyped(cert, onAlert, 'certificate2.pdf', setIsBulkGeneratingV2 as any, true)
             );
             
-            const results = (await Promise.all(pdfPromises)).filter(result => result !== null);
+            // 💡 FIX 2: Use implicit truthiness check (Boolean) to filter out null AND undefined
+            const results = (await Promise.all(pdfPromises)).filter(Boolean);
 
             if (results.length > 0) {
                 // 3. Trigger bulk ZIP download

@@ -61,6 +61,7 @@ const CertificateTable: React.FC<CertificateTableProps> = ({ refreshKey, onRefre
         totalPages,
         searchQuery,
         hospitalFilter,
+        dateFilter, // 💡 MUST DESTRUCTURE dateFilter
         uniqueHospitals,
         sortConfig,
         selectedIds,
@@ -69,6 +70,7 @@ const CertificateTable: React.FC<CertificateTableProps> = ({ refreshKey, onRefre
         setCurrentPage,
         setSearchQuery,
         setHospitalFilter,
+        setDateFilter, // 💡 MUST DESTRUCTURE setDateFilter
         setSelectedIds,
         requestSort,
         sortedCertificates,
@@ -86,8 +88,8 @@ const CertificateTable: React.FC<CertificateTableProps> = ({ refreshKey, onRefre
         deletingId,
         generatingPdfId,
         generatingPdfV1Id,
-        isBulkGeneratingV1, // 💡 DESTRUCTURE NEW STATE
-        isBulkGeneratingV2, // 💡 DESTRUCTURE NEW STATE
+        isBulkGeneratingV1, 
+        isBulkGeneratingV2, 
         setEditingId,
         setEditFormData,
         setIsAddFormVisible,
@@ -105,8 +107,8 @@ const CertificateTable: React.FC<CertificateTableProps> = ({ refreshKey, onRefre
         handleDownload,
         handleGeneratePDF_V1,
         handleGeneratePDF_V2,
-        handleBulkGeneratePDF_V1, // 💡 DESTRUCTURE NEW HANDLER
-        handleBulkGeneratePDF_V2, // 💡 DESTRUCTURE NEW HANDLER
+        handleBulkGeneratePDF_V1, 
+        handleBulkGeneratePDF_V2, 
     } = useCertificateActions({
         certificates,
         selectedIds,
@@ -190,6 +192,8 @@ const CertificateTable: React.FC<CertificateTableProps> = ({ refreshKey, onRefre
                 uniqueHospitals={uniqueHospitals}
                 searchQuery={searchQuery}
                 hospitalFilter={hospitalFilter}
+                dateFilter={dateFilter} // 💡 ADDED MISSING PROP
+                setDateFilter={setDateFilter} // 💡 ADDED MISSING PROP
                 setIsAddFormVisible={setIsAddFormVisible}
                 setSearchQuery={setSearchQuery}
                 setHospitalFilter={setHospitalFilter}
@@ -253,10 +257,12 @@ const CertificateTable: React.FC<CertificateTableProps> = ({ refreshKey, onRefre
                                 handleSelectAll={handleSelectAll}
                             />
                             <tbody className="divide-y divide-gray-200">
-                                {sortedCertificates.map((cert: ICertificateClient) => (
+                                {sortedCertificates.map((cert: ICertificateClient, index: number) => ( 
                                     <TableRow
                                         key={cert._id}
                                         cert={cert}
+                                        index={index} 
+                                        currentPage={currentPage} 
                                         isSelected={selectedIds.includes(cert._id)}
                                         isEditing={editingId === cert._id}
                                         isFlashing={flashId === cert._id}

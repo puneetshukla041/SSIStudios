@@ -8,9 +8,12 @@ import {
     Plus,
     Trash2,
     FileCheck, // For V1 PDF
-    FileText,  // For V2 PDF
-    Loader2,   // For loading state
+    FileText,  // For V2 PDF
+    Loader2,   // For loading state
+    Calendar, // 💡 NEW ICON
 } from 'lucide-react';
+
+import { DateFilterOption, DATE_FILTER_OPTIONS } from '../utils/constants'; // 💡 IMPORT NEW CONSTANTS
 
 interface QuickActionBarProps {
     isAddFormVisible: boolean;
@@ -18,15 +21,17 @@ interface QuickActionBarProps {
     uniqueHospitals: string[];
     searchQuery: string;
     hospitalFilter: string;
-    isBulkGeneratingV1: boolean; // NEW
-    isBulkGeneratingV2: boolean; // NEW
+    dateFilter: DateFilterOption; // 💡 NEW PROP
+    isBulkGeneratingV1: boolean; 
+    isBulkGeneratingV2: boolean; 
     setIsAddFormVisible: React.Dispatch<React.SetStateAction<boolean>>;
     setSearchQuery: React.Dispatch<React.SetStateAction<string>>;
     setHospitalFilter: React.Dispatch<React.SetStateAction<string>>;
+    setDateFilter: React.Dispatch<React.SetStateAction<DateFilterOption>>; // 💡 NEW PROP
     handleBulkDelete: () => Promise<void>;
     handleDownload: (type: 'xlsx' | 'csv') => Promise<void>;
-    handleBulkGeneratePDF_V1: () => Promise<void>; // NEW
-    handleBulkGeneratePDF_V2: () => Promise<void>; // NEW
+    handleBulkGeneratePDF_V1: () => Promise<void>; 
+    handleBulkGeneratePDF_V2: () => Promise<void>; 
 }
 
 const QuickActionBar: React.FC<QuickActionBarProps> = ({
@@ -35,11 +40,13 @@ const QuickActionBar: React.FC<QuickActionBarProps> = ({
     uniqueHospitals,
     searchQuery,
     hospitalFilter,
+    dateFilter, // 💡 DESTRUCTURE NEW PROP
     isBulkGeneratingV1,
     isBulkGeneratingV2,
     setIsAddFormVisible,
     setSearchQuery,
     setHospitalFilter,
+    setDateFilter, // 💡 DESTRUCTURE NEW PROP
     handleBulkDelete,
     handleDownload,
     handleBulkGeneratePDF_V1,
@@ -52,7 +59,7 @@ const QuickActionBar: React.FC<QuickActionBarProps> = ({
     return (
         <div className="flex flex-col md:flex-row justify-between items-center space-y-4 md:space-y-0 md:space-x-4 p-4 sm:p-5 bg-white/80 rounded-xl border border-gray-200 backdrop-blur-sm">
 
-            {/* Left Side: Add, Search, Filter */}
+            {/* Left Side: Add, Search, Filters (Hospital, Date) */}
             <div className="flex flex-col sm:flex-row w-full space-y-3 sm:space-y-0 sm:space-x-4">
                 <button
                     onClick={() => setIsAddFormVisible(prev => !prev)}
@@ -73,6 +80,7 @@ const QuickActionBar: React.FC<QuickActionBarProps> = ({
                     />
                 </div>
 
+                {/* Hospital Filter (Existing) */}
                 <div className="relative w-full sm:w-48">
                     <Filter className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-gray-400 pointer-events-none" />
                     <select
@@ -86,9 +94,23 @@ const QuickActionBar: React.FC<QuickActionBarProps> = ({
                         ))}
                     </select>
                 </div>
+                
+                {/* 💡 NEW: Date Filter */}
+                <div className="relative w-full sm:w-48">
+                    <Calendar className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-gray-400 pointer-events-none" />
+                    <select
+                        value={dateFilter}
+                        onChange={(e) => setDateFilter(e.target.value as DateFilterOption)}
+                        className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-xl bg-white/90 focus:ring-sky-500 focus:border-sky-500 transition duration-300 appearance-none outline-none cursor-pointer shadow-sm"
+                    >
+                        {DATE_FILTER_OPTIONS.map(option => (
+                            <option key={option} value={option}>{option}</option>
+                        ))}
+                    </select>
+                </div>
             </div>
 
-            {/* Right Side: Bulk Actions & Export */}
+            {/* Right Side: Bulk Actions & Export (UNCHANGED logic for existing buttons) */}
             <div className="flex space-x-3 w-full sm:w-auto justify-start sm:justify-end flex-wrap gap-2 sm:gap-3">
                 
                 {/* 💡 Bulk PDF Export V1 Button */}
@@ -140,10 +162,11 @@ const QuickActionBar: React.FC<QuickActionBarProps> = ({
                 <button
                     onClick={() => handleDownload('xlsx')}
                     disabled={isGenerating} // Disable excel export during PDF export
-                    className="px-5 py-2 text-sm font-semibold rounded-full bg-teal-600/90 text-white hover:bg-teal-700 transition duration-300 shadow-lg flex items-center transform hover:scale-[1.05] cursor-pointer"
+                    className="px-6 py-2 text-sm font-semibold rounded-full bg-teal-600/90 text-white hover:bg-teal-700 transition duration-300 shadow-lg flex items-center justify-center transform hover:scale-[1.05] cursor-pointer whitespace-nowrap sm:w-56"
                 >
                     <Download className="w-4 h-4 mr-2" /> Export Excel
                 </button>
+
             </div>
         </div>
     );

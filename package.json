@@ -12,6 +12,7 @@
     "@aws-sdk/client-s3": "^3.926.0",
     "@aws-sdk/s3-request-presigner": "^3.926.0",
     "@fortawesome/free-solid-svg-icons": "^7.0.1",
+    "@sendgrid/mail": "^8.1.5",
     "@fortawesome/react-fontawesome": "^3.0.2",
     "@google/generative-ai": "^0.24.1",
     "@headlessui/react": "^2.2.7",

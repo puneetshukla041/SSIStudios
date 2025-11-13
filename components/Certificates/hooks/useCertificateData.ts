@@ -9,8 +9,9 @@ import {
     SortConfig,
     SortKey,
     PAGE_LIMIT,
+    DateFilterOption, // 💡 IMPORT NEW TYPE
 } from '../utils/constants';
-import { sortCertificates } from '../utils/helpers';
+import { sortCertificates, getDateFilterStart } from '../utils/helpers'; // 💡 IMPORT NEW HELPER
 
 interface UseCertificateDataResult {
     certificates: ICertificateClient[];
@@ -20,14 +21,16 @@ interface UseCertificateDataResult {
     totalPages: number;
     searchQuery: string;
     hospitalFilter: string;
+    dateFilter: DateFilterOption; // 💡 NEW STATE
     uniqueHospitals: string[];
     sortConfig: SortConfig | null;
     selectedIds: string[];
     fetchCertificates: () => Promise<void>;
-    fetchCertificatesForExport: () => Promise<ICertificateClient[]>;
+    fetchCertificatesForExport: (isBulkPdfExport?: boolean, idsToFetch?: string[]) => Promise<ICertificateClient[]>; // MODIFIED
     setCurrentPage: React.Dispatch<React.SetStateAction<number>>;
     setSearchQuery: React.Dispatch<React.SetStateAction<string>>;
     setHospitalFilter: React.Dispatch<React.SetStateAction<string>>;
+    setDateFilter: React.Dispatch<React.SetStateAction<DateFilterOption>>; // 💡 NEW SETTER
     setSelectedIds: React.Dispatch<React.SetStateAction<string[]>>;
     requestSort: (key: SortKey) => void;
     sortedCertificates: ICertificateClient[];
@@ -46,6 +49,7 @@ export const useCertificateData = (
     const [totalPages, setTotalPages] = useState(1);
     const [searchQuery, setSearchQuery] = useState('');
     const [hospitalFilter, setHospitalFilter] = useState('');
+    const [dateFilter, setDateFilter] = useState<DateFilterOption>('All Time'); // 💡 NEW STATE: Default to 'All Time'
     const [uniqueHospitals, setUniqueHospitals] = useState<string[]>([]);
     const [selectedIds, setSelectedIds] = useState<string[]>([]);
     const [sortConfig, setSortConfig] = useState<SortConfig | null>(null);
@@ -54,6 +58,7 @@ export const useCertificateData = (
     const fetchCertificates = useCallback(async () => {
         setIsLoading(true);
         const start = Date.now();
+        const startDateParam = getDateFilterStart(dateFilter); // 💡 GET START DATE
 
         try {
             const params = new URLSearchParams({
@@ -64,6 +69,10 @@ export const useCertificateData = (
 
             if (hospitalFilter) {
                 params.append('hospital', hospitalFilter);
+            }
+            
+            if (startDateParam) { // 💡 ADD DATE FILTER PARAM
+                params.append('dateStart', startDateParam);
             }
 
             const response = await fetch(`/api/certificates?${params.toString()}`);
@@ -85,11 +94,13 @@ export const useCertificateData = (
             const duration = Date.now() - start;
             setTimeout(() => setIsLoading(false), Math.max(500 - duration, 0));
         }
-    }, [currentPage, searchQuery, hospitalFilter, onRefresh, onAlert]);
+    }, [currentPage, searchQuery, hospitalFilter, dateFilter, onRefresh, onAlert]); // 💡 ADD dateFilter DEPENDENCY
 
     // --- Fetch ALL Data Logic (For Export) ---
-    const fetchCertificatesForExport = useCallback(async () => {
+    const fetchCertificatesForExport = useCallback(async (isBulkPdfExport = false, idsToFetch: string[] = []) => { // MODIFIED SIGNATURE
         try {
+            const startDateParam = getDateFilterStart(dateFilter); // 💡 GET START DATE
+            
             const params = new URLSearchParams({
                 q: searchQuery,
                 all: 'true'
@@ -98,6 +109,18 @@ export const useCertificateData = (
             if (hospitalFilter) {
                 params.append('hospital', hospitalFilter);
             }
+            
+            if (startDateParam) { // 💡 ADD DATE FILTER PARAM
+                params.append('dateStart', startDateParam);
+            }
+            
+            // Handle bulk export: only fetch selected IDs
+            if (isBulkPdfExport && idsToFetch.length > 0) {
+                 params.append('ids', idsToFetch.join(','));
+                 params.delete('all'); // Do not fetch all, only fetch by IDs
+                 params.delete('q'); // Search query is irrelevant if IDs are specified
+            }
+
 
             const response = await fetch(`/api/certificates?${params.toString()}`);
             const result: FetchResponse & { success: boolean, message?: string } = await response.json();
@@ -113,7 +136,7 @@ export const useCertificateData = (
             onAlert('Network error while fetching data for export.', true);
             return [];
         }
-    }, [searchQuery, hospitalFilter, onAlert]);
+    }, [searchQuery, hospitalFilter, dateFilter, onAlert]); // 💡 ADD dateFilter DEPENDENCY
 
     // Effect to fetch data on dependency changes
     useEffect(() => {
@@ -125,9 +148,9 @@ export const useCertificateData = (
     // Effect to reset page when search/filter changes
     useEffect(() => {
         setCurrentPage(1);
-    }, [searchQuery, hospitalFilter]);
+    }, [searchQuery, hospitalFilter, dateFilter]); // 💡 ADD dateFilter
 
-    // --- Sort Functionality ---
+    // --- Sort Functionality (UNCHANGED) ---
     const sortedCertificates = useMemo(() => {
         return sortCertificates(certificates, sortConfig);
     }, [certificates, sortConfig]);
@@ -148,6 +171,7 @@ export const useCertificateData = (
         totalPages,
         searchQuery,
         hospitalFilter,
+        dateFilter, // 💡 EXPORT NEW STATE
         uniqueHospitals,
         sortConfig,
         selectedIds,
@@ -156,6 +180,7 @@ export const useCertificateData = (
         setCurrentPage,
         setSearchQuery,
         setHospitalFilter,
+        setDateFilter, // 💡 EXPORT NEW SETTER
         setSelectedIds,
         requestSort,
         sortedCertificates,
