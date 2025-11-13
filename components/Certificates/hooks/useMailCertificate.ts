@@ -48,7 +48,7 @@ export const useMailCertificate = (onAlert: (message: string, isError: boolean) 
     }, [onAlert]);
 
     // 2. Mail Send Logic
-    // 💡 UPDATED SIGNATURE: Accepts ccEmail as the second argument
+    // 💡 UPDATED SIGNATURE: Accepts recipientEmail, ccEmail (string), and mailContent
     const handleSendMail = useCallback(async (recipientEmail: string, ccEmail: string, mailContent: string) => {
         if (!mailState.cert || !mailState.pdfBlob) {
             onAlert('Cannot send mail: Missing certificate data or PDF attachment.', true);
@@ -72,7 +72,7 @@ export const useMailCertificate = (onAlert: (message: string, isError: boolean) 
             formData.append('lastName', lastName || '');
             formData.append('hospitalName', hospitalName);
             formData.append('recipientEmail', recipientEmail); 
-            formData.append('ccEmail', ccEmail); // 💡 NEW: Append CC email (will be empty string if user left it blank)
+            formData.append('ccEmail', ccEmail); // 💡 NEW: Append the comma-separated CC string
             formData.append('mailContent', mailContent); 
 
             const response = await fetch('/api/send-certificate', {

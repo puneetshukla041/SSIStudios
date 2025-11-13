@@ -21,7 +21,7 @@ export async function POST(req: Request) {
     const lastName = formData.get("lastName") as string;
     const hospitalName = formData.get("hospitalName") as string;
     const recipientEmail = formData.get("recipientEmail") as string; 
-    const ccEmailsString = formData.get("ccEmail") as string; // 💡 MULTIPLE EMAILS: Comma-separated string
+    const ccEmailsString = formData.get("ccEmail") as string; // 💡 NEW: Extract CC email string
 
     if (!pdfFile || !recipientEmail) {
       return NextResponse.json({ success: false, error: "Missing PDF file or recipient email address." }, { status: 400 });
@@ -58,12 +58,11 @@ This is a system-generated email. Please do not reply.
     const ccRecipients = ccEmailsString.split(',')
         .map(email => email.trim())
         .filter(email => email.length > 0) // Filter out empty strings
-        .map(email => ({ email })); // Convert to the format [{email: 'a@a.com'}, {email: 'b@b.com'}]
+        .map(email => ({ email })); 
 
 
     // 💡 CONDITIONAL CC SETUP
-    // SendGrid's 'cc' property expects an array of email objects or a single string.
-    // We use the array format for multiple emails.
+    // If we have valid recipients, create the CC object using the array format.
     const cc = ccRecipients.length > 0 ? { cc: ccRecipients } : {};
 
 

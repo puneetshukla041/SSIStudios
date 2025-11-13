@@ -18,7 +18,8 @@ interface MailComposerProps {
 const validateEmails = (emails: string): boolean => {
     if (!emails.trim()) return true; // Empty is valid
     const emailArray = emails.split(',').map(email => email.trim()).filter(Boolean);
-    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    // Simple regex check for valid email format
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/; 
     return emailArray.every(email => emailRegex.test(email));
 };
 
@@ -30,7 +31,7 @@ const MailComposer: React.FC<MailComposerProps> = ({
     onSend,
     onAlert,
 }) => {
-    // MOCK: Accessing mock data for names/hospital to populate the subject/body.
+    // ⚠️ MOCK: Accessing mock data for names/hospital to populate the subject/body.
     const mockData = certData as any; 
     const hospitalName = certData.hospital;
 
@@ -61,13 +62,13 @@ This is a system-generated email. Please do not reply.
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
 
-        // 1. Validate 'To' email
-        if (!recipientEmail.trim() || !validateEmails(recipientEmail)) {
+        // 1. Validate 'To' email (must be a single, valid email)
+        if (!recipientEmail.trim() || !validateEmails(recipientEmail) || recipientEmail.includes(',')) {
             onAlert('Please enter a single, valid recipient (To) email address.', true);
             return;
         }
 
-        // 2. Validate 'CC' emails (multiple allowed)
+        // 2. Validate 'CC' emails (multiple allowed, comma-separated)
         if (ccEmail.trim() && !validateEmails(ccEmail)) {
              onAlert('Please ensure all Carbon Copy (CC) emails are valid and separated by commas.', true);
             return;
@@ -78,7 +79,7 @@ This is a system-generated email. Please do not reply.
             return;
         }
 
-        // Pass the comma-separated string to the handler
+        // Pass the recipient, comma-separated CC string, and content to the handler
         await onSend(recipientEmail, ccEmail, mailContent);
     };
 
@@ -111,7 +112,7 @@ This is a system-generated email. Please do not reply.
                 <div className="p-2 border-b border-gray-200 flex items-center">
                     <span className="text-sm text-gray-600 font-medium mr-2 flex-shrink-0">CC:</span>
                     <input
-                        type="text" // Changed to text to better support comma-separated list
+                        type="text" 
                         value={ccEmail}
                         onChange={(e) => setCcEmail(e.target.value)}
                         placeholder="Multiple CC emails, separated by commas (optional)"
@@ -120,13 +121,13 @@ This is a system-generated email. Please do not reply.
                     />
                 </div>
                 
-                {/* Subject Field (UNCHANGED) */}
+                {/* Subject Field */}
                 <div className="p-2 border-b border-gray-200">
                     <span className="text-sm text-gray-600 font-medium">Subject: </span>
                     <span className="text-sm text-gray-800">Your SSI Certificate for {mockData.firstName} {mockData.lastName}</span>
                 </div>
 
-                {/* Body Content Area (UNCHANGED) */}
+                {/* Body Content Area */}
                 <div className="flex-1 p-3 overflow-y-auto">
                     <textarea
                         value={mailContent}
@@ -137,7 +138,7 @@ This is a system-generated email. Please do not reply.
                     />
                 </div>
 
-                {/* Footer (Actions) (UNCHANGED) */}
+                {/* Footer (Actions) */}
                 <div className="p-3 flex justify-between items-center bg-gray-100 rounded-b-lg border-t border-gray-200">
                     <button
                         onClick={handleSubmit}
@@ -150,7 +151,7 @@ This is a system-generated email. Please do not reply.
                     >
                         {isSending ? (
                             <>
-                                <Loader2 className="w-4 h-4 mr-2 animate-spin" /> Send
+                                <Loader2 className="w-4 h-4 mr-2 animate-spin" /> Sending...
                             </>
                         ) : (
                             <>

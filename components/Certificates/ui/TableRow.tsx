@@ -1,4 +1,4 @@
-// D:\ssistudios\ssistudios\components\Certificates\ui\TableRow.tsx (UPDATED)
+// D:\ssistudios\ssistudios\components\Certificates\ui\TableRow.tsx
 
 import React from 'react';
 import {
@@ -11,7 +11,7 @@ import {
     Square,
     FileText,
     FileCheck,
-    Mail, // 💡 NEW ICON
+    Mail,
 } from 'lucide-react';
 import { ICertificateClient, PAGE_LIMIT } from '../utils/constants'; 
 import { getHospitalColor, doiToDateInput, dateInputToDoi } from '../utils/helpers';
@@ -26,6 +26,7 @@ interface TableRowProps {
     isDeleting: boolean;
     generatingPdfId: string | null;
     generatingPdfV1Id: string | null;
+    isAnyActionLoading: boolean; // 💡 NEW: Global disable flag
     editFormData: Partial<ICertificateClient>;
     handleSelectOne: (id: string, checked: boolean) => void;
     handleEdit: (certificate: ICertificateClient) => void;
@@ -35,8 +36,6 @@ interface TableRowProps {
     setEditingId: React.Dispatch<React.SetStateAction<string | null>>;
     handleGeneratePDF_V1: (cert: ICertificateClient) => void;
     handleGeneratePDF_V2: (cert: ICertificateClient) => void;
-    
-    // 💡 NEW PROP FOR MAILING
     handleMailCertificate: (cert: ICertificateClient, template: 'certificate1.pdf' | 'certificate2.pdf') => void;
 }
 
@@ -50,6 +49,7 @@ const TableRow: React.FC<TableRowProps> = ({
     isDeleting,
     generatingPdfId,
     generatingPdfV1Id,
+    isAnyActionLoading, 
     editFormData,
     handleSelectOne,
     handleEdit,
@@ -59,7 +59,7 @@ const TableRow: React.FC<TableRowProps> = ({
     setEditingId,
     handleGeneratePDF_V1,
     handleGeneratePDF_V2,
-    handleMailCertificate, // 💡 DESTRUCTURE NEW PROP
+    handleMailCertificate,
 }) => {
     // Animation Classes
     const rowClasses = `
@@ -71,6 +71,10 @@ const TableRow: React.FC<TableRowProps> = ({
     `;
     
     const serialNumber = (currentPage - 1) * PAGE_LIMIT + index + 1;
+
+    const isPdfGenerating = generatingPdfId === cert._id || generatingPdfV1Id === cert._id;
+    // Disable if any individual PDF is generating OR if the global mail modal/send process is active
+    const isDisabled = isPdfGenerating || isAnyActionLoading; 
 
     return (
         <tr
@@ -103,7 +107,6 @@ const TableRow: React.FC<TableRowProps> = ({
 
             {/* Data Cells (UNCHANGED) */}
             {(['certificateNo', 'name', 'hospital', 'doi'] as (keyof ICertificateClient)[]).map((field) => {
-                 // ... (unchanged data rendering and editing logic)
                  const displayValue = field === 'hospital' 
                     ? <span className={`inline-flex items-center px-3 py-1 rounded-full text-xs font-semibold ${getHospitalColor(cert.hospital)}`}>
                         {cert.hospital}
@@ -137,7 +140,7 @@ const TableRow: React.FC<TableRowProps> = ({
             <td className="px-4 py-2 whitespace-nowrap text-sm font-medium">
                 {isEditing ? (
                     <div className="flex space-x-2">
-                         {/* ... (Save/Cancel buttons) */}
+                        {/* Save Button */}
                         <button
                             onClick={() => handleSave(cert._id)}
                             className="text-white bg-green-600/90 hover:bg-green-700 p-2 rounded-full w-8 h-8 flex items-center justify-center transition transform hover:scale-110 shadow-lg cursor-pointer"
@@ -146,6 +149,7 @@ const TableRow: React.FC<TableRowProps> = ({
                         >
                             <Save className="w-4 h-4" />
                         </button>
+                        {/* Cancel Button */}
                         <button
                             onClick={() => setEditingId(null)}
                             className="text-white bg-gray-500/90 hover:bg-gray-600 p-2 rounded-full w-8 h-8 flex items-center justify-center transition transform hover:scale-110 shadow-lg cursor-pointer"
@@ -157,38 +161,44 @@ const TableRow: React.FC<TableRowProps> = ({
                     </div>
                 ) : (
                     <div className="flex space-x-2">
-                        {/* 💡 NEW: Send Mail Button (V1) */}
+                        {/* 💡 Send Mail Button (V1) - PROFESSIONAL LOADING */}
                         <button
                             onClick={() => handleMailCertificate(cert, 'certificate1.pdf')}
-                            disabled={generatingPdfV1Id === cert._id || generatingPdfId === cert._id}
+                            disabled={isDisabled}
                             className={`text-white p-2 rounded-full w-8 h-8 flex items-center justify-center transition transform hover:scale-110 cursor-pointer shadow-md hover:shadow-lg ${
-                                (generatingPdfV1Id === cert._id || generatingPdfId === cert._id) ? 'bg-yellow-500/70' : 'bg-orange-600/90 hover:bg-orange-700'
+                                isDisabled 
+                                    ? 'bg-gray-400/90 cursor-not-allowed shadow-inner'
+                                    : 'bg-orange-600/90 hover:bg-orange-700'
                             }`}
                             title="Email Certificate (V1)"
                             aria-label="Email V1 certificate"
                         >
-                            <Mail className="w-4 h-4" />
+                            {isPdfGenerating ? <Loader2 className="w-4 h-4 animate-spin" /> : <Mail className="w-4 h-4" />}
                         </button>
                         
-                        {/* 💡 NEW: Send Mail Button (V2) - Optionally add another for the second template */}
+                        {/* 💡 Send Mail Button (V2) - PROFESSIONAL LOADING */}
                         <button
                             onClick={() => handleMailCertificate(cert, 'certificate2.pdf')}
-                            disabled={generatingPdfV1Id === cert._id || generatingPdfId === cert._id}
+                            disabled={isDisabled}
                             className={`text-white p-2 rounded-full w-8 h-8 flex items-center justify-center transition transform hover:scale-110 cursor-pointer shadow-md hover:shadow-lg ${
-                                (generatingPdfV1Id === cert._id || generatingPdfId === cert._id) ? 'bg-yellow-500/70' : 'bg-red-600/90 hover:bg-red-700'
+                                isDisabled 
+                                    ? 'bg-gray-400/90 cursor-not-allowed shadow-inner'
+                                    : 'bg-red-600/90 hover:bg-red-700'
                             }`}
                             title="Email Certificate (V2)"
                             aria-label="Email V2 certificate"
                         >
-                            <Mail className="w-4 h-4" />
+                            {isPdfGenerating ? <Loader2 className="w-4 h-4 animate-spin" /> : <Mail className="w-4 h-4" />}
                         </button>
 
-                        {/* Generate PDF Button (Template V1 - Green) */}
+                        {/* 💡 Generate PDF Button (Template V1) - PROFESSIONAL LOADING */}
                         <button
                             onClick={() => handleGeneratePDF_V1(cert)}
-                            disabled={generatingPdfV1Id === cert._id || generatingPdfId === cert._id}
+                            disabled={isDisabled}
                             className={`text-white p-2 rounded-full w-8 h-8 flex items-center justify-center transition transform hover:scale-110 cursor-pointer shadow-md hover:shadow-lg ${
-                                generatingPdfV1Id === cert._id ? 'bg-yellow-500/70' : 'bg-emerald-600/90 hover:bg-emerald-700'
+                                generatingPdfV1Id === cert._id 
+                                    ? 'bg-yellow-500/70 shadow-inner' 
+                                    : 'bg-emerald-600/90 hover:bg-emerald-700'
                             }`}
                             title="Download PDF (V1)"
                             aria-label="Generate and download PDF certificate (Version 1)"
@@ -200,12 +210,14 @@ const TableRow: React.FC<TableRowProps> = ({
                             )}
                         </button>
 
-                        {/* Generate PDF Button (Template V2 - Original Purple) */}
+                        {/* 💡 Generate PDF Button (Template V2) - PROFESSIONAL LOADING */}
                         <button
                             onClick={() => handleGeneratePDF_V2(cert)}
-                            disabled={generatingPdfId === cert._id || generatingPdfV1Id === cert._id}
+                            disabled={isDisabled}
                             className={`text-white p-2 rounded-full w-8 h-8 flex items-center justify-center transition transform hover:scale-110 cursor-pointer shadow-md hover:shadow-lg ${
-                                generatingPdfId === cert._id ? 'bg-yellow-500/70' : 'bg-purple-600/90 hover:bg-purple-700'
+                                generatingPdfId === cert._id 
+                                    ? 'bg-yellow-500/70 shadow-inner' 
+                                    : 'bg-purple-600/90 hover:bg-purple-700'
                             }`}
                             title="Download PDF (V2)"
                             aria-label="Generate and download PDF certificate (Version 2)"
@@ -220,7 +232,12 @@ const TableRow: React.FC<TableRowProps> = ({
                         {/* Edit Button */}
                         <button
                             onClick={() => handleEdit(cert)}
-                            className="text-sky-700 hover:text-white bg-sky-100/70 hover:bg-sky-600 p-2 rounded-full w-8 h-8 flex items-center justify-center transition transform hover:scale-110 cursor-pointer shadow-md hover:shadow-lg"
+                            disabled={isDisabled}
+                            className={`p-2 rounded-full w-8 h-8 flex items-center justify-center transition transform hover:scale-110 cursor-pointer shadow-md hover:shadow-lg ${
+                                isDisabled 
+                                    ? 'bg-gray-200 text-gray-400 cursor-not-allowed' 
+                                    : 'text-sky-700 hover:text-white bg-sky-100/70 hover:bg-sky-600'
+                            }`}
                             title="Edit"
                             aria-label="Edit certificate"
                         >
@@ -230,7 +247,12 @@ const TableRow: React.FC<TableRowProps> = ({
                         {/* Delete Button */}
                         <button
                             onClick={() => handleDelete(cert._id)}
-                            className="text-red-600 hover:text-white bg-red-100/70 hover:bg-red-600 p-2 rounded-full w-8 h-8 flex items-center justify-center transition transform hover:scale-110 cursor-pointer shadow-md hover:shadow-lg"
+                            disabled={isDisabled}
+                            className={`p-2 rounded-full w-8 h-8 flex items-center justify-center transition transform hover:scale-110 cursor-pointer shadow-md hover:shadow-lg ${
+                                isDisabled 
+                                    ? 'bg-gray-200 text-gray-400 cursor-not-allowed'
+                                    : 'text-red-600 hover:text-white bg-red-100/70 hover:bg-red-600'
+                            }`}
                             title="Delete"
                             aria-label="Delete certificate"
                         >

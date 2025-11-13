@@ -130,6 +130,9 @@ const CertificateTable: React.FC<CertificateTableProps> = ({ refreshKey, onRefre
         handleCloseMailComposer,
     } = useMailCertificate(onAlert);
 
+    // 💡 NEW: Combined loading state for individual row actions 
+    const isAnyActionLoading = isMailComposerOpen || isSending || isBulkGeneratingV1 || isBulkGeneratingV2;
+
     // Effect to handle the flash animation duration 
     useEffect(() => {
         if (flashId) {
@@ -141,7 +144,7 @@ const CertificateTable: React.FC<CertificateTableProps> = ({ refreshKey, onRefre
     }, [flashId, setFlashId]);
 
 
-    // --- Pagination Component ---
+    // --- Pagination Component (UNCHANGED) ---
     const Pagination = () => (
         <div className="flex flex-col sm:flex-row justify-end items-center mt-4 p-2 w-full">
             <div className="flex space-x-1 border border-gray-200 rounded-full p-1 shadow-inner bg-white/70 backdrop-blur-sm">
@@ -215,7 +218,7 @@ const CertificateTable: React.FC<CertificateTableProps> = ({ refreshKey, onRefre
                     handleBulkGeneratePDF_V2={handleBulkGeneratePDF_V2}
                 />
 
-                {/* Conditional Add Certificate Form */}
+                {/* Conditional Add Certificate Form (UNCHANGED) */}
                 {isAddFormVisible && (
                     <AddCertificateForm
                         newCertificateData={newCertificateData}
@@ -227,7 +230,7 @@ const CertificateTable: React.FC<CertificateTableProps> = ({ refreshKey, onRefre
                     />
                 )}
 
-                {/* Selection Summary Notification */}
+                {/* Selection Summary Notification (UNCHANGED) */}
                 {selectedIds.length > 0 && (
                     <div className="p-3 bg-sky-100/50 border-l-4 border-sky-600 text-slate-800 rounded-xl shadow-lg flex items-center justify-between transition duration-300 backdrop-blur-sm">
                         <div className="flex items-center">
@@ -241,7 +244,7 @@ const CertificateTable: React.FC<CertificateTableProps> = ({ refreshKey, onRefre
 
 
                 {sortedCertificates.length === 0 ? (
-                    // Empty state
+                    // Empty state (UNCHANGED)
                     <div className="text-center p-12 bg-white/70 rounded-xl shadow-lg border-2 border-dashed border-gray-300 backdrop-blur-sm">
                         <p className="text-gray-500 text-xl font-medium">
                             No certificates found.
@@ -288,6 +291,7 @@ const CertificateTable: React.FC<CertificateTableProps> = ({ refreshKey, onRefre
                                             handleGeneratePDF_V1={handleGeneratePDF_V1}
                                             handleGeneratePDF_V2={handleGeneratePDF_V2}
                                             handleMailCertificate={handleOpenMailComposer}
+                                            isAnyActionLoading={isAnyActionLoading} // 💡 PASSING LOADING FLAG
                                         />
                                     ))}
                                 </tbody>
