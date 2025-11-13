@@ -1,4 +1,3 @@
-// app/api/upload/route.ts
 import { NextRequest, NextResponse } from 'next/server';
 import dbConnect from '@/lib/dbconnect';
 // Assuming your Certificate model has 'certificateNo' indexed as unique.
@@ -17,14 +16,31 @@ interface InsertManyRawResult {
 // Helper function to validate DOI format (DD-MM-YYYY)
 const isValidDOI = (doi: string): boolean => {
     if (!doi || typeof doi !== 'string' || doi.length !== 10) return false;
-    // Regex to check for exactly two digits, a dash, two digits, a dash, and four digits
     const regex = /^\d{2}-\d{2}-\d{4}$/;
-    if (!regex.test(doi)) return false;
-    return true;
+    return regex.test(doi);
 };
+
+// Helper function to convert XLSX date number to DD-MM-YYYY string safely
+const safeXlsxDateToDoi = (excelSerial: number): string | null => {
+    try {
+        if (excelSerial > 0) {
+            const date = XLSX.SSF.parse_date_code(excelSerial);
+            // Check for valid year (Excel dates typically start after 1900)
+            if (date && date.y > 1900) { 
+                return `${String(date.d).padStart(2, '0')}-${String(date.m).padStart(2, '0')}-${String(date.y).padStart(4, '0')}`;
+            }
+        }
+    } catch (e) {
+        // Parsing failed (e.g., invalid input)
+        return null;
+    }
+    return null;
+};
+
 
 export async function POST(req: NextRequest) {
     try {
+        // --- Database Connection Check ---
         const connection = await dbConnect();
         if (!connection) {
             return NextResponse.json({ success: false, message: 'Database connection failed.' }, { status: 500 });
@@ -54,7 +70,6 @@ export async function POST(req: NextRequest) {
         
         const sheetName = workbook.SheetNames[0];
         const worksheet = workbook.Sheets[sheetName];
-        // Read data starting from the first row (header row)
         const json: any[] = XLSX.utils.sheet_to_json(worksheet, { header: 1 });
 
         if (json.length < 2) {
@@ -71,9 +86,7 @@ export async function POST(req: NextRequest) {
             'DOI': 'doi',
         };
 
-        // Map required column headers to their index in the Excel sheet
         const columnMap = Object.keys(requiredColumns).reduce((acc, requiredHeader) => {
-            // Find the index of the header, trimming whitespace for robustness
             const index = headers.findIndex(h => h && String(h).trim() === requiredHeader);
             if (index !== -1) {
                 // @ts-ignore
@@ -82,7 +95,6 @@ export async function POST(req: NextRequest) {
             return acc;
         }, {} as Record<string, { index: number, dbField: string }>);
 
-        // Ensure all required columns are present
         const missingColumns = Object.keys(requiredColumns).filter(header => !columnMap[header]);
         if (missingColumns.length > 0) {
             return NextResponse.json({
@@ -92,91 +104,111 @@ export async function POST(req: NextRequest) {
         }
 
         const certificatesToInsert: ICertificate[] = [];
-        let processedCount = 0;
         let failedCount = 0;
 
         // Process data rows
-        for (const row of dataRows) {
-            processedCount++;
+        for (let i = 0; i < dataRows.length; i++) {
+            const row = dataRows[i];
+            const processedCount = i + 1;
             try {
                 const certificate: Partial<ICertificate> = {};
-                let isValidRow = true;
-
-                // Extract and map data
+                
                 Object.keys(columnMap).forEach(header => {
                     const { index, dbField } = columnMap[header];
                     
-                    // Get value, handle undefined/null, and trim whitespace
-                    let value = row[index] !== undefined && row[index] !== null ? String(row[index]).trim() : '';
+                    let rawValue = row[index];
+                    let value: string = '';
 
+                    // Step 1: Handle DOI Conversion Robustly
                     if (dbField === 'doi') {
-                        // Handle DOI: convert XLSX date number to DD-MM-YYYY string if necessary
-                        if (typeof row[index] === 'number') {
-                            const date = XLSX.SSF.parse_date_code(row[index]);
-                            value = `${String(date.d).padStart(2, '0')}-${String(date.m).padStart(2, '0')}-${String(date.y).padStart(4, '0')}`;
+                        if (typeof rawValue === 'number') {
+                            const doiString = safeXlsxDateToDoi(rawValue);
+                            if (doiString) {
+                                value = doiString;
+                            } else {
+                                // Rejects row if date parsing fails (e.g., number is not a valid date serial)
+                                throw new Error(`Invalid or unparsable date value (${rawValue}) for DOI.`);
+                            }
+                        } else {
+                            // If not a number, convert to string and trim.
+                            value = rawValue !== undefined && rawValue !== null ? String(rawValue).trim() : '';
                         }
 
-                        // We still validate DOI format, but allow empty/missing DOI if it's not the critical field.
-                        // If a DOI is provided, it must be valid. If it's missing, we insert an empty string.
+                        // Step 2: Validate the final DOI format (after conversion/trimming)
                         if (value !== '' && !isValidDOI(value)) {
-                            throw new Error(`Invalid DOI format for row ${processedCount}: "${value}". Expected DD-MM-YYYY.`);
+                            throw new Error(`Invalid DOI format: "${value}". Expected DD-MM-YYYY.`);
                         }
-                    }
-                    
-                    // --- CRITICAL CHANGE 1: Enforce presence ONLY for 'certificateNo' ---
-                    if (dbField === 'certificateNo' && value === '') {
-                        throw new Error(`Missing required unique field: ${header} in row ${processedCount}.`);
+                    } else {
+                        // Handle other string fields (certificateNo, name, hospital)
+                        value = rawValue !== undefined && rawValue !== null ? String(rawValue).trim() : '';
                     }
 
-                    // For all other fields (name, hospital, doi), an empty string is now allowed if the cell is blank.
-                    // This satisfies the requirement to "insert empty values also".
+                    // Enforce presence ONLY for 'certificateNo' (the unique key)
+                    if (dbField === 'certificateNo' && value === '') {
+                        throw new Error(`Missing required unique field: ${header}.`);
+                    }
+
+                    // For all other fields (name, hospital, doi), an empty string is now allowed.
                     // @ts-ignore
                     certificate[dbField] = value;
                 });
 
-                // --- CRITICAL CHANGE 2: Only check for the primary unique field ---
                 if (certificate.certificateNo) {
                     certificatesToInsert.push(certificate as ICertificate);
-                } else {
-                    // This block should only be hit if certificateNo was somehow missing
-                    throw new Error(`Missing critical unique field (Certificate No.) in row ${processedCount}.`);
                 }
                 
             } catch (e: any) {
+                // Log and count rows that failed internal processing (e.g., validation, date parsing)
                 console.error(`Row processing failed (row ${processedCount}): ${e.message}`);
                 failedCount++;
             }
         }
 
         if (certificatesToInsert.length === 0) {
-            return NextResponse.json({ success: false, message: 'No valid data rows found to insert.' }, { status: 400 });
+            const message = failedCount > 0 
+                ? `No valid data rows found to insert. ${failedCount} rows failed initial processing/validation.`
+                : 'No valid data rows found to insert.';
+            return NextResponse.json({ success: false, message }, { status: 400 });
         }
 
-        // --- CRITICAL CHANGE 3: Insert into MongoDB, handling duplicates ---
-        // 'ordered: false' and unique indexing on 'certificateNo' handles the "don't repeat certificate no" requirement.
-        const insertResult = (await Certificate.insertMany(certificatesToInsert, {
-            ordered: false, // Allows processing to continue after a duplicate key error (11000)
-            lean: true,
-            rawResult: true,
-        })) as InsertManyRawResult;
+        // --- Insert into MongoDB, handling duplicates ---
+        let insertResult: InsertManyRawResult = { insertedCount: 0 };
+        let dbErrors = 0;
 
-        const insertedCount = insertResult.insertedCount;
-        const totalProcessed = processedCount;
+        try {
+            // Use ordered: false to ensure valid documents are inserted even if duplicates exist
+            insertResult = (await Certificate.insertMany(certificatesToInsert, {
+                ordered: false, 
+                lean: true,
+                rawResult: true,
+            })) as InsertManyRawResult;
+            dbErrors = insertResult.writeErrors?.length || 0; 
+
+        } catch (e: any) {
+            // If the bulk write fails completely (e.g., all are duplicates, connection error)
+            if (e.code === 11000 || (e.writeErrors && e.writeErrors.length > 0)) { 
+                dbErrors = e.writeErrors?.length || 0;
+            } else {
+                 throw e; // Re-throw any non-duplicate related error (e.g., connection issue)
+            }
+        }
         
-        // Calculate the number of documents that failed due to database errors (mostly duplicates)
-        const dbErrors = insertResult.writeErrors?.length || 0; 
-        const finalFailedCount = failedCount + dbErrors; // combines processing errors + database errors (duplicates)
+        const insertedCount = insertResult.insertedCount || 0;
+        const totalRows = dataRows.length; 
+        
+        // Final skipped count combines processing errors and database (duplicate) errors
+        const finalFailedCount = totalRows - insertedCount; 
 
         let responseMessage = `${insertedCount} unique certificates successfully uploaded.`;
         if (finalFailedCount > 0) {
-            responseMessage += ` ${finalFailedCount} rows were skipped due to errors (e.g., duplicate Certificate No., missing Certificate No., or invalid DOI format).`;
+            responseMessage += ` ${finalFailedCount} rows were skipped due to errors (e.g., duplicate Certificate No., invalid date, or processing failures).`;
         }
 
         return NextResponse.json({
             success: true,
             message: responseMessage,
             summary: {
-                totalRows: totalProcessed,
+                totalRows: totalRows,
                 successfullyInserted: insertedCount,
                 failedToProcess: finalFailedCount,
                 dbErrors: dbErrors,
@@ -184,11 +216,10 @@ export async function POST(req: NextRequest) {
         }, { status: 200 });
 
     } catch (error: any) {
-        console.error('Upload error:', error);
+        console.error('Upload error (FATAL):', error);
 
-        // Catch-all for other server-side errors
-        // Note: The main logic relies on writeErrors inside insertMany for duplicate handling.
-        return NextResponse.json({ success: false, message: 'Server error during file processing or database operation.' }, { status: 500 });
+        // Catch-all for fatal server-side errors
+        return NextResponse.json({ success: false, message: `Server error during file processing or database operation: ${error.message || 'Unknown error'}` }, { status: 500 });
     }
 }
 

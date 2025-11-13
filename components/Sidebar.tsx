@@ -85,6 +85,7 @@ const menu: MenuItem[] = [
     children: [
       { name: 'Database', path: '/certificates/database' },
       { name: 'Certificate Generator', path: '/certificates/generator' },
+      { name: 'Analysis', path: '/certificates/analysis' },
     ],
   },
 
