@@ -1,9 +1,17 @@
+// D:\ssistudios\ssistudios\components\CertificateDatabasePage.tsx
+
 'use client';
 
 import React, { useState, useCallback, useEffect } from 'react';
 import { FiCheckCircle, FiAlertTriangle, FiRefreshCw } from 'react-icons/fi';
 import UploadButton from '@/components/UploadButton';
-import CertificateTable, { ICertificateClient } from '@/components/CertificateTable';
+import CertificateTable from '@/components/Certificates/CertificateTable';
+
+// 💡 FIX: Import ICertificateClient from the constants file.
+// Assuming constants.ts is one level up and then down into the Certificates folder structure
+import { ICertificateClient } from '@/components/Certificates/utils/constants'; 
+// NOTE: The exact path might vary depending on your setup, adjust '@/components/...' accordingly.
+
 
 const CertificateDatabasePage: React.FC = () => {
     const [refreshKey, setRefreshKey] = useState(0);
