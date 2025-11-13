@@ -1,4 +1,4 @@
-// D:\ssistudios\ssistudios\components\Certificates\ui\MailComposer.tsx (UPDATED)
+// D:\ssistudios\ssistudios\components\Certificates\ui\MailComposer.tsx
 
 import React, { useState, useEffect } from 'react';
 import { Send, X, Paperclip, Loader2 } from 'lucide-react';
@@ -9,9 +9,18 @@ interface MailComposerProps {
     pdfBlob: Blob | null; // The generated PDF blob
     isSending: boolean;
     onClose: () => void;
-    onSend: (recipientEmail: string, emailContent: string) => Promise<void>; // 💡 UPDATED: Now passes recipientEmail
+    // UPDATED: onSend expects recipientEmail, ccEmail (comma-separated string), and emailContent
+    onSend: (recipientEmail: string, ccEmail: string, emailContent: string) => Promise<void>; 
     onAlert: (message: string, isError: boolean) => void;
 }
+
+// Helper to validate a comma-separated list of emails
+const validateEmails = (emails: string): boolean => {
+    if (!emails.trim()) return true; // Empty is valid
+    const emailArray = emails.split(',').map(email => email.trim()).filter(Boolean);
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    return emailArray.every(email => emailRegex.test(email));
+};
 
 const MailComposer: React.FC<MailComposerProps> = ({
     certData,
@@ -21,11 +30,11 @@ const MailComposer: React.FC<MailComposerProps> = ({
     onSend,
     onAlert,
 }) => {
-    // ⚠️ MOCK: Accessing mock data for names/hospital to populate the subject/body.
-    const mockData = certData as any; // Cast for mock data access 
+    // MOCK: Accessing mock data for names/hospital to populate the subject/body.
+    const mockData = certData as any; 
     const hospitalName = certData.hospital;
 
-    // Default mail content (editable by user)
+    // Default mail content 
     const initialContent = `
 Hello ${mockData.firstName || 'User'} ${mockData.lastName || ''},
 
@@ -38,22 +47,29 @@ The SSI Innovations Team
 This is a system-generated email. Please do not reply.
     `.trim();
 
-    // 💡 CHANGE 1: Initialize recipientEmail to an empty string.
     const [recipientEmail, setRecipientEmail] = useState(''); 
+    const [ccEmail, setCcEmail] = useState(''); 
     const [mailContent, setMailContent] = useState(initialContent);
 
-    // Ensure content and recipient resets if the component re-opens for a different certificate
+    // Reset fields on component re-open
     useEffect(() => {
         setMailContent(initialContent);
-        setRecipientEmail(''); // Ensure recipient is empty on new compose instance
+        setRecipientEmail('');
+        setCcEmail(''); 
     }, [certData._id]); 
 
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
 
-        // Basic validation for recipient email
-        if (!recipientEmail.trim() || !recipientEmail.includes('@')) {
-            onAlert('Please enter a valid recipient email address.', true);
+        // 1. Validate 'To' email
+        if (!recipientEmail.trim() || !validateEmails(recipientEmail)) {
+            onAlert('Please enter a single, valid recipient (To) email address.', true);
+            return;
+        }
+
+        // 2. Validate 'CC' emails (multiple allowed)
+        if (ccEmail.trim() && !validateEmails(ccEmail)) {
+             onAlert('Please ensure all Carbon Copy (CC) emails are valid and separated by commas.', true);
             return;
         }
 
@@ -62,8 +78,8 @@ This is a system-generated email. Please do not reply.
             return;
         }
 
-        // 💡 CHANGE 2: Pass the user-entered email to the onSend handler
-        await onSend(recipientEmail, mailContent);
+        // Pass the comma-separated string to the handler
+        await onSend(recipientEmail, ccEmail, mailContent);
     };
 
     return (
@@ -78,14 +94,27 @@ This is a system-generated email. Please do not reply.
                     </button>
                 </div>
                 
-                {/* To Field - Editable by User */}
+                {/* To Field (Single Recipient) */}
                 <div className="p-2 border-b border-gray-200 flex items-center">
                     <span className="text-sm text-gray-600 font-medium mr-2 flex-shrink-0">To:</span>
                     <input
                         type="email"
                         value={recipientEmail}
-                        onChange={(e) => setRecipientEmail(e.target.value)} // 💡 CHANGE 3: Make it editable
-                        placeholder="Recipient's email address" // 💡 CHANGE 4: Placeholder added
+                        onChange={(e) => setRecipientEmail(e.target.value)}
+                        placeholder="Recipient's email address"
+                        className="flex-1 text-sm text-gray-800 bg-transparent outline-none p-1 border border-transparent focus:border-sky-400 rounded transition duration-150"
+                        disabled={isSending}
+                    />
+                </div>
+
+                {/* CC Field (Multiple Recipients via Comma) */}
+                <div className="p-2 border-b border-gray-200 flex items-center">
+                    <span className="text-sm text-gray-600 font-medium mr-2 flex-shrink-0">CC:</span>
+                    <input
+                        type="text" // Changed to text to better support comma-separated list
+                        value={ccEmail}
+                        onChange={(e) => setCcEmail(e.target.value)}
+                        placeholder="Multiple CC emails, separated by commas (optional)"
                         className="flex-1 text-sm text-gray-800 bg-transparent outline-none p-1 border border-transparent focus:border-sky-400 rounded transition duration-150"
                         disabled={isSending}
                     />
@@ -121,7 +150,7 @@ This is a system-generated email. Please do not reply.
                     >
                         {isSending ? (
                             <>
-                                <Loader2 className="w-4 h-4 mr-2 animate-spin" /> Sending...
+                                <Loader2 className="w-4 h-4 mr-2 animate-spin" /> Send
                             </>
                         ) : (
                             <>

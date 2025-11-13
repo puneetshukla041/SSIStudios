@@ -1,3 +1,5 @@
+// send-certificate/route.ts
+
 import { NextResponse } from "next/server";
 import sgMail from "@sendgrid/mail";
 
@@ -19,6 +21,7 @@ export async function POST(req: Request) {
     const lastName = formData.get("lastName") as string;
     const hospitalName = formData.get("hospitalName") as string;
     const recipientEmail = formData.get("recipientEmail") as string; 
+    const ccEmailsString = formData.get("ccEmail") as string; // 💡 MULTIPLE EMAILS: Comma-separated string
 
     if (!pdfFile || !recipientEmail) {
       return NextResponse.json({ success: false, error: "Missing PDF file or recipient email address." }, { status: 400 });
@@ -29,7 +32,7 @@ export async function POST(req: Request) {
 
     sgMail.setApiKey(process.env.SENDGRID_API_KEY as string);
 
-    // Define the HTML content
+    // Define the HTML content (UNCHANGED)
     const htmlContent = `
       <p>Hello ${firstName} ${lastName},</p>
       <p>Congratulations! Here is your training certificate from ${hospitalName}.</p>
@@ -37,9 +40,9 @@ export async function POST(req: Request) {
       <br>
       <small>This is a system-generated email. Please do not reply.</small>
     `;
-    
-    // Define the plain text content (clean of HTML tags)
-    const textContent = `
+    
+    // Define the plain text content (UNCHANGED)
+    const textContent = `
 Hello ${firstName} ${lastName},
 
 Congratulations! Here is your training certificate from ${hospitalName}.
@@ -49,14 +52,28 @@ The SSI Innovations Team
 
 ---
 This is a system-generated email. Please do not reply.
-    `.trim();
+    `.trim();
+    
+    // 💡 NEW: Process the comma-separated CC string into an array of SendGrid recipients
+    const ccRecipients = ccEmailsString.split(',')
+        .map(email => email.trim())
+        .filter(email => email.length > 0) // Filter out empty strings
+        .map(email => ({ email })); // Convert to the format [{email: 'a@a.com'}, {email: 'b@b.com'}]
+
+
+    // 💡 CONDITIONAL CC SETUP
+    // SendGrid's 'cc' property expects an array of email objects or a single string.
+    // We use the array format for multiple emails.
+    const cc = ccRecipients.length > 0 ? { cc: ccRecipients } : {};
+
 
     const msg = {
       to: recipientEmail, 
-      from: "puneetshukla041@gmail.com", // ⚠️ Highly recommend replacing this with a verified domain email (e.g., 'certs@ssinnovations.org')
+      from: "puneetshukla041@gmail.com", 
       subject: `Your SSI Certificate for ${firstName} ${lastName}`,
-      html: htmlContent, // HTML version
-      text: textContent, // ✅ Plain text version (IMPROVES DELIVERABILITY)
+      html: htmlContent, 
+      text: textContent, 
+      ...cc, // 💡 NEW: Spread the processed CC object here
       attachments: [
         {
           content: buffer.toString("base64"),

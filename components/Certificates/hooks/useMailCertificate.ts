@@ -1,11 +1,11 @@
-// D:\ssistudios\ssistudios\components\Certificates\hooks\useMailCertificate.ts (UPDATED)
+// D:\ssistudios\ssistudios\components\Certificates\hooks\useMailCertificate.ts
 
 import { useState, useCallback } from 'react';
 import { ICertificateClient } from '../utils/constants';
 // ⚠️ Mocked/Assumed Import: This PDF generator should handle the V1/V2 template logic 
 // and return a Blob or File object for the mail composer.
 import { generateCertificatePDF } from '../utils/pdfGenerator'; 
-import { mockCertificateData, ICertificateClientWithEmail } from '../utils/mockData'; // 💡 Using mock data
+import { mockCertificateData, ICertificateClientWithEmail } from '../utils/mockData'; 
 
 // Type for the internal state of the certificate being mailed
 interface MailState {
@@ -20,7 +20,7 @@ export const useMailCertificate = (onAlert: (message: string, isError: boolean) 
     const [isPdfGenerating, setIsPdfGenerating] = useState(false);
     const [isSending, setIsSending] = useState(false);
 
-    // 1. Initiate mail composer, generate PDF in the background
+    // 1. Initiate mail composer, generate PDF in the background (UNCHANGED)
     const handleOpenMailComposer = useCallback(async (cert: ICertificateClient, template: 'certificate1.pdf' | 'certificate2.pdf') => {
         setIsMailComposerOpen(true);
         setMailState({ cert, pdfBlob: null, template });
@@ -30,8 +30,7 @@ export const useMailCertificate = (onAlert: (message: string, isError: boolean) 
         // ⚠️ Mock PDF Generation: In a real app, this generates the file locally.
         try {
              // Assuming generateCertificatePDF is updated to return a Blob/File when the 5th argument is 'true'
-             // We need a dummy setLoading function or adjust the original generator for the client-side approach
-             const dummySetLoading = (() => {}) as any; // Using dummy setter
+             const dummySetLoading = (() => {}) as any; 
              const result = await generateCertificatePDF(cert, onAlert, template, dummySetLoading, true);
 
              if (result && result.blob) {
@@ -42,15 +41,15 @@ export const useMailCertificate = (onAlert: (message: string, isError: boolean) 
              }
         } catch (error: any) {
             onAlert(`PDF Generation Failed: ${error.message || 'Unknown error'}`, true);
-            setIsMailComposerOpen(false); // Close composer on failure
+            setIsMailComposerOpen(false); 
         } finally {
             setIsPdfGenerating(false);
         }
     }, [onAlert]);
 
     // 2. Mail Send Logic
-    // 💡 UPDATED SIGNATURE to receive recipientEmail as the first argument
-    const handleSendMail = useCallback(async (recipientEmail: string, mailContent: string) => {
+    // 💡 UPDATED SIGNATURE: Accepts ccEmail as the second argument
+    const handleSendMail = useCallback(async (recipientEmail: string, ccEmail: string, mailContent: string) => {
         if (!mailState.cert || !mailState.pdfBlob) {
             onAlert('Cannot send mail: Missing certificate data or PDF attachment.', true);
             return;
@@ -58,11 +57,9 @@ export const useMailCertificate = (onAlert: (message: string, isError: boolean) 
 
         setIsSending(true);
         
-        // ⚠️ MOCK DATA ACCESS for names/hospital
-        // We find the certificate to get name/hospital details needed for the API route.
+        // MOCK DATA ACCESS for names/hospital
         const certWithDetails = mockCertificateData.find(c => c._id === mailState.cert?._id) || mailState.cert as ICertificateClientWithEmail;
         
-        // Extract details for the API body. The recipientEmail comes directly from the function argument.
         const { firstName, lastName, hospital: hospitalName, certificateNo } = certWithDetails; 
         
         try {
@@ -74,12 +71,9 @@ export const useMailCertificate = (onAlert: (message: string, isError: boolean) 
             formData.append('firstName', firstName || 'Recipient');
             formData.append('lastName', lastName || '');
             formData.append('hospitalName', hospitalName);
-            formData.append('recipientEmail', recipientEmail); // 💡 USING USER-PROVIDED EMAIL (Corrected)
+            formData.append('recipientEmail', recipientEmail); 
+            formData.append('ccEmail', ccEmail); // 💡 NEW: Append CC email (will be empty string if user left it blank)
             formData.append('mailContent', mailContent); 
-
-            // 💡 The provided API route currently ignores 'mailContent' and constructs its own body. 
-            // We proceed with the send but acknowledge the API structure might need modification 
-            // if the user wants the custom text used.
 
             const response = await fetch('/api/send-certificate', {
                 method: 'POST',
@@ -101,7 +95,7 @@ export const useMailCertificate = (onAlert: (message: string, isError: boolean) 
         } finally {
             setIsSending(false);
         }
-    }, [mailState, onAlert]); // mailState ensures we capture the correct cert and blob
+    }, [mailState, onAlert]); 
 
     const handleCloseMailComposer = useCallback(() => {
         setIsMailComposerOpen(false);
