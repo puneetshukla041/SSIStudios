@@ -1,42 +1,22 @@
 // D:\ssistudios\ssistudios\components\Certificates\CertificateTable.tsx
-
 'use client';
 
-import React, { useEffect, useMemo } from 'react';
-import { BadgeCheck, ChevronLeft, ChevronRight } from 'lucide-react';
+import React, { useEffect } from 'react';
+import { BadgeCheck, Loader2, Square, ChevronLeft, ChevronRight } from 'lucide-react';
 
 // Import Hooks and Utils
 import { useCertificateData } from './hooks/useCertificateData';
 import { useCertificateActions } from './hooks/useCertificateActions';
-import { useMailCertificate } from './hooks/useMailCertificate';
-import { ICertificateClient, CertificateTableProps as BaseTableProps, PAGE_LIMIT } from './utils/constants';
+import { useMailCertificate } from './hooks/useMailCertificate'; 
+import { ICertificateClient, CertificateTableProps, PAGE_LIMIT } from './utils/constants';
 
 // Import UI Components
+import AddCertificateForm from './ui/AddCertificateForm';
+import QuickActionBar from './ui/QuickActionBar';
 import TableHeader from './ui/TableHeader';
 import TableRow from './ui/TableRow';
-import MailComposer from './ui/MailComposer';
+import MailComposer from './ui/MailComposer'; 
 
-// --- NEW PROPS INTERFACE for CertificateTable ---
-interface CertificateTableProps extends BaseTableProps {
-    searchQuery: string;
-    hospitalFilter: string;
-    selectedIds: string[];
-    isAddFormVisible: boolean;
-    isBulkGeneratingV1: boolean;
-    isBulkGeneratingV2: boolean;
-    setSearchQuery: React.Dispatch<React.SetStateAction<string>>;
-    setHospitalFilter: React.Dispatch<React.SetStateAction<string>>;
-    setSelectedIds: React.Dispatch<React.SetStateAction<string[]>>;
-    setIsAddFormVisible: React.Dispatch<React.SetStateAction<boolean>>;
-    setIsBulkGeneratingV1: React.Dispatch<React.SetStateAction<boolean>>;
-    setIsBulkGeneratingV2: React.Dispatch<React.SetStateAction<boolean>>;
-    // Action Handlers passed down from the page (needed for useCertificateActions compatibility)
-    handleBulkDelete: () => Promise<void>;
-    handleDownload: (type: 'xlsx' | 'csv') => Promise<void>;
-    handleBulkGeneratePDF_V1: () => Promise<void>;
-    handleBulkGeneratePDF_V2: () => Promise<void>;
-}
-// --------------------------------------------------
 
 // --- Skeleton Loader Component (UNCHANGED) ---
 const SkeletonLoader = () => (
@@ -73,68 +53,62 @@ const SkeletonLoader = () => (
 );
 
 
-const CertificateTable: React.FC<CertificateTableProps> = ({ 
-    refreshKey, 
-    onRefresh, 
-    onAlert,
-    searchQuery, 
-    hospitalFilter,
-    selectedIds,
-    isBulkGeneratingV1,
-    isBulkGeneratingV2,
-    setSelectedIds,
-    setIsAddFormVisible, 
-    setIsBulkGeneratingV1, 
-    setIsBulkGeneratingV2,
-}) => {
-    // 1. Data and State Management: Use external state for fetching logic
+const CertificateTable: React.FC<CertificateTableProps> = ({ refreshKey, onRefresh, onAlert }) => {
+    // 1. Data and State Management (Fetching, Pagination, Sorting, Filtering)
     const {
         certificates,
         isLoading,
+        totalItems,
         currentPage,
         totalPages,
+        searchQuery,
+        hospitalFilter,
         uniqueHospitals,
         sortConfig,
+        selectedIds,
         fetchCertificates,
         fetchCertificatesForExport,
         setCurrentPage,
+        setSearchQuery,
+        setHospitalFilter,
+        setSelectedIds,
         requestSort,
         sortedCertificates,
         setIsLoading,
-    } = useCertificateData(
-        refreshKey, 
-        // 💡 UPDATED: Pass the custom onRefresh that accepts hospitals
-        (data, totalCount, hospitals) => onRefresh(data, totalCount, hospitals), 
-        onAlert, 
-        searchQuery, 
-        hospitalFilter,
-    );
+    } = useCertificateData(refreshKey, onRefresh, onAlert);
 
-    // 2. Action Management: Use external setters for bulk actions/selection
+    // 2. Action Management (CRUD, Bulk Actions, PDF, Download)
     const {
         editingId,
         editFormData,
+        isAddFormVisible,
         newCertificateData,
         isAdding,
         flashId,
         deletingId,
         generatingPdfId,
         generatingPdfV1Id,
+        isBulkGeneratingV1, 
+        isBulkGeneratingV2, 
         setEditingId,
         setEditFormData,
+        setIsAddFormVisible,
         setNewCertificateData,
         setFlashId,
         handleSelectOne,
         handleSelectAll,
+        handleBulkDelete,
         handleEdit,
         handleSave,
         handleDelete,
         handleChange,
         handleAddCertificate,
         handleNewCertChange,
+        handleDownload,
         handleGeneratePDF_V1,
         handleGeneratePDF_V2,
-        // The rest of the action handlers are used internally but their loading states are managed externally.
+        handleBulkGeneratePDF_V1, 
+        handleBulkGeneratePDF_V2, 
     } = useCertificateActions({
         certificates,
         selectedIds,
@@ -143,14 +117,9 @@ const CertificateTable: React.FC<CertificateTableProps> = ({
         fetchCertificatesForExport,
         onAlert,
         setIsLoading,
-        // 💡 Pass bulk state setters to the actions hook so it can signal loading status externally
-        setIsBulkGeneratingV1, 
-        setIsBulkGeneratingV2, 
-        // 💡 Pass isAddFormVisible setter to the actions hook so it can hide the form after adding
-        setIsAddFormVisible,
     });
     
-    // 3. Mail Action Management (UNCHANGED)
+    // 3. Mail Action Management
     const {
         isMailComposerOpen,
         mailComposerCert,
@@ -162,16 +131,14 @@ const CertificateTable: React.FC<CertificateTableProps> = ({
     } = useMailCertificate(onAlert);
 
     // Combined loading state: Disable individual row buttons when any action is running
-    const isAnyActionLoading = useMemo(() => 
-        isMailComposerOpen || isSending || isBulkGeneratingV1 || isBulkGeneratingV2 || isAdding
-    , [isMailComposerOpen, isSending, isBulkGeneratingV1, isBulkGeneratingV2, isAdding]);
+    const isAnyActionLoading = isMailComposerOpen || isSending || isBulkGeneratingV1 || isBulkGeneratingV2;
 
-    // Effect to handle the flash animation duration (UNCHANGED)
+    // Effect to handle the flash animation duration 
     useEffect(() => {
         if (flashId) {
             const timer = setTimeout(() => {
                 setFlashId(null);
-            }, 1000);
+            }, 1000); 
             return () => clearTimeout(timer);
         }
     }, [flashId, setFlashId]);
@@ -231,7 +198,43 @@ const CertificateTable: React.FC<CertificateTableProps> = ({
 
     return (
         <>
-            <div className="space-y-6 w-full">
+            <div className="space-y-6 w-full p-3 md:p-0">
+
+                {/* 💡 FIX: Notification Space Placeholder */}
+                {/* This div reserves the space for any temporary notifications (like the "synced" message) 
+                   preventing the content below from shifting up/down when the message appears/disappears. */}
+                <div className="h-10" aria-hidden="true" />
+
+
+                {/* Quick Action Bar */}
+                <QuickActionBar
+                    isAddFormVisible={isAddFormVisible}
+                    selectedIds={selectedIds}
+                    uniqueHospitals={uniqueHospitals}
+                    searchQuery={searchQuery}
+                    hospitalFilter={hospitalFilter}
+                    setIsAddFormVisible={setIsAddFormVisible}
+                    setSearchQuery={setSearchQuery}
+                    setHospitalFilter={setHospitalFilter}
+                    handleBulkDelete={handleBulkDelete}
+                    handleDownload={handleDownload}
+                    isBulkGeneratingV1={isBulkGeneratingV1}
+                    isBulkGeneratingV2={isBulkGeneratingV2}
+                    handleBulkGeneratePDF_V1={handleBulkGeneratePDF_V1}
+                    handleBulkGeneratePDF_V2={handleBulkGeneratePDF_V2}
+                />
+
+                {/* Conditional Add Certificate Form (UNCHANGED) */}
+                {isAddFormVisible && (
+                    <AddCertificateForm
+                        newCertificateData={newCertificateData}
+                        isAdding={isAdding}
+                        handleNewCertChange={handleNewCertChange}
+                        handleAddCertificate={handleAddCertificate}
+                        setIsAddFormVisible={setIsAddFormVisible}
+                        setNewCertificateData={setNewCertificateData}
+                    />
+                )}
 
                 {/* Selection Summary Notification (UNCHANGED) */}
                 {selectedIds.length > 0 && (
@@ -258,7 +261,8 @@ const CertificateTable: React.FC<CertificateTableProps> = ({
                     </div>
                 ) : (
                     <>
-                        <div className="overflow-x-auto">
+                        {/* TABLE Container (UNCHANGED) */}
+                        <div className="overflow-x-auto rounded-xl shadow-lg border border-gray-300 bg-white/70 backdrop-blur-md">
                             <table
                                 className="min-w-full divide-y divide-gray-300"
                                 style={{ borderCollapse: 'collapse' }}
@@ -271,12 +275,12 @@ const CertificateTable: React.FC<CertificateTableProps> = ({
                                     handleSelectAll={handleSelectAll}
                                 />
                                 <tbody className="divide-y divide-gray-200">
-                                    {sortedCertificates.map((cert: ICertificateClient, index: number) => (
+                                    {sortedCertificates.map((cert: ICertificateClient, index: number) => ( 
                                         <TableRow
                                             key={cert._id}
                                             cert={cert}
-                                            index={index}
-                                            currentPage={currentPage}
+                                            index={index} 
+                                            currentPage={currentPage} 
                                             isSelected={selectedIds.includes(cert._id)}
                                             isEditing={editingId === cert._id}
                                             isFlashing={flashId === cert._id}
