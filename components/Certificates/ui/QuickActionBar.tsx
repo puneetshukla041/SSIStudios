@@ -12,7 +12,8 @@ import {
     Loader2,   // For loading state
 } from 'lucide-react';
 
-// Removed DateFilterOption and DATE_FILTER_OPTIONS imports
+// Assuming imports from constants/types needed by this component exist
+// Example: import { DateFilterOption, DATE_FILTER_OPTIONS } from '../utils/constants'; 
 
 interface QuickActionBarProps {
     isAddFormVisible: boolean;
@@ -50,11 +51,13 @@ const QuickActionBar: React.FC<QuickActionBarProps> = ({
     
     // Combine loading states to disable all relevant buttons
     const isGenerating = isBulkGeneratingV1 || isBulkGeneratingV2;
-    
+
+    const isExporting = isGenerating; 
+
     return (
         <div className="flex flex-col md:flex-row justify-between items-center space-y-4 md:space-y-0 md:space-x-4 p-4 sm:p-5 bg-white/80 rounded-xl border border-gray-200 backdrop-blur-sm">
 
-            {/* Left Side: Add, Search, Filter */}
+            {/* Left Side: Add, Search, Filters */}
             <div className="flex flex-col sm:flex-row w-full space-y-3 sm:space-y-0 sm:space-x-4">
                 <button
                     onClick={() => setIsAddFormVisible(prev => !prev)}
@@ -89,63 +92,75 @@ const QuickActionBar: React.FC<QuickActionBarProps> = ({
                         ))}
                     </select>
                 </div>
-                
-                {/* Removed: Date Filter dropdown */}
             </div>
 
             {/* Right Side: Bulk Actions & Export */}
             <div className="flex space-x-3 w-full sm:w-auto justify-start sm:justify-end flex-wrap gap-2 sm:gap-3">
                 
-                {/* Bulk PDF Export V1 Button */}
+                {/* 💡 Bulk PDF Export V1 Button - PROFESSIONAL LOADING */}
                 {selectedIds.length > 0 && (
                     <button
                         onClick={handleBulkGeneratePDF_V1}
                         disabled={isGenerating}
                         className={`px-5 py-2 text-sm font-semibold rounded-full text-white transition duration-300 shadow-lg flex items-center transform hover:scale-[1.05] cursor-pointer ${
                             isBulkGeneratingV1 
-                                ? 'bg-yellow-500/70 cursor-wait' 
+                                ? 'bg-yellow-500/70 cursor-wait shadow-inner' 
                                 : 'bg-emerald-600/90 hover:bg-emerald-700'
                         }`}
                         title="Export Selected V1 PDFs (ZIP)"
                     >
-                        {isBulkGeneratingV1 ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : <FileCheck className="w-4 h-4 mr-2" />} 
-                        Export {selectedIds.length} V1
+                        {isBulkGeneratingV1 ? (
+                            <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                        ) : (
+                            <FileCheck className="w-4 h-4 mr-2" />
+                        )} 
+                        {isBulkGeneratingV1 ? 'Generating...' : `Export ${selectedIds.length} V1`}
                     </button>
                 )}
                 
-                {/* Bulk PDF Export V2 Button */}
+                {/* 💡 Bulk PDF Export V2 Button - PROFESSIONAL LOADING */}
                 {selectedIds.length > 0 && (
                     <button
                         onClick={handleBulkGeneratePDF_V2}
                         disabled={isGenerating}
                         className={`px-5 py-2 text-sm font-semibold rounded-full text-white transition duration-300 shadow-lg flex items-center transform hover:scale-[1.05] cursor-pointer ${
                             isBulkGeneratingV2
-                                ? 'bg-yellow-500/70 cursor-wait' 
+                                ? 'bg-yellow-500/70 cursor-wait shadow-inner' 
                                 : 'bg-purple-600/90 hover:bg-purple-700'
                         }`}
                         title="Export Selected V2 PDFs (ZIP)"
                     >
-                        {isBulkGeneratingV2 ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : <FileText className="w-4 h-4 mr-2" />} 
-                        Export {selectedIds.length} V2
+                        {isBulkGeneratingV2 ? (
+                            <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                        ) : (
+                            <FileText className="w-4 h-4 mr-2" />
+                        )} 
+                        {isBulkGeneratingV2 ? 'Generating...' : `Export ${selectedIds.length} V2`}
                     </button>
                 )}
                 
-                {/* Bulk Delete Button */}
+                {/* Bulk Delete Button (Disabled when generating) */}
                 {selectedIds.length > 0 && (
                     <button
                         onClick={handleBulkDelete}
-                        disabled={isGenerating} // Disable delete during PDF export
-                        className="px-5 py-2 text-sm font-semibold rounded-full bg-red-600/90 text-white hover:bg-red-700 transition duration-300 shadow-lg flex items-center transform hover:scale-[1.05] cursor-pointer"
+                        disabled={isGenerating} 
+                        className={`px-5 py-2 text-sm font-semibold rounded-full text-white transition duration-300 shadow-lg flex items-center transform hover:scale-[1.05] cursor-pointer ${
+                            isGenerating ? 'bg-red-400/90 cursor-not-allowed' : 'bg-red-600/90 hover:bg-red-700'
+                        }`}
                     >
                         <Trash2 className="w-4 h-4 mr-2" /> Delete {selectedIds.length}
                     </button>
                 )}
 
-                {/* Export Button (Excel) */}
+                {/* 💡 Export Button (Excel) - PROFESSIONAL LOADING */}
                 <button
                     onClick={() => handleDownload('xlsx')}
-                    disabled={isGenerating} // Disable excel export during PDF export
-                    className="px-6 py-2 text-sm font-semibold rounded-full bg-teal-600/90 text-white hover:bg-teal-700 transition duration-300 shadow-lg flex items-center justify-center transform hover:scale-[1.05] cursor-pointer whitespace-nowrap sm:w-56"
+                    disabled={isExporting} 
+                    className={`px-6 py-2 text-sm font-semibold rounded-full text-white transition duration-300 shadow-lg flex items-center justify-center transform hover:scale-[1.05] cursor-pointer whitespace-nowrap sm:w-56 ${
+                        isExporting
+                            ? 'bg-gray-400/90 cursor-not-allowed shadow-inner' 
+                            : 'bg-teal-600/90 hover:bg-teal-700'
+                    }`}
                 >
                     <Download className="w-4 h-4 mr-2" /> Export Excel
                 </button>

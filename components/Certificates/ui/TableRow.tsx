@@ -26,7 +26,7 @@ interface TableRowProps {
     isDeleting: boolean;
     generatingPdfId: string | null;
     generatingPdfV1Id: string | null;
-    isAnyActionLoading: boolean; // 💡 NEW: Global disable flag
+    isAnyActionLoading: boolean; // Global disable flag
     editFormData: Partial<ICertificateClient>;
     handleSelectOne: (id: string, checked: boolean) => void;
     handleEdit: (certificate: ICertificateClient) => void;
@@ -65,22 +65,30 @@ const TableRow: React.FC<TableRowProps> = ({
     const rowClasses = `
         transition-all duration-300 ease-in-out bg-white/80
         ${isDeleting ? 'opacity-0 transform translate-x-1/2 scale-x-95 pointer-events-none h-0' : ''}
-        ${isFlashing ? 'bg-emerald-200/50 shadow-sm' : ''}
         hover:bg-white hover:shadow-sm
-        ${isSelected && !isFlashing ? 'bg-sky-100/50' : ''}
+        ${isSelected ? 'bg-sky-100/50' : ''}
     `;
     
+    // FIX: Apply the flashing background color directly via style for smoothness
+    const flashingStyle = {
+        backgroundColor: isFlashing ? 'rgba(167, 243, 208, 0.5)' : undefined, 
+        boxShadow: isFlashing ? '0 0 10px rgba(16, 185, 129, 0.5)' : undefined,
+    };
+
     const serialNumber = (currentPage - 1) * PAGE_LIMIT + index + 1;
 
     const isPdfGenerating = generatingPdfId === cert._id || generatingPdfV1Id === cert._id;
-    // Disable if any individual PDF is generating OR if the global mail modal/send process is active
-    const isDisabled = isPdfGenerating || isAnyActionLoading; 
+    const isDisabled = isPdfGenerating || isAnyActionLoading || isEditing; 
 
     return (
         <tr
             key={cert._id}
             className={rowClasses}
-            style={{ transitionProperty: 'opacity, transform, background-color, box-shadow' }}
+            // FIX: Explicitly set transition property and merge flashing style
+            style={{ 
+                transitionProperty: 'opacity, transform, background-color, box-shadow',
+                ...flashingStyle,
+            }}
         >
             {/* Checkbox for individual selection */}
             <td className="px-3 py-3 text-center whitespace-nowrap w-12 border-r border-gray-200">
@@ -91,6 +99,7 @@ const TableRow: React.FC<TableRowProps> = ({
                         checked={isSelected}
                         onChange={(e) => handleSelectOne(cert._id, e.target.checked)}
                         aria-label={`Select certificate ${cert.certificateNo}`}
+                        disabled={isDisabled}
                     />
                     {isSelected ? (
                         <BadgeCheck className="w-5 h-5 text-sky-600" />
@@ -161,7 +170,7 @@ const TableRow: React.FC<TableRowProps> = ({
                     </div>
                 ) : (
                     <div className="flex space-x-2">
-                        {/* 💡 Send Mail Button (V1) - PROFESSIONAL LOADING */}
+                        {/* Send Mail Button (V1) */}
                         <button
                             onClick={() => handleMailCertificate(cert, 'certificate1.pdf')}
                             disabled={isDisabled}
@@ -176,7 +185,7 @@ const TableRow: React.FC<TableRowProps> = ({
                             {isPdfGenerating ? <Loader2 className="w-4 h-4 animate-spin" /> : <Mail className="w-4 h-4" />}
                         </button>
                         
-                        {/* 💡 Send Mail Button (V2) - PROFESSIONAL LOADING */}
+                        {/* Send Mail Button (V2) */}
                         <button
                             onClick={() => handleMailCertificate(cert, 'certificate2.pdf')}
                             disabled={isDisabled}
@@ -191,7 +200,7 @@ const TableRow: React.FC<TableRowProps> = ({
                             {isPdfGenerating ? <Loader2 className="w-4 h-4 animate-spin" /> : <Mail className="w-4 h-4" />}
                         </button>
 
-                        {/* 💡 Generate PDF Button (Template V1) - PROFESSIONAL LOADING */}
+                        {/* Generate PDF Button (Template V1) */}
                         <button
                             onClick={() => handleGeneratePDF_V1(cert)}
                             disabled={isDisabled}
@@ -210,7 +219,7 @@ const TableRow: React.FC<TableRowProps> = ({
                             )}
                         </button>
 
-                        {/* 💡 Generate PDF Button (Template V2) - PROFESSIONAL LOADING */}
+                        {/* Generate PDF Button (Template V2) */}
                         <button
                             onClick={() => handleGeneratePDF_V2(cert)}
                             disabled={isDisabled}

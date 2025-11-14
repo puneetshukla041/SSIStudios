@@ -18,7 +18,7 @@ import TableRow from './ui/TableRow';
 import MailComposer from './ui/MailComposer'; 
 
 
-// --- Skeleton Loader Component ---
+// --- Skeleton Loader Component (UNCHANGED) ---
 const SkeletonLoader = () => (
     <div className="animate-pulse space-y-4 p-6 rounded-xl shadow-lg border border-gray-200 bg-white">
         <div className="flex justify-between items-center space-x-4">
@@ -130,7 +130,7 @@ const CertificateTable: React.FC<CertificateTableProps> = ({ refreshKey, onRefre
         handleCloseMailComposer,
     } = useMailCertificate(onAlert);
 
-    // 💡 NEW: Combined loading state for individual row actions 
+    // Combined loading state: Disable individual row buttons when any action is running
     const isAnyActionLoading = isMailComposerOpen || isSending || isBulkGeneratingV1 || isBulkGeneratingV2;
 
     // Effect to handle the flash animation duration 
@@ -200,7 +200,13 @@ const CertificateTable: React.FC<CertificateTableProps> = ({ refreshKey, onRefre
         <>
             <div className="space-y-6 w-full p-3 md:p-0">
 
-                {/* Quick Action Bar (Search, Filter, Add, Export, Bulk Delete) */}
+                {/* 💡 FIX: Notification Space Placeholder */}
+                {/* This div reserves the space for any temporary notifications (like the "synced" message) 
+                   preventing the content below from shifting up/down when the message appears/disappears. */}
+                <div className="h-10" aria-hidden="true" />
+
+
+                {/* Quick Action Bar */}
                 <QuickActionBar
                     isAddFormVisible={isAddFormVisible}
                     selectedIds={selectedIds}
@@ -255,7 +261,7 @@ const CertificateTable: React.FC<CertificateTableProps> = ({ refreshKey, onRefre
                     </div>
                 ) : (
                     <>
-                        {/* TABLE Container */}
+                        {/* TABLE Container (UNCHANGED) */}
                         <div className="overflow-x-auto rounded-xl shadow-lg border border-gray-300 bg-white/70 backdrop-blur-md">
                             <table
                                 className="min-w-full divide-y divide-gray-300"
@@ -291,7 +297,7 @@ const CertificateTable: React.FC<CertificateTableProps> = ({ refreshKey, onRefre
                                             handleGeneratePDF_V1={handleGeneratePDF_V1}
                                             handleGeneratePDF_V2={handleGeneratePDF_V2}
                                             handleMailCertificate={handleOpenMailComposer}
-                                            isAnyActionLoading={isAnyActionLoading} // 💡 PASSING LOADING FLAG
+                                            isAnyActionLoading={isAnyActionLoading}
                                         />
                                     ))}
                                 </tbody>
@@ -302,7 +308,7 @@ const CertificateTable: React.FC<CertificateTableProps> = ({ refreshKey, onRefre
                 )}
             </div>
             
-            {/* Mail Composer Modal */}
+            {/* Mail Composer Modal (UNCHANGED) */}
             {isMailComposerOpen && mailComposerCert && (
                 <MailComposer
                     certData={mailComposerCert}

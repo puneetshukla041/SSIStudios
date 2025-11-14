@@ -20,7 +20,7 @@ export const useMailCertificate = (onAlert: (message: string, isError: boolean) 
     const [isPdfGenerating, setIsPdfGenerating] = useState(false);
     const [isSending, setIsSending] = useState(false);
 
-    // 1. Initiate mail composer, generate PDF in the background (UNCHANGED)
+    // 1. Initiate mail composer, generate PDF in the background
     const handleOpenMailComposer = useCallback(async (cert: ICertificateClient, template: 'certificate1.pdf' | 'certificate2.pdf') => {
         setIsMailComposerOpen(true);
         setMailState({ cert, pdfBlob: null, template });
@@ -29,7 +29,6 @@ export const useMailCertificate = (onAlert: (message: string, isError: boolean) 
         
         // ⚠️ Mock PDF Generation: In a real app, this generates the file locally.
         try {
-             // Assuming generateCertificatePDF is updated to return a Blob/File when the 5th argument is 'true'
              const dummySetLoading = (() => {}) as any; 
              const result = await generateCertificatePDF(cert, onAlert, template, dummySetLoading, true);
 
@@ -48,7 +47,7 @@ export const useMailCertificate = (onAlert: (message: string, isError: boolean) 
     }, [onAlert]);
 
     // 2. Mail Send Logic
-    // 💡 UPDATED SIGNATURE: Accepts recipientEmail, ccEmail (string), and mailContent
+    // UPDATED SIGNATURE: Accepts recipientEmail, ccEmail (string), and mailContent
     const handleSendMail = useCallback(async (recipientEmail: string, ccEmail: string, mailContent: string) => {
         if (!mailState.cert || !mailState.pdfBlob) {
             onAlert('Cannot send mail: Missing certificate data or PDF attachment.', true);
@@ -72,7 +71,7 @@ export const useMailCertificate = (onAlert: (message: string, isError: boolean) 
             formData.append('lastName', lastName || '');
             formData.append('hospitalName', hospitalName);
             formData.append('recipientEmail', recipientEmail); 
-            formData.append('ccEmail', ccEmail); // 💡 NEW: Append the comma-separated CC string
+            formData.append('ccEmail', ccEmail); 
             formData.append('mailContent', mailContent); 
 
             const response = await fetch('/api/send-certificate', {
@@ -84,8 +83,13 @@ export const useMailCertificate = (onAlert: (message: string, isError: boolean) 
 
             if (response.ok && result.success) {
                 onAlert(result.message, false);
-                setIsMailComposerOpen(false);
-                setMailState({ cert: null, pdfBlob: null, template: 'certificate1.pdf' });
+                
+                // FIX: Add a slight delay before closing the modal for smooth transition
+                setTimeout(() => {
+                    setIsMailComposerOpen(false);
+                    setMailState({ cert: null, pdfBlob: null, template: 'certificate1.pdf' });
+                }, 300); 
+
             } else {
                 throw new Error(result.error || 'Mail API failed without specific error message.');
             }
@@ -93,7 +97,8 @@ export const useMailCertificate = (onAlert: (message: string, isError: boolean) 
             console.error("Mail Send Error:", error);
             onAlert(`Failed to send email: ${error.message || 'Network error'}`, true);
         } finally {
-            setIsSending(false);
+            // This is outside the setTimeout, so the loading indicator vanishes quickly
+            setIsSending(false); 
         }
     }, [mailState, onAlert]); 
 
