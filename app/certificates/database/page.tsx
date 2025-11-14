@@ -1,37 +1,35 @@
-// D:\ssistudios\ssistudios\components\CertificateDatabasePage.tsx
-
 'use client';
 
 import React, { useState, useCallback, useEffect } from 'react';
-import { FiCheckCircle, FiAlertTriangle, FiRefreshCw } from 'react-icons/fi';
+import { FiRefreshCw } from 'react-icons/fi';
 import UploadButton from '@/components/UploadButton';
 import CertificateTable from '@/components/Certificates/CertificateTable';
-
-// 💡 FIX: Import ICertificateClient from the constants file.
-// Assuming constants.ts is one level up and then down into the Certificates folder structure
-import { ICertificateClient } from '@/components/Certificates/utils/constants'; 
-// NOTE: The exact path might vary depending on your setup, adjust '@/components/...' accordingly.
-
+import QuickActionBar from '@/components/Certificates/ui/QuickActionBar'; // Import QuickActionBar
+import { ICertificateClient, NotificationType } from '@/components/Certificates/utils/constants';
 
 const CertificateDatabasePage: React.FC = () => {
     const [refreshKey, setRefreshKey] = useState(0);
-    const [alert, setAlert] = useState<{ message: string; isError: boolean } | null>(null);
     const [certificateData, setCertificateData] = useState<ICertificateClient[]>([]);
-    // 💡 NEW STATE: To hold the true total count from the database
-    const [totalRecords, setTotalRecords] = useState(0); 
+    const [totalRecords, setTotalRecords] = useState(0);
     const [isRefreshing, setIsRefreshing] = useState(false);
+    
+    // 💡 NEW STATE: For Search and Filter (Moved here from useCertificateData for persistent state)
+    const [searchQuery, setSearchQuery] = useState('');
+    const [hospitalFilter, setHospitalFilter] = useState('');
+    const [isAddFormVisible, setIsAddFormVisible] = useState(false); // Add form state moved here
 
-    const clearAlert = useCallback(() => {
-        setTimeout(() => setAlert(null), 4000);
-    }, []);
-
+    // --- Placeholder Alert (To satisfy UploadButton/Child props, redirecting to console) ---
     const handleAlert = useCallback(
         (message: string, isError: boolean) => {
-            setAlert({ message, isError });
-            clearAlert();
+             if (isError) {
+                 console.error("Legacy Alert (ERROR):", message);
+             } else {
+                 console.log("Legacy Alert (INFO):", message);
+             }
         },
-        [clearAlert]
+        []
     );
+
 
     useEffect(() => {
         if (isRefreshing) {
@@ -55,21 +53,16 @@ const CertificateDatabasePage: React.FC = () => {
     const handleRefresh = () => {
         setRefreshKey((prev) => prev + 1);
         setIsRefreshing(true);
-        handleAlert('Refreshing table data...', false);
     };
 
-    // 💡 MODIFIED: handleTableDataUpdate must now accept the full FetchResponse payload
-    // to extract the 'total' count.
+    // 💡 MODIFIED: Callback to update data and total count from the table fetch
     const handleTableDataUpdate = useCallback(
         (data: ICertificateClient[], totalCount: number) => {
-            setCertificateData(data);
-            setTotalRecords(totalCount); // 💡 UPDATE totalRecords state
-            setIsRefreshing(false);
-            if (alert?.message === 'Refreshing table data...') {
-                handleAlert('Table data synchronized.', false);
-            }
+             setCertificateData(data);
+             setTotalRecords(totalCount);
+             setIsRefreshing(false);
         },
-        [alert, handleAlert]
+        []
     );
 
     return (
@@ -114,37 +107,27 @@ const CertificateDatabasePage: React.FC = () => {
                             </button>
                         </div>
 
-                        {/* Right group: Export Excel */}
+                        {/* Right group: Export Excel (Placeholder) */}
                         <div className="flex justify-center sm:justify-end">
-                            {/* Keep your existing Export Excel button here */}
+                            {/* Keep your existing Export Excel button here (or move it to QuickActionBar) */}
                         </div>
                     </div>
                 </div>
 
-                {/* Alert Notification */}
-                {alert && (
-                    <div
-                        className={`flex items-center gap-2 p-3 rounded-xl shadow-lg transition-all duration-500 ease-in-out ${
-                            alert.isError ? 'bg-red-600 text-white' : 'bg-green-600 text-white'
-                        }`}
-                    >
-                        {alert.isError ? (
-                            <FiAlertTriangle className="w-5 h-5 flex-shrink-0" />
-                        ) : (
-                            <FiCheckCircle className="w-5 h-5 flex-shrink-0" />
-                        )}
-                        <span className="text-sm font-medium">{alert.message}</span>
-                    </div>
-                )}
-
-                {/* Certificate Table */}
-                <div className="bg-white rounded-xl shadow-xl border border-gray-100 p-3 sm:p-4 overflow-x-auto">
-                    <CertificateTable
-                        refreshKey={refreshKey}
-                        onRefresh={handleTableDataUpdate} // Now expects two arguments
-                        onAlert={handleAlert}
-                    />
-                </div>
+                {/* 💡 NEW: Quick Action Bar is now here, passing state down */}
+                {/* Note: useCertificateActions props (like handleBulkDelete) will be passed via CertificateTable */}
+                <CertificateTable
+                    refreshKey={refreshKey}
+                    onRefresh={handleTableDataUpdate}
+                    onAlert={handleAlert}
+                    // Pass search/filter state and setters
+                    searchQuery={searchQuery}
+                    setSearchQuery={setSearchQuery}
+                    hospitalFilter={hospitalFilter}
+                    setHospitalFilter={setHospitalFilter}
+                    isAddFormVisible={isAddFormVisible}
+                    setIsAddFormVisible={setIsAddFormVisible}
+                />
             </main>
         </div>
     );

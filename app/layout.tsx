@@ -1,4 +1,4 @@
-// app/layout.tsx
+// app/layout.tsx (FIXED)
 import './globals.css';
 import { Inter } from 'next/font/google';
 import ClientRootLayout from './ClientRootLayout';
@@ -12,11 +12,13 @@ export const metadata = {
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
-    <html lang="en">
+    // ✅ FIX: Apply suppressHydrationWarning directly to the <html> tag
+    <html lang="en" suppressHydrationWarning> 
       <head>
         <link rel="icon" href="/logos/ssilogo.png" />
       </head>
-      <body className={inter.className} suppressHydrationWarning>
+      {/* It's okay to keep the class here, but the warning prop is removed from body */}
+      <body className={inter.className}> 
         <ClientRootLayout>{children}</ClientRootLayout>
       </body>
     </html>

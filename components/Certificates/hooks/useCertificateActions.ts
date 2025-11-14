@@ -1,9 +1,8 @@
-// D:\ssistudios\ssistudios\components\Certificates\hooks\useCertificateActions.ts
 'use client';
 
 import { useState } from 'react';
 import * as XLSX from 'xlsx';
-import { ICertificateClient, CertificateTableProps, initialNewCertificateState } from '../utils/constants';
+import { ICertificateClient, CertificateTableProps, initialNewCertificateState, NotificationType } from '../utils/constants';
 import { getTodayDoi } from '../utils/helpers';
 // Assuming generateCertificatePDF is properly imported and modified to handle bulk mode (returning a blob/file object).
 import { generateCertificatePDF } from '../utils/pdfGenerator'; 
@@ -31,10 +30,11 @@ interface UseCertificateActionsProps {
     certificates: ICertificateClient[];
     selectedIds: string[];
     setSelectedIds: React.Dispatch<React.SetStateAction<string[]>>;
-    fetchCertificates: () => Promise<void>;
+    fetchCertificates: (resetPage?: boolean) => Promise<void>; 
     // MODIFIED INTERFACE: Assumes fetchCertificatesForExport can optionally fetch selected IDs for bulk PDF.
     fetchCertificatesForExport: (isBulkPdfExport?: boolean, idsToFetch?: string[]) => Promise<ICertificateClient[]>;
-    onAlert: CertificateTableProps['onAlert'];
+    showNotification: (message: string, type: NotificationType) => void;
+    onAlert: CertificateTableProps['onAlert']; // Kept for compatibility with pdfGenerator 
     setIsLoading: React.Dispatch<React.SetStateAction<boolean>>;
 }
 
@@ -57,7 +57,7 @@ interface UseCertificateActionsResult {
     setFlashId: React.Dispatch<React.SetStateAction<string | null>>;
     handleSelectOne: (id: string, checked: boolean) => void;
     handleSelectAll: (checked: boolean) => void;
-    handleBulkDelete: () => Promise<void>;
+    handleBulkDelete: () => Promise<void>; // 💡 CHECKED: Included in Interface
     handleEdit: (certificate: ICertificateClient) => void;
     handleSave: (id: string) => Promise<void>;
     handleDelete: (id: string) => Promise<void>;
@@ -98,7 +98,8 @@ export const useCertificateActions = ({
     setSelectedIds,
     fetchCertificates,
     fetchCertificatesForExport,
-    onAlert,
+    showNotification, 
+    onAlert: oldOnAlert, 
     setIsLoading,
 }: UseCertificateActionsProps): UseCertificateActionsResult => {
     // Edit States
@@ -138,10 +139,10 @@ export const useCertificateActions = ({
         }
     };
 
-    // --- Delete Handlers (UPDATED - Removed automatic fetch) ---
+    // --- Delete Handlers ---
     const handleBulkDelete = async () => {
         if (selectedIds.length === 0) {
-            onAlert('No certificates selected for deletion.', false);
+            showNotification('No certificates selected for deletion.', 'info');
             return;
         }
 
@@ -150,11 +151,9 @@ export const useCertificateActions = ({
         const idsToDelete = [...selectedIds];
         setDeletingId(idsToDelete[0]);
 
-        // Wrap logic in setTimeout to allow for deletion animation start
         setTimeout(async () => {
             setIsLoading(true);
             try {
-                // REAL API call for bulk delete
                 const response = await fetch(`/api/certificates/bulk`, { 
                     method: 'DELETE', 
                     headers: { 'Content-Type': 'application/json' },
@@ -167,14 +166,14 @@ export const useCertificateActions = ({
                     throw new Error(result.message || 'Failed to perform bulk delete.');
                 }
                 
-                onAlert(`${idsToDelete.length} certificate(s) deleted successfully!`, false);
+                showNotification(`${idsToDelete.length} certificate(s) deleted successfully!`, 'success');
                 setSelectedIds([]);
                 
             } catch (error: any) {
-                onAlert(error.message || 'Network error during bulk delete.', true);
+                showNotification(error.message || 'Network error during bulk delete.', 'error');
             } finally {
                 setDeletingId(null);
-                // ❌ REMOVED: fetchCertificates(); 
+                fetchCertificates(); 
                 setIsLoading(false); 
             }
         }, 300);
@@ -194,17 +193,17 @@ export const useCertificateActions = ({
                     throw new Error(result.message || 'Failed to delete certificate.');
                 }
 
-                onAlert('Certificate deleted successfully!', false);
+                showNotification('Certificate deleted successfully!', 'success');
             } catch (error: any) {
-                onAlert(error.message || 'Network error during delete.', true);
+                showNotification(error.message || 'Network error during delete.', 'error');
             } finally {
                 setDeletingId(null);
-                // ❌ REMOVED: fetchCertificates();
+                fetchCertificates();
             }
         }, 300);
     };
     
-    // --- Edit Handlers (UPDATED - Removed automatic fetch) ---
+    // --- Edit Handlers ---
     const handleEdit = (certificate: ICertificateClient) => {
         setEditingId(certificate._id);
         setEditFormData({ ...certificate });
@@ -212,12 +211,12 @@ export const useCertificateActions = ({
 
     const handleSave = async (id: string) => {
         if (!editFormData.certificateNo || !editFormData.name || !editFormData.hospital || !editFormData.doi) {
-            onAlert('All fields are required.', true);
+            showNotification('All fields are required.', 'error');
             return;
         }
         const doiRegex = /^\d{2}-\d{2}-\d{4}$/;
         if (!doiRegex.test(editFormData.doi || '')) {
-            onAlert('DOI must be in DD-MM-YYYY format.', true);
+            showNotification('DOI must be in DD-MM-YYYY format.', 'error');
             return;
         }
 
@@ -234,14 +233,14 @@ export const useCertificateActions = ({
                 throw new Error(result.message || 'Failed to update certificate.');
             }
 
-            onAlert('Certificate updated successfully!', false);
+            showNotification('Certificate updated successfully!', 'success');
             setEditingId(null);
             setEditFormData({});
-            setFlashId(id); // Trigger flash animation
-            // ❌ REMOVED: fetchCertificates(); 
+            setFlashId(id); 
+            fetchCertificates(); 
 
         } catch (error: any) {
-            onAlert(error.message || 'Network error during update.', true);
+            showNotification(error.message || 'Network error during update.', 'error');
         }
     };
 
@@ -250,18 +249,18 @@ export const useCertificateActions = ({
     };
 
 
-    // --- Add Handlers (UPDATED - Removed automatic fetch) ---
+    // --- Add Handlers ---
     const handleAddCertificate = async () => {
         if (isAdding) return;
 
         // Basic Validation
         if (!newCertificateData.certificateNo || !newCertificateData.name || !newCertificateData.hospital || !newCertificateData.doi) {
-            onAlert('All fields are required for the new certificate.', true);
+            showNotification('All fields are required for the new certificate.', 'error');
             return;
         }
         const doiRegex = /^\d{2}-\d{2}-\d{4}$/;
         if (!doiRegex.test(newCertificateData.doi || '')) {
-            onAlert('DOI must be in DD-MM-YYYY format.', true);
+            showNotification('DOI must be in DD-MM-YYYY format.', 'error');
             return;
         }
 
@@ -281,14 +280,14 @@ export const useCertificateActions = ({
                 throw new Error(result.message || 'Failed to create certificate.');
             }
 
-            onAlert(`Certificate ${newCertificateData.certificateNo} added successfully!`, false);
+            showNotification(`Certificate ${newCertificateData.certificateNo} added successfully!`, 'success');
             setFlashId(result.data._id || newIdPlaceholder);
             setNewCertificateData(initialNewCertificate);
             setIsAddFormVisible(false);
-            // ❌ REMOVED: fetchCertificates(); 
+            fetchCertificates(true); 
 
         } catch (error: any) {
-            onAlert(error.message || 'Network error during certificate creation.', true);
+            showNotification(error.message || 'Network error during certificate creation.', 'error');
         } finally {
             setIsAdding(false);
         }
@@ -298,27 +297,27 @@ export const useCertificateActions = ({
         setNewCertificateData(prev => ({ ...prev, [field]: value }));
     };
     
-    // --- PDF Generation Handlers (UNCHANGED) ---
+    // --- PDF Generation Handlers (Uses oldOnAlert) ---
     const handleGeneratePDF_V2 = (cert: ICertificateClient) => {
         if (generatingPdfId === cert._id) return;
-        generateCertificatePDF(cert, onAlert, 'certificate2.pdf', setGeneratingPdfId); 
+        generateCertificatePDF(cert, oldOnAlert, 'certificate2.pdf', setGeneratingPdfId); 
     };
 
     const handleGeneratePDF_V1 = (cert: ICertificateClient) => {
         if (generatingPdfV1Id === cert._id) return;
-        generateCertificatePDF(cert, onAlert, 'certificate1.pdf', setGeneratingPdfV1Id); 
+        generateCertificatePDF(cert, oldOnAlert, 'certificate1.pdf', setGeneratingPdfV1Id); 
     };
     
-    // --- Bulk PDF Generation Handlers (UNCHANGED) ---
+    // --- Bulk PDF Generation Handlers ---
     
     const handleBulkGeneratePDF_V1 = async () => {
         if (selectedIds.length === 0 || isBulkGeneratingV1) {
-            onAlert('Select certificates for bulk export (V1).', false);
+            showNotification('Select certificates for bulk export (V1).', 'info');
             return;
         }
 
         setIsBulkGeneratingV1(true);
-        onAlert(`Fetching ${selectedIds.length} certificates for bulk PDF generation (V1)...`, false);
+        showNotification(`Fetching ${selectedIds.length} certificates for bulk PDF generation (V1)...`, 'info');
 
         try {
             const selectedCertificates = await fetchCertificatesForExport(true, selectedIds);
@@ -327,20 +326,20 @@ export const useCertificateActions = ({
             }
             
             const pdfPromises = selectedCertificates.map(cert => 
-                generateCertificatePDFTyped(cert, onAlert, 'certificate1.pdf', setIsBulkGeneratingV1 as any, true)
+                generateCertificatePDFTyped(cert, oldOnAlert, 'certificate1.pdf', setIsBulkGeneratingV1 as any, true)
             );
             
             const results = (await Promise.all(pdfPromises)).filter(Boolean);
 
             if (results.length > 0) {
                 downloadZip(results as { filename: string, blob: Blob }[], 'certificates_v1_bulk_export.zip');
-                onAlert(`Successfully generated and zipped ${results.length} certificates (V1).`, false);
+                showNotification(`Successfully generated and zipped ${results.length} certificates (V1).`, 'success');
                 setSelectedIds([]);
             } else {
-                 onAlert('PDF generation failed for all selected certificates.', true);
+                 showNotification('PDF generation failed for all selected certificates.', 'error');
             }
         } catch (error: any) {
-            onAlert(`Bulk PDF Generation (V1) failed. Error: ${error.message || 'Unknown error'}`, true);
+            showNotification(`Bulk PDF Generation (V1) failed. Error: ${error.message || 'Unknown error'}`, 'error');
         } finally {
             setIsBulkGeneratingV1(false);
         }
@@ -348,12 +347,12 @@ export const useCertificateActions = ({
     
     const handleBulkGeneratePDF_V2 = async () => {
         if (selectedIds.length === 0 || isBulkGeneratingV2) {
-            onAlert('Select certificates for bulk export (V2).', false);
+            showNotification('Select certificates for bulk export (V2).', 'info');
             return;
         }
 
         setIsBulkGeneratingV2(true);
-        onAlert(`Fetching ${selectedIds.length} certificates for bulk PDF generation (V2)...`, false);
+        showNotification(`Fetching ${selectedIds.length} certificates for bulk PDF generation (V2)...`, 'info');
 
         try {
             const selectedCertificates = await fetchCertificatesForExport(true, selectedIds);
@@ -362,33 +361,33 @@ export const useCertificateActions = ({
             }
             
             const pdfPromises = selectedCertificates.map(cert => 
-                generateCertificatePDFTyped(cert, onAlert, 'certificate2.pdf', setIsBulkGeneratingV2 as any, true)
+                generateCertificatePDFTyped(cert, oldOnAlert, 'certificate2.pdf', setIsBulkGeneratingV2 as any, true)
             );
             
             const results = (await Promise.all(pdfPromises)).filter(Boolean);
 
             if (results.length > 0) {
                 downloadZip(results as { filename: string, blob: Blob }[], 'certificates_v2_bulk_export.zip');
-                onAlert(`Successfully generated and zipped ${results.length} certificates (V2).`, false);
+                showNotification(`Successfully generated and zipped ${results.length} certificates (V2).`, 'success');
                 setSelectedIds([]);
             } else {
-                 onAlert('PDF generation failed for all selected certificates.', true);
+                 showNotification('PDF generation failed for all selected certificates.', 'error');
             }
         } catch (error: any) {
-            onAlert(`Bulk PDF Generation (V2) failed. Error: ${error.message || 'Unknown error'}`, true);
+            showNotification(`Bulk PDF Generation (V2) failed. Error: ${error.message || 'Unknown error'}`, 'error');
         } finally {
             setIsBulkGeneratingV2(false);
         }
     }
 
-    // --- Export Handler (UNCHANGED logic) ---
+    // --- Export Handler ---
     const handleDownload = async (type: 'xlsx' | 'csv') => {
-        onAlert('Fetching all filtered records for export, please wait...', false);
+        showNotification('Fetching all filtered records for export, please wait...', 'info');
 
         const allCertificates = await fetchCertificatesForExport();
 
         if (allCertificates.length === 0) {
-            onAlert('No data found for the current filter/search criteria to export.', false);
+            showNotification('No data found for the current filter/search criteria to export.', 'info');
             return;
         }
 
@@ -406,7 +405,7 @@ export const useCertificateActions = ({
         const fileName = `certificates_export.${type}`;
         XLSX.writeFile(workbook, fileName);
 
-        onAlert(`Successfully exported ${allCertificates.length} records to ${fileName}.`, false);
+        showNotification(`Successfully exported ${allCertificates.length} records to ${fileName}.`, 'success');
     };
 
 
@@ -429,7 +428,7 @@ export const useCertificateActions = ({
         setFlashId,
         handleSelectOne,
         handleSelectAll,
-        handleBulkDelete,
+        handleBulkDelete, // 💡 FIX: Ensure handleBulkDelete is explicitly returned here
         handleEdit,
         handleSave,
         handleDelete,

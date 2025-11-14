@@ -1,4 +1,4 @@
-// D:\ssistudios\ssistudios\components\Certificates\ui\MailComposer.tsx
+// D:\ssistudios\ssistudios\components\Certificates\ui\MailComposer.tsx (UNCHANGED)
 
 import React, { useState, useEffect } from 'react';
 import { Send, X, Paperclip, Loader2 } from 'lucide-react';

@@ -1,18 +1,17 @@
-// D:\ssistudios\ssistudios\components\Certificates\CertificateTable.tsx
 'use client';
 
-import React, { useEffect } from 'react';
-import { BadgeCheck, Loader2, Square, ChevronLeft, ChevronRight } from 'lucide-react';
+import React, { useEffect, useState, useCallback } from 'react';
+import { BadgeCheck, Loader2, Square, ChevronLeft, ChevronRight, Check, Info, AlertCircle } from 'lucide-react'; 
 
 // Import Hooks and Utils
 import { useCertificateData } from './hooks/useCertificateData';
 import { useCertificateActions } from './hooks/useCertificateActions';
 import { useMailCertificate } from './hooks/useMailCertificate'; 
-import { ICertificateClient, CertificateTableProps, PAGE_LIMIT } from './utils/constants';
+import { ICertificateClient, CertificateTableProps, PAGE_LIMIT, NotificationState, NotificationType } from './utils/constants';
 
 // Import UI Components
 import AddCertificateForm from './ui/AddCertificateForm';
-import QuickActionBar from './ui/QuickActionBar';
+import QuickActionBar from './ui/QuickActionBar'; // Still imported for use in JSX
 import TableHeader from './ui/TableHeader';
 import TableRow from './ui/TableRow';
 import MailComposer from './ui/MailComposer'; 
@@ -53,35 +52,85 @@ const SkeletonLoader = () => (
 );
 
 
-const CertificateTable: React.FC<CertificateTableProps> = ({ refreshKey, onRefresh, onAlert }) => {
-    // 1. Data and State Management (Fetching, Pagination, Sorting, Filtering)
+// 💡 MODIFIED PROPS INTERFACE
+interface CertificateTableExtendedProps extends CertificateTableProps {
+    searchQuery: string;
+    setSearchQuery: React.Dispatch<React.SetStateAction<string>>;
+    hospitalFilter: string;
+    setHospitalFilter: React.Dispatch<React.SetStateAction<string>>;
+    isAddFormVisible: boolean;
+    setIsAddFormVisible: React.Dispatch<React.SetStateAction<boolean>>;
+}
+
+
+const CertificateTable: React.FC<CertificateTableExtendedProps> = ({ 
+    refreshKey, 
+    onRefresh, 
+    onAlert: legacyOnAlert,
+    // Destructure new props from parent
+    searchQuery,
+    setSearchQuery,
+    hospitalFilter,
+    setHospitalFilter,
+    isAddFormVisible,
+    setIsAddFormVisible,
+}) => {
+    
+    // 💡 NEW: Notification State
+    const [notification, setNotification] = useState<NotificationState | null>(null);
+
+    // 💡 NEW: showNotification function (as requested)
+    const showNotification = useCallback((message: string, type: NotificationType) => {
+        setNotification({ message, type, active: true });
+        
+        // Hide animation: 3000ms duration + 300ms transition time
+        setTimeout(() => {
+            setNotification(prev => prev ? { ...prev, active: false } : null);
+        }, 3000);
+        
+        // Remove from DOM after transition
+        setTimeout(() => {
+            setNotification(null);
+        }, 3300);
+    }, []);
+
+    // 💡 FIX: Proxy function to intercept and SILENCE successful legacy alerts, 
+    const pdfOnAlert = useCallback((message: string, isError: boolean) => {
+        
+        if (!isError && (message.includes('synchronized') || message.includes('loaded'))) {
+            return;
+        }
+
+        const type: NotificationType = isError ? 'error' : 'info';
+        showNotification(message, type);
+    }, [showNotification]);
+
+
+    // 1. Data and State Management (Fetching, Pagination, Sorting)
     const {
         certificates,
         isLoading,
         totalItems,
         currentPage,
         totalPages,
-        searchQuery,
-        hospitalFilter,
         uniqueHospitals,
         sortConfig,
         selectedIds,
         fetchCertificates,
         fetchCertificatesForExport,
         setCurrentPage,
-        setSearchQuery,
-        setHospitalFilter,
         setSelectedIds,
         requestSort,
         sortedCertificates,
         setIsLoading,
-    } = useCertificateData(refreshKey, onRefresh, onAlert);
+    // 💡 MODIFIED: Pass search/filter states from parent down to useCertificateData
+    } = useCertificateData(refreshKey, onRefresh, showNotification, searchQuery, hospitalFilter, setSearchQuery, setHospitalFilter); 
 
     // 2. Action Management (CRUD, Bulk Actions, PDF, Download)
     const {
         editingId,
         editFormData,
-        isAddFormVisible,
+        // isAddFormVisible is now passed via props
         newCertificateData,
         isAdding,
         flashId,
@@ -92,7 +141,7 @@ const CertificateTable: React.FC<CertificateTableProps> = ({ refreshKey, onRefre
         isBulkGeneratingV2, 
         setEditingId,
         setEditFormData,
-        setIsAddFormVisible,
+        // setIsAddFormVisible is now passed via props
         setNewCertificateData,
         setFlashId,
         handleSelectOne,
@@ -115,7 +164,8 @@ const CertificateTable: React.FC<CertificateTableProps> = ({ refreshKey, onRefre
         setSelectedIds,
         fetchCertificates,
         fetchCertificatesForExport,
-        onAlert,
+        showNotification, 
+        onAlert: pdfOnAlert, 
         setIsLoading,
     });
     
@@ -128,7 +178,7 @@ const CertificateTable: React.FC<CertificateTableProps> = ({ refreshKey, onRefre
         handleOpenMailComposer,
         handleSendMail,
         handleCloseMailComposer,
-    } = useMailCertificate(onAlert);
+    } = useMailCertificate(pdfOnAlert); 
 
     // Combined loading state: Disable individual row buttons when any action is running
     const isAnyActionLoading = isMailComposerOpen || isSending || isBulkGeneratingV1 || isBulkGeneratingV2;
@@ -198,15 +248,34 @@ const CertificateTable: React.FC<CertificateTableProps> = ({ refreshKey, onRefre
 
     return (
         <>
+            {/* 💡 DYNAMIC ISLAND STYLE TOAST NOTIFICATION (UNCHANGED) */}
+            {notification && (
+                <div
+                    className={`
+                        fixed top-4 left-1/2 transform -translate-x-1/2 z-[1000] h-12 px-5 py-3
+                        rounded-full shadow-2xl flex items-center gap-3 bg-white border
+                        text-base font-medium whitespace-nowrap overflow-hidden w-max min-w-[36px] md:max-w-[360px]
+                        transition-transform duration-300 ease-out 
+                        ${notification.active ? 'translate-y-0 opacity-100' : '-translate-y-20 opacity-0'}
+                        ${notification.type === "success" ? "border-green-300" : ""}
+                        ${notification.type === "info" ? "border-sky-300" : ""}
+                        ${notification.type === "error" ? "border-red-300" : ""}
+                    `}
+                >
+                    <div className={`flex-shrink-0 text-xl`}>
+                        {notification.type === "success" && <Check className="w-5 h-5 text-green-600" />}
+                        {notification.type === "info" && <Info className="w-5 h-5 text-sky-600" />}
+                        {notification.type === "error" && <AlertCircle className="w-5 h-5 text-red-600" />}
+                    </div>
+                    <span className={`flex-grow text-center truncate text-gray-700 text-sm`}>
+                        {notification.message}
+                    </span>
+                </div>
+            )}
+            
             <div className="space-y-6 w-full p-3 md:p-0">
 
-                {/* 💡 FIX: Notification Space Placeholder */}
-                {/* This div reserves the space for any temporary notifications (like the "synced" message) 
-                   preventing the content below from shifting up/down when the message appears/disappears. */}
-                <div className="h-10" aria-hidden="true" />
-
-
-                {/* Quick Action Bar */}
+                {/* 💡 Quick Action Bar is now rendered here, passing down handlers and states */}
                 <QuickActionBar
                     isAddFormVisible={isAddFormVisible}
                     selectedIds={selectedIds}
@@ -235,19 +304,6 @@ const CertificateTable: React.FC<CertificateTableProps> = ({ refreshKey, onRefre
                         setNewCertificateData={setNewCertificateData}
                     />
                 )}
-
-                {/* Selection Summary Notification (UNCHANGED) */}
-                {selectedIds.length > 0 && (
-                    <div className="p-3 bg-sky-100/50 border-l-4 border-sky-600 text-slate-800 rounded-xl shadow-lg flex items-center justify-between transition duration-300 backdrop-blur-sm">
-                        <div className="flex items-center">
-                            <BadgeCheck className="w-5 h-5 mr-3 flex-shrink-0 text-sky-600" />
-                            <span className="font-medium text-sm sm:text-base">
-                                {selectedIds.length} certificates selected for action.
-                            </span>
-                        </div>
-                    </div>
-                )}
-
 
                 {sortedCertificates.length === 0 ? (
                     // Empty state (UNCHANGED)
@@ -316,7 +372,7 @@ const CertificateTable: React.FC<CertificateTableProps> = ({ refreshKey, onRefre
                     isSending={isSending}
                     onClose={handleCloseMailComposer}
                     onSend={handleSendMail}
-                    onAlert={onAlert}
+                    onAlert={pdfOnAlert} 
                 />
             )}
         </>

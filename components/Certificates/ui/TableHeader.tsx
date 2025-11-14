@@ -1,4 +1,4 @@
-// D:\ssistudios\ssistudios\components\Certificates\ui\TableHeader.tsx (ASSUMED FILE)
+// D:\ssistudios\ssistudios\components\Certificates\ui\TableHeader.tsx (UNCHANGED)
 
 import React from 'react';
 import { ChevronUp, ChevronDown, Square, BadgeCheck } from 'lucide-react';

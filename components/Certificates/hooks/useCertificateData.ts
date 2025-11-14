@@ -1,4 +1,3 @@
-// D:\ssistudios\ssistudios\components\Certificates\hooks\useCertificateData.ts
 'use client';
 
 import { useState, useEffect, useCallback, useMemo } from 'react';
@@ -9,8 +8,9 @@ import {
     SortConfig,
     SortKey,
     PAGE_LIMIT,
+    NotificationType, 
 } from '../utils/constants';
-import { sortCertificates } from '../utils/helpers'; // Removed getDateFilterStart
+import { sortCertificates } from '../utils/helpers'; 
 
 interface UseCertificateDataResult {
     certificates: ICertificateClient[];
@@ -18,16 +18,13 @@ interface UseCertificateDataResult {
     totalItems: number;
     currentPage: number;
     totalPages: number;
-    searchQuery: string;
-    hospitalFilter: string;
+    // searchQuery, hospitalFilter, setSearchQuery, setHospitalFilter are removed from this result type
     uniqueHospitals: string[];
     sortConfig: SortConfig | null;
     selectedIds: string[];
-    fetchCertificates: () => Promise<void>;
+    fetchCertificates: (resetPage?: boolean) => Promise<void>; 
     fetchCertificatesForExport: (isBulkPdfExport?: boolean, idsToFetch?: string[]) => Promise<ICertificateClient[]>;
     setCurrentPage: React.Dispatch<React.SetStateAction<number>>;
-    setSearchQuery: React.Dispatch<React.SetStateAction<string>>;
-    setHospitalFilter: React.Dispatch<React.SetStateAction<string>>;
     setSelectedIds: React.Dispatch<React.SetStateAction<string[]>>;
     requestSort: (key: SortKey) => void;
     sortedCertificates: ICertificateClient[];
@@ -36,29 +33,41 @@ interface UseCertificateDataResult {
 
 export const useCertificateData = (
     refreshKey: number,
-    onRefresh: CertificateTableProps['onRefresh'],
-    onAlert: CertificateTableProps['onAlert']
+    onRefresh: (data: ICertificateClient[], totalCount: number) => void,
+    showNotification: (message: string, type: NotificationType) => void,
+    // 💡 NEW PROPS: Received from the parent (CertificateDatabasePage)
+    searchQuery: string,
+    hospitalFilter: string,
+    setSearchQuery: React.Dispatch<React.SetStateAction<string>>,
+    setHospitalFilter: React.Dispatch<React.SetStateAction<string>>
 ): UseCertificateDataResult => {
     const [certificates, setCertificates] = useState<ICertificateClient[]>([]);
     const [isLoading, setIsLoading] = useState(true);
     const [totalItems, setTotalItems] = useState(0);
     const [currentPage, setCurrentPage] = useState(1);
     const [totalPages, setTotalPages] = useState(1);
-    const [searchQuery, setSearchQuery] = useState('');
-    const [hospitalFilter, setHospitalFilter] = useState('');
+    // ❌ REMOVED: [searchQuery, setSearchQuery]
+    // ❌ REMOVED: [hospitalFilter, setHospitalFilter]
     const [uniqueHospitals, setUniqueHospitals] = useState<string[]>([]);
     const [selectedIds, setSelectedIds] = useState<string[]>([]);
     const [sortConfig, setSortConfig] = useState<SortConfig | null>(null);
 
     // --- Fetch Data Logic (Paginated & Filtered) ---
-    const fetchCertificates = useCallback(async () => {
+    const fetchCertificates = useCallback(async (resetPage: boolean = false) => {
         setIsLoading(true);
+        
+        // 💡 FIX: Resetting page only if the query/filter has changed, not just if fetch is called
+        let pageToFetch = currentPage;
+        if (resetPage) {
+             setCurrentPage(1);
+             pageToFetch = 1;
+        }
+
         const start = Date.now();
-        // Removed: const startDateParam = getDateFilterStart(dateFilter); 
 
         try {
             const params = new URLSearchParams({
-                page: currentPage.toString(),
+                page: pageToFetch.toString(), 
                 limit: PAGE_LIMIT.toString(),
                 q: searchQuery,
             });
@@ -67,8 +76,6 @@ export const useCertificateData = (
                 params.append('hospital', hospitalFilter);
             }
             
-            // Removed: if (startDateParam) { params.append('dateStart', startDateParam); }
-
             const response = await fetch(`/api/certificates?${params.toString()}`);
             const result: FetchResponse & { success: boolean, message?: string } = await response.json();
 
@@ -78,39 +85,37 @@ export const useCertificateData = (
                 setTotalPages(result.totalPages);
                 setUniqueHospitals(result.filters.hospitals);
                 onRefresh(result.data, result.total);
+                
+                const message = `Data synced. Showing ${result.data.length} of ${result.total} items.`;
+                showNotification(message, 'success'); 
             } else {
-                onAlert(result.message || 'Failed to fetch certificates.', true);
+                showNotification(result.message || 'Failed to fetch certificates.', 'error');
             }
         } catch (error) {
             console.error('Fetch error:', error);
-            onAlert('Network error while fetching data.', true);
+            showNotification('Network error while fetching data.', 'error');
         } finally {
             const duration = Date.now() - start;
-            setTimeout(() => setIsLoading(false), Math.max(500 - duration, 0));
+            setTimeout(() => setIsLoading(false), Math.max(100 - duration, 0)); 
         }
-    }, [currentPage, searchQuery, hospitalFilter, onRefresh, onAlert]); // Removed dateFilter dependency
+    }, [currentPage, searchQuery, hospitalFilter, onRefresh, showNotification]); // searchQuery and hospitalFilter are dependencies
 
     // --- Fetch ALL Data Logic (For Export) ---
     const fetchCertificatesForExport = useCallback(async (isBulkPdfExport = false, idsToFetch: string[] = []) => {
         try {
-            // Removed: const startDateParam = getDateFilterStart(dateFilter); 
-            
             const params = new URLSearchParams({
-                q: searchQuery,
+                q: searchQuery, // Use external searchQuery
                 all: 'true'
             });
 
-            if (hospitalFilter) {
+            if (hospitalFilter) { // Use external hospitalFilter
                 params.append('hospital', hospitalFilter);
             }
             
-            // Removed: if (startDateParam) { params.append('dateStart', startDateParam); }
-            
-            // Handle bulk export: only fetch selected IDs
             if (isBulkPdfExport && idsToFetch.length > 0) {
                  params.append('ids', idsToFetch.join(','));
-                 params.delete('all'); // Do not fetch all, only fetch by IDs
-                 params.delete('q'); // Search query is irrelevant if IDs are specified
+                 params.delete('all'); 
+                 params.delete('q'); 
             }
 
 
@@ -120,29 +125,36 @@ export const useCertificateData = (
             if (response.ok && result.success) {
                 return result.data;
             } else {
-                onAlert(result.message || 'Failed to fetch all certificates for export.', true);
+                showNotification(result.message || 'Failed to fetch all certificates for export.', 'error');
                 return [];
             }
         } catch (error) {
             console.error('Export fetch error:', error);
-            onAlert('Network error while fetching data for export.', true);
+            showNotification('Network error while fetching data for export.', 'error');
             return [];
         }
-    }, [searchQuery, hospitalFilter, onAlert]); // Removed dateFilter dependency
+    }, [searchQuery, hospitalFilter, showNotification]); 
 
-    // Effect to fetch data on dependency changes
+    // Effect to fetch data on initial load, page change, or refreshKey change
     useEffect(() => {
         fetchCertificates();
-        // Clear selection when data is re-fetched due to filter/pagination changes
         setSelectedIds([]);
     }, [fetchCertificates, refreshKey]);
 
-    // Effect to reset page when search/filter changes
+    // 💡 MODIFIED Effect: Only reset page when search/filter CHANGES, then fetch data
     useEffect(() => {
-        setCurrentPage(1);
-    }, [searchQuery, hospitalFilter]); // Removed dateFilter dependency
+        setSelectedIds([]);
+        if (currentPage !== 1) {
+            // When search/filter changes, reset to page 1 which triggers a fetch via the first useEffect's dependency on currentPage.
+            setCurrentPage(1); 
+        } else {
+            // If already on page 1, manually trigger fetch
+            fetchCertificates();
+        }
+    }, [searchQuery, hospitalFilter]); 
 
-    // --- Sort Functionality ---
+
+    // --- Sort Functionality (UNCHANGED) ---
     const sortedCertificates = useMemo(() => {
         return sortCertificates(certificates, sortConfig);
     }, [certificates, sortConfig]);
@@ -161,16 +173,12 @@ export const useCertificateData = (
         totalItems,
         currentPage,
         totalPages,
-        searchQuery,
-        hospitalFilter,
         uniqueHospitals,
         sortConfig,
         selectedIds,
         fetchCertificates,
         fetchCertificatesForExport,
         setCurrentPage,
-        setSearchQuery,
-        setHospitalFilter,
         setSelectedIds,
         requestSort,
         sortedCertificates,

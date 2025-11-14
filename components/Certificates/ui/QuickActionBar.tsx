@@ -1,4 +1,4 @@
-// D:\ssistudios\ssistudios\components\Certificates\ui\QuickActionBar.tsx
+// D:\ssistudios\ssistudios\components\Certificates\ui\QuickActionBar.tsx (FIXED)
 
 import React from 'react';
 import {
@@ -8,22 +8,23 @@ import {
     Plus,
     Trash2,
     FileCheck, // For V1 PDF
-    FileText,  // For V2 PDF
-    Loader2,   // For loading state
+    FileText,  // For V2 PDF
+    Loader2,   // For loading state
 } from 'lucide-react';
 
 // Assuming imports from constants/types needed by this component exist
 // Example: import { DateFilterOption, DATE_FILTER_OPTIONS } from '../utils/constants'; 
 
 interface QuickActionBarProps {
-    isAddFormVisible: boolean;
+    // 💡 FIX: Include isAddFormVisible and setIsAddFormVisible
+    isAddFormVisible: boolean; 
     selectedIds: string[];
     uniqueHospitals: string[];
     searchQuery: string;
     hospitalFilter: string;
     isBulkGeneratingV1: boolean; 
     isBulkGeneratingV2: boolean; 
-    setIsAddFormVisible: React.Dispatch<React.SetStateAction<boolean>>;
+    setIsAddFormVisible: React.Dispatch<React.SetStateAction<boolean>>; // 💡 FIX: Included
     setSearchQuery: React.Dispatch<React.SetStateAction<string>>;
     setHospitalFilter: React.Dispatch<React.SetStateAction<string>>;
     handleBulkDelete: () => Promise<void>;
@@ -33,14 +34,14 @@ interface QuickActionBarProps {
 }
 
 const QuickActionBar: React.FC<QuickActionBarProps> = ({
-    isAddFormVisible,
+    isAddFormVisible, // Destructured here
     selectedIds,
     uniqueHospitals,
     searchQuery,
     hospitalFilter,
     isBulkGeneratingV1,
     isBulkGeneratingV2,
-    setIsAddFormVisible,
+    setIsAddFormVisible, // Destructured here
     setSearchQuery,
     setHospitalFilter,
     handleBulkDelete,

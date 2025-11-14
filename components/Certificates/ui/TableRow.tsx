@@ -1,4 +1,4 @@
-// D:\ssistudios\ssistudios\components\Certificates\ui\TableRow.tsx
+// D:\ssistudios\ssistudios\components\Certificates\ui\TableRow.tsx (UNCHANGED)
 
 import React from 'react';
 import {
@@ -117,26 +117,26 @@ const TableRow: React.FC<TableRowProps> = ({
             {/* Data Cells (UNCHANGED) */}
             {(['certificateNo', 'name', 'hospital', 'doi'] as (keyof ICertificateClient)[]).map((field) => {
                  const displayValue = field === 'hospital' 
-                    ? <span className={`inline-flex items-center px-3 py-1 rounded-full text-xs font-semibold ${getHospitalColor(cert.hospital)}`}>
-                        {cert.hospital}
-                      </span>
-                    : cert[field];
+                     ? <span className={`inline-flex items-center px-3 py-1 rounded-full text-xs font-semibold ${getHospitalColor(cert.hospital)}`}>
+                         {cert.hospital}
+                       </span>
+                     : cert[field];
 
-                const editInput = field === 'doi' 
-                    ? <input
-                        type="date"
-                        value={doiToDateInput(editFormData[field] as string || '')}
-                        onChange={(e) => handleChange(field, dateInputToDoi(e.target.value))}
-                        className="w-full p-1 border border-sky-300 rounded-md focus:ring-1 focus:ring-sky-500 transition duration-150 shadow-inner bg-white/90 text-gray-800 outline-none"
-                        aria-label={`Edit ${field}`}
-                      />
-                    : <input
-                        type="text"
-                        value={editFormData[field] as string || ''}
-                        onChange={(e) => handleChange(field, e.target.value)}
-                        className="w-full p-1 border border-sky-300 rounded-md focus:ring-1 focus:ring-sky-500 transition duration-150 shadow-inner bg-white/90 text-gray-800 outline-none"
-                        aria-label={`Edit ${field}`}
-                      />;
+                 const editInput = field === 'doi' 
+                     ? <input
+                         type="date"
+                         value={doiToDateInput(editFormData[field] as string || '')}
+                         onChange={(e) => handleChange(field, dateInputToDoi(e.target.value))}
+                         className="w-full p-1 border border-sky-300 rounded-md focus:ring-1 focus:ring-sky-500 transition duration-150 shadow-inner bg-white/90 text-gray-800 outline-none"
+                         aria-label={`Edit ${field}`}
+                       />
+                     : <input
+                         type="text"
+                         value={editFormData[field] as string || ''}
+                         onChange={(e) => handleChange(field, e.target.value)}
+                         className="w-full p-1 border border-sky-300 rounded-md focus:ring-1 focus:ring-sky-500 transition duration-150 shadow-inner bg-white/90 text-gray-800 outline-none"
+                         aria-label={`Edit ${field}`}
+                       />;
 
                 return (
                     <td key={field} className="px-4 py-2 whitespace-nowrap text-sm text-gray-800 border-r border-gray-200">

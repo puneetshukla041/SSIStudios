@@ -1,4 +1,4 @@
-// D:\ssistudios\ssistudios\components\Certificates\hooks\useMailCertificate.ts
+// D:\ssistudios\ssistudios\components\Certificates\hooks\useMailCertificate.ts (UNCHANGED)
 
 import { useState, useCallback } from 'react';
 import { ICertificateClient } from '../utils/constants';
