@@ -1,10 +1,9 @@
-'use client';
+// D:\ssistudios\ssistudios\components\Certificates\hooks\useCertificateActions.ts
 
 import { useState } from 'react';
 import * as XLSX from 'xlsx';
 import { ICertificateClient, CertificateTableProps, initialNewCertificateState, NotificationType } from '../utils/constants';
 import { getTodayDoi } from '../utils/helpers';
-// Assuming generateCertificatePDF is properly imported and modified to handle bulk mode (returning a blob/file object).
 import { generateCertificatePDF } from '../utils/pdfGenerator'; 
 
 // Set today's date for the initial new certificate state
@@ -31,10 +30,9 @@ interface UseCertificateActionsProps {
     selectedIds: string[];
     setSelectedIds: React.Dispatch<React.SetStateAction<string[]>>;
     fetchCertificates: (resetPage?: boolean) => Promise<void>; 
-    // MODIFIED INTERFACE: Assumes fetchCertificatesForExport can optionally fetch selected IDs for bulk PDF.
     fetchCertificatesForExport: (isBulkPdfExport?: boolean, idsToFetch?: string[]) => Promise<ICertificateClient[]>;
     showNotification: (message: string, type: NotificationType) => void;
-    onAlert: CertificateTableProps['onAlert']; // Kept for compatibility with pdfGenerator 
+    onAlert: CertificateTableProps['onAlert']; 
     setIsLoading: React.Dispatch<React.SetStateAction<boolean>>;
 }
 
@@ -57,7 +55,7 @@ interface UseCertificateActionsResult {
     setFlashId: React.Dispatch<React.SetStateAction<string | null>>;
     handleSelectOne: (id: string, checked: boolean) => void;
     handleSelectAll: (checked: boolean) => void;
-    handleBulkDelete: () => Promise<void>; // 💡 CHECKED: Included in Interface
+    handleBulkDelete: () => Promise<void>; 
     handleEdit: (certificate: ICertificateClient) => void;
     handleSave: (id: string) => Promise<void>;
     handleDelete: (id: string) => Promise<void>;
@@ -114,8 +112,8 @@ export const useCertificateActions = ({
     // UI/Animation States
     const [flashId, setFlashId] = useState<string | null>(null);
     const [deletingId, setDeletingId] = useState<string | null>(null);
-    const [generatingPdfId, setGeneratingPdfId] = useState<string | null>(null); // Template 2 (Individual)
-    const [generatingPdfV1Id, setGeneratingPdfV1Id] = useState<string | null>(null); // Template 1 (Individual)
+    const [generatingPdfId, setGeneratingPdfId] = useState<string | null>(null);
+    const [generatingPdfV1Id, setGeneratingPdfV1Id] = useState<string | null>(null);
     
     // For Bulk PDF Generation
     const [isBulkGeneratingV1, setIsBulkGeneratingV1] = useState(false);
@@ -428,7 +426,7 @@ export const useCertificateActions = ({
         setFlashId,
         handleSelectOne,
         handleSelectAll,
-        handleBulkDelete, // 💡 FIX: Ensure handleBulkDelete is explicitly returned here
+        handleBulkDelete, 
         handleEdit,
         handleSave,
         handleDelete,

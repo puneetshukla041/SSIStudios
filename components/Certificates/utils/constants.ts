@@ -1,4 +1,5 @@
 // D:\ssistudios\ssistudios\components\Certificates\utils\constants.ts
+
 // --- Interfaces & Types ---
 
 export interface ICertificateClient {
@@ -20,7 +21,8 @@ export interface FetchResponse {
 
 export interface CertificateTableProps {
     refreshKey: number;
-    onRefresh: (data: ICertificateClient[], totalCount: number) => void;
+    // 💡 FIX: Updated onRefresh to include uniqueHospitalsList
+    onRefresh: (data: ICertificateClient[], totalCount: number, uniqueHospitalsList: string[]) => void;
     onAlert: (message: string, isError: boolean) => void; // Kept for legacy compatibility (pdfGenerator)
 }
 

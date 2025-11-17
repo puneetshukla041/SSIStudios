@@ -119,12 +119,11 @@ function AppLayout({ children }: { children: ReactNode }) {
   );
 }
 
-// --- Main Client Layout ---
 export default function ClientRootLayout({ children }: { children: ReactNode }) {
   return (
     <AuthProvider>
       <ThemeProvider>
-        {/* ✅ Wrap with UsageProvider, SSI-only logic is inside UsageProvider */}
+       
         <UsageProvider>
           <AppLayout>{children}</AppLayout>
         </UsageProvider>

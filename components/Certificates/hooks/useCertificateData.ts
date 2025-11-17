@@ -1,10 +1,9 @@
-'use client';
+// D:\ssistudios\ssistudios\components\Certificates\hooks\useCertificateData.ts
 
 import { useState, useEffect, useCallback, useMemo } from 'react';
 import {
     ICertificateClient,
     FetchResponse,
-    CertificateTableProps,
     SortConfig,
     SortKey,
     PAGE_LIMIT,
@@ -18,7 +17,6 @@ interface UseCertificateDataResult {
     totalItems: number;
     currentPage: number;
     totalPages: number;
-    // searchQuery, hospitalFilter, setSearchQuery, setHospitalFilter are removed from this result type
     uniqueHospitals: string[];
     sortConfig: SortConfig | null;
     selectedIds: string[];
@@ -31,11 +29,12 @@ interface UseCertificateDataResult {
     setIsLoading: React.Dispatch<React.SetStateAction<boolean>>;
 }
 
+// FIX: onRefresh signature updated to include uniqueHospitalsList
 export const useCertificateData = (
     refreshKey: number,
-    onRefresh: (data: ICertificateClient[], totalCount: number) => void,
+    onRefresh: (data: ICertificateClient[], totalCount: number, uniqueHospitalsList: string[]) => void,
     showNotification: (message: string, type: NotificationType) => void,
-    // 💡 NEW PROPS: Received from the parent (CertificateDatabasePage)
+    // PROPS: Received from the parent (CertificateDatabasePage)
     searchQuery: string,
     hospitalFilter: string,
     setSearchQuery: React.Dispatch<React.SetStateAction<string>>,
@@ -46,8 +45,6 @@ export const useCertificateData = (
     const [totalItems, setTotalItems] = useState(0);
     const [currentPage, setCurrentPage] = useState(1);
     const [totalPages, setTotalPages] = useState(1);
-    // ❌ REMOVED: [searchQuery, setSearchQuery]
-    // ❌ REMOVED: [hospitalFilter, setHospitalFilter]
     const [uniqueHospitals, setUniqueHospitals] = useState<string[]>([]);
     const [selectedIds, setSelectedIds] = useState<string[]>([]);
     const [sortConfig, setSortConfig] = useState<SortConfig | null>(null);
@@ -56,7 +53,6 @@ export const useCertificateData = (
     const fetchCertificates = useCallback(async (resetPage: boolean = false) => {
         setIsLoading(true);
         
-        // 💡 FIX: Resetting page only if the query/filter has changed, not just if fetch is called
         let pageToFetch = currentPage;
         if (resetPage) {
              setCurrentPage(1);
@@ -84,7 +80,8 @@ export const useCertificateData = (
                 setTotalItems(result.total);
                 setTotalPages(result.totalPages);
                 setUniqueHospitals(result.filters.hospitals);
-                onRefresh(result.data, result.total);
+                // FIX: Pass uniqueHospitals to onRefresh callback
+                onRefresh(result.data, result.total, result.filters.hospitals); 
                 
                 const message = `Data synced. Showing ${result.data.length} of ${result.total} items.`;
                 showNotification(message, 'success'); 
@@ -98,17 +95,17 @@ export const useCertificateData = (
             const duration = Date.now() - start;
             setTimeout(() => setIsLoading(false), Math.max(100 - duration, 0)); 
         }
-    }, [currentPage, searchQuery, hospitalFilter, onRefresh, showNotification]); // searchQuery and hospitalFilter are dependencies
+    }, [currentPage, searchQuery, hospitalFilter, onRefresh, showNotification]); 
 
     // --- Fetch ALL Data Logic (For Export) ---
     const fetchCertificatesForExport = useCallback(async (isBulkPdfExport = false, idsToFetch: string[] = []) => {
         try {
             const params = new URLSearchParams({
-                q: searchQuery, // Use external searchQuery
+                q: searchQuery, 
                 all: 'true'
             });
 
-            if (hospitalFilter) { // Use external hospitalFilter
+            if (hospitalFilter) { 
                 params.append('hospital', hospitalFilter);
             }
             
@@ -141,14 +138,12 @@ export const useCertificateData = (
         setSelectedIds([]);
     }, [fetchCertificates, refreshKey]);
 
-    // 💡 MODIFIED Effect: Only reset page when search/filter CHANGES, then fetch data
+    // MODIFIED Effect: Only reset page when search/filter CHANGES, then fetch data
     useEffect(() => {
         setSelectedIds([]);
         if (currentPage !== 1) {
-            // When search/filter changes, reset to page 1 which triggers a fetch via the first useEffect's dependency on currentPage.
             setCurrentPage(1); 
         } else {
-            // If already on page 1, manually trigger fetch
             fetchCertificates();
         }
     }, [searchQuery, hospitalFilter]); 

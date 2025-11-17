@@ -4,8 +4,9 @@ import React, { useState, useCallback, useEffect } from 'react';
 import { FiRefreshCw } from 'react-icons/fi';
 import UploadButton from '@/components/UploadButton';
 import CertificateTable from '@/components/Certificates/CertificateTable';
-import QuickActionBar from '@/components/Certificates/ui/QuickActionBar'; // Import QuickActionBar
+import QuickActionBar from '@/components/Certificates/ui/QuickActionBar'; 
 import { ICertificateClient, NotificationType } from '@/components/Certificates/utils/constants';
+import HospitalPieChart from '@/components/Certificates/analysis/HospitalPieChart'; 
 
 const CertificateDatabasePage: React.FC = () => {
     const [refreshKey, setRefreshKey] = useState(0);
@@ -13,12 +14,15 @@ const CertificateDatabasePage: React.FC = () => {
     const [totalRecords, setTotalRecords] = useState(0);
     const [isRefreshing, setIsRefreshing] = useState(false);
     
-    // 💡 NEW STATE: For Search and Filter (Moved here from useCertificateData for persistent state)
+    // State for unique hospitals (fetched from API via CertificateTable)
+    const [uniqueHospitals, setUniqueHospitals] = useState<string[]>([]);
+
+    // --- State for Search and Filter ---
     const [searchQuery, setSearchQuery] = useState('');
     const [hospitalFilter, setHospitalFilter] = useState('');
-    const [isAddFormVisible, setIsAddFormVisible] = useState(false); // Add form state moved here
+    const [isAddFormVisible, setIsAddFormVisible] = useState(false);
 
-    // --- Placeholder Alert (To satisfy UploadButton/Child props, redirecting to console) ---
+    // --- Placeholder Alert (for UploadButton/Child props) ---
     const handleAlert = useCallback(
         (message: string, isError: boolean) => {
              if (isError) {
@@ -55,11 +59,12 @@ const CertificateDatabasePage: React.FC = () => {
         setIsRefreshing(true);
     };
 
-    // 💡 MODIFIED: Callback to update data and total count from the table fetch
+    // Callback now accepts the list of unique hospitals
     const handleTableDataUpdate = useCallback(
-        (data: ICertificateClient[], totalCount: number) => {
+        (data: ICertificateClient[], totalCount: number, uniqueHospitalsList: string[]) => {
              setCertificateData(data);
              setTotalRecords(totalCount);
+             setUniqueHospitals(uniqueHospitalsList); // Update unique hospitals list
              setIsRefreshing(false);
         },
         []
@@ -72,7 +77,7 @@ const CertificateDatabasePage: React.FC = () => {
                 {/* Header Row */}
                 <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 py-2">
                     
-                    {/* Total Records - 💡 USING totalRecords STATE */}
+                    {/* Total Records */}
                     <div className="flex-shrink-0">
                         <p className="text-sm sm:text-base font-semibold text-gray-700 text-center sm:text-left">
                             Total Records:{' '}
@@ -114,11 +119,17 @@ const CertificateDatabasePage: React.FC = () => {
                     </div>
                 </div>
 
-                {/* 💡 NEW: Quick Action Bar is now here, passing state down */}
-                {/* Note: useCertificateActions props (like handleBulkDelete) will be passed via CertificateTable */}
+                {/* Hospital Pie Chart (Receiving live data) */}
+                <HospitalPieChart
+                    uniqueHospitals={uniqueHospitals}
+                    totalRecords={totalRecords}
+                    certificates={certificateData} 
+                />
+                
+                {/* Certificate Table */}
                 <CertificateTable
                     refreshKey={refreshKey}
-                    onRefresh={handleTableDataUpdate}
+                    onRefresh={handleTableDataUpdate as any} 
                     onAlert={handleAlert}
                     // Pass search/filter state and setters
                     searchQuery={searchQuery}
