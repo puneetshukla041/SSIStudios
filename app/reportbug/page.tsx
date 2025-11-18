@@ -192,7 +192,8 @@ const BugReportApp: React.FC = () => {
 
         for (let i = 1; i <= 5; i++) {
             const isFilled = i <= starsToFill; 
-            const starColor = isFilled ? 'text-amber-400 fill-amber-400' : 'text-gray-300 fill-gray-100';
+            // MODIFICATION: Changed base fill to a very light, semi-transparent blue for a better look on a light background.
+            const starColor = isFilled ? 'text-amber-400 fill-amber-400' : 'text-blue-200/50 fill-blue-50/50';
 
             stars.push(
                 <Star 
@@ -234,9 +235,10 @@ const BugReportApp: React.FC = () => {
     const IconComponent = getFeedbackIcon();
 
     return (
-        <div className="min-h-screen bg-white p-4 sm:p-8 flex justify-center items-start font-sans">
+        // Added a gradient background to make the glassmorphism effect visible
+        <div className="min-h-screen p-4 sm:p-8 flex justify-center items-start font-sans bg-white">
             {/* Main Container - Compact Size */}
-            <div className="w-full max-w-xl bg-white shadow-xl rounded-xl p-5 sm:p-6 border border-gray-100">
+            <div className="w-full max-w-xl bg-gradient-to-br from-white-200 to-indigo-100 shadow-xl rounded-xl p-5 sm:p-6 border border-gray-300">
 
                 <header className="flex flex-col items-center mb-5 pb-3 border-b border-gray-100">
                     <div className="p-2 bg-blue-600 rounded-full mb-3 shadow-md">
@@ -395,14 +397,16 @@ const BugReportApp: React.FC = () => {
                         </div>
                     )}
 
-                    {/* Submit Button (Blue Themed) */}
+                    {/* Submit Button (Glassmorphism Themed) */}
                     <button
                         type="submit"
                         disabled={isSubmitting}
-                        className={`w-full flex justify-center items-center space-x-2 px-3 py-2.5 text-base font-bold rounded-lg transition-all duration-200 ease-in-out shadow-lg 
+                        className={`w-full flex justify-center items-center space-x-2 px-3 py-2.5 text-base font-bold rounded-lg transition-all duration-300 ease-in-out backdrop-blur-md 
                             ${isSubmitting 
-                                ? 'bg-blue-400 text-white cursor-not-allowed' 
-                                : 'bg-blue-600 text-white hover:bg-blue-700 active:bg-blue-800 hover:shadow-xl'
+                                // Disabled state
+                                ? 'bg-blue-400/50 text-white cursor-not-allowed border border-blue-300/50' 
+                                // Glassmorphism style
+                                : 'bg-white/30 text-blue-800 border border-blue-300/50 shadow-lg shadow-blue-500/20 hover:bg-white/50 hover:shadow-xl hover:shadow-blue-500/30'
                             }
                         `}
                     >
@@ -410,7 +414,6 @@ const BugReportApp: React.FC = () => {
                             <>
                                 <Loader2 className="w-4 h-4 animate-spin" /> 
                                 <span>Submitting...</span>
-                                
                             </>
                         ) : (
                             <>
