@@ -72,7 +72,7 @@ const QuickActionBar: React.FC<QuickActionBarProps> = ({
                     <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-gray-400" />
                     <input
                         type="text"
-                        placeholder="Search Certificate, Name..."
+                        placeholder="Search Certificates"
                         value={searchQuery}
                         onChange={(e) => setSearchQuery(e.target.value)}
                         className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-xl bg-white/90 focus:ring-sky-500 focus:border-sky-500 transition duration-300 outline-none shadow-sm"
@@ -80,7 +80,7 @@ const QuickActionBar: React.FC<QuickActionBarProps> = ({
                 </div>
 
                 {/* Hospital Filter */}
-                <div className="relative w-full sm:w-48">
+                <div className="relative w-full sm:w-68">
                     <Filter className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-gray-400 pointer-events-none" />
                     <select
                         value={hospitalFilter}

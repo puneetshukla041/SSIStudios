@@ -1,5 +1,3 @@
-// D:\ssistudios\ssistudios\components\Certificates\ui\TableRow.tsx (UNCHANGED)
-
 import React from 'react';
 import {
     Save,
@@ -80,6 +78,12 @@ const TableRow: React.FC<TableRowProps> = ({
     const isPdfGenerating = generatingPdfId === cert._id || generatingPdfV1Id === cert._id;
     const isDisabled = isPdfGenerating || isAnyActionLoading || isEditing; 
 
+    // Base Glassmorphism classes for buttons
+    const glassBaseClasses = "p-2 rounded-full w-8 h-8 flex items-center justify-center transition duration-100 transform hover:scale-110 cursor-pointer shadow-lg backdrop-blur-sm";
+
+    // Disabled Glassmorphism classes
+    const disabledGlassClasses = "bg-gray-300/40 text-gray-500 cursor-not-allowed shadow-inner backdrop-blur-sm";
+
     return (
         <tr
             key={cert._id}
@@ -116,26 +120,26 @@ const TableRow: React.FC<TableRowProps> = ({
 
             {/* Data Cells (UNCHANGED) */}
             {(['certificateNo', 'name', 'hospital', 'doi'] as (keyof ICertificateClient)[]).map((field) => {
-                 const displayValue = field === 'hospital' 
-                     ? <span className={`inline-flex items-center px-3 py-1 rounded-full text-xs font-semibold ${getHospitalColor(cert.hospital)}`}>
-                         {cert.hospital}
-                       </span>
-                     : cert[field];
+                const displayValue = field === 'hospital' 
+                    ? <span className={`inline-flex items-center px-3 py-1 rounded-full text-xs font-semibold ${getHospitalColor(cert.hospital)}`}>
+                        {cert.hospital}
+                      </span>
+                    : cert[field];
 
-                 const editInput = field === 'doi' 
-                     ? <input
-                         type="date"
-                         value={doiToDateInput(editFormData[field] as string || '')}
-                         onChange={(e) => handleChange(field, dateInputToDoi(e.target.value))}
-                         className="w-full p-1 border border-sky-300 rounded-md focus:ring-1 focus:ring-sky-500 transition duration-150 shadow-inner bg-white/90 text-gray-800 outline-none"
-                         aria-label={`Edit ${field}`}
+                const editInput = field === 'doi' 
+                    ? <input
+                        type="date"
+                        value={doiToDateInput(editFormData[field] as string || '')}
+                        onChange={(e) => handleChange(field, dateInputToDoi(e.target.value))}
+                        className="w-full p-1 border border-sky-300 rounded-md focus:ring-1 focus:ring-sky-500 transition duration-150 shadow-inner bg-white/90 text-gray-800 outline-none"
+                        aria-label={`Edit ${field}`}
                        />
-                     : <input
-                         type="text"
-                         value={editFormData[field] as string || ''}
-                         onChange={(e) => handleChange(field, e.target.value)}
-                         className="w-full p-1 border border-sky-300 rounded-md focus:ring-1 focus:ring-sky-500 transition duration-150 shadow-inner bg-white/90 text-gray-800 outline-none"
-                         aria-label={`Edit ${field}`}
+                    : <input
+                        type="text"
+                        value={editFormData[field] as string || ''}
+                        onChange={(e) => handleChange(field, e.target.value)}
+                        className="w-full p-1 border border-sky-300 rounded-md focus:ring-1 focus:ring-sky-500 transition duration-150 shadow-inner bg-white/90 text-gray-800 outline-none"
+                        aria-label={`Edit ${field}`}
                        />;
 
                 return (
@@ -149,19 +153,19 @@ const TableRow: React.FC<TableRowProps> = ({
             <td className="px-4 py-2 whitespace-nowrap text-sm font-medium">
                 {isEditing ? (
                     <div className="flex space-x-2">
-                        {/* Save Button */}
+                        {/* Save Button (Green Glass) */}
                         <button
                             onClick={() => handleSave(cert._id)}
-                            className="text-white bg-green-600/90 hover:bg-green-700 p-2 rounded-full w-8 h-8 flex items-center justify-center transition transform hover:scale-110 shadow-lg cursor-pointer"
+                            className={`text-white bg-green-500/70 hover:bg-green-600/90 ${glassBaseClasses}`}
                             title="Save"
                             aria-label="Save changes"
                         >
                             <Save className="w-4 h-4" />
                         </button>
-                        {/* Cancel Button */}
+                        {/* Cancel Button (Gray Glass) */}
                         <button
                             onClick={() => setEditingId(null)}
-                            className="text-white bg-gray-500/90 hover:bg-gray-600 p-2 rounded-full w-8 h-8 flex items-center justify-center transition transform hover:scale-110 shadow-lg cursor-pointer"
+                            className={`text-white bg-gray-500/70 hover:bg-gray-600/90 ${glassBaseClasses}`}
                             title="Cancel"
                             aria-label="Cancel editing"
                         >
@@ -170,47 +174,47 @@ const TableRow: React.FC<TableRowProps> = ({
                     </div>
                 ) : (
                     <div className="flex space-x-2">
-                        {/* Send Mail Button (V1) */}
+                        {/* Send Mail V1 (Proctoring - Light Green Glass) */}
                         <button
                             onClick={() => handleMailCertificate(cert, 'certificate1.pdf')}
                             disabled={isDisabled}
-                            className={`text-white p-2 rounded-full w-8 h-8 flex items-center justify-center transition transform hover:scale-110 cursor-pointer shadow-md hover:shadow-lg ${
+                            className={`${glassBaseClasses} ${
                                 isDisabled 
-                                    ? 'bg-gray-400/90 cursor-not-allowed shadow-inner'
-                                    : 'bg-orange-600/90 hover:bg-orange-700'
+                                    ? disabledGlassClasses
+                                    : 'text-white bg-emerald-500/70 hover:bg-emerald-600/90' // Light Green
                             }`}
-                            title="Email Certificate (V1)"
-                            aria-label="Email V1 certificate"
+                            title="Email Proctoring Certificate"
+                            aria-label="Email Proctoring certificate (V1 template)"
                         >
                             {isPdfGenerating ? <Loader2 className="w-4 h-4 animate-spin" /> : <Mail className="w-4 h-4" />}
                         </button>
                         
-                        {/* Send Mail Button (V2) */}
+                        {/* Send Mail V2 (Training - Light Purple Glass) */}
                         <button
                             onClick={() => handleMailCertificate(cert, 'certificate2.pdf')}
                             disabled={isDisabled}
-                            className={`text-white p-2 rounded-full w-8 h-8 flex items-center justify-center transition transform hover:scale-110 cursor-pointer shadow-md hover:shadow-lg ${
+                            className={`${glassBaseClasses} ${
                                 isDisabled 
-                                    ? 'bg-gray-400/90 cursor-not-allowed shadow-inner'
-                                    : 'bg-red-600/90 hover:bg-red-700'
+                                    ? disabledGlassClasses
+                                    : 'text-white bg-violet-500/70 hover:bg-violet-600/90' // Light Purple
                             }`}
-                            title="Email Certificate (V2)"
-                            aria-label="Email V2 certificate"
+                            title="Email Training Certificate"
+                            aria-label="Email Training certificate (V2 template)"
                         >
                             {isPdfGenerating ? <Loader2 className="w-4 h-4 animate-spin" /> : <Mail className="w-4 h-4" />}
                         </button>
 
-                        {/* Generate PDF Button (Template V1) */}
+                        {/* Generate PDF V1 (Proctoring - Light Green Glass) */}
                         <button
                             onClick={() => handleGeneratePDF_V1(cert)}
                             disabled={isDisabled}
-                            className={`text-white p-2 rounded-full w-8 h-8 flex items-center justify-center transition transform hover:scale-110 cursor-pointer shadow-md hover:shadow-lg ${
+                            className={`${glassBaseClasses} ${
                                 generatingPdfV1Id === cert._id 
-                                    ? 'bg-yellow-500/70 shadow-inner' 
-                                    : 'bg-emerald-600/90 hover:bg-emerald-700'
+                                    ? 'bg-yellow-500/70 shadow-inner' // Active state remains yellow/inner
+                                    : 'text-white bg-emerald-500/70 hover:bg-emerald-600/90' // Light Green
                             }`}
-                            title="Download PDF (V1)"
-                            aria-label="Generate and download PDF certificate (Version 1)"
+                            title="Download Proctoring Certificate"
+                            aria-label="Generate and download Proctoring certificate (V1 template)"
                         >
                             {generatingPdfV1Id === cert._id ? (
                                 <Loader2 className="w-4 h-4 animate-spin" />
@@ -219,17 +223,17 @@ const TableRow: React.FC<TableRowProps> = ({
                             )}
                         </button>
 
-                        {/* Generate PDF Button (Template V2) */}
+                        {/* Generate PDF V2 (Training - Light Purple Glass) */}
                         <button
                             onClick={() => handleGeneratePDF_V2(cert)}
                             disabled={isDisabled}
-                            className={`text-white p-2 rounded-full w-8 h-8 flex items-center justify-center transition transform hover:scale-110 cursor-pointer shadow-md hover:shadow-lg ${
+                            className={`${glassBaseClasses} ${
                                 generatingPdfId === cert._id 
-                                    ? 'bg-yellow-500/70 shadow-inner' 
-                                    : 'bg-purple-600/90 hover:bg-purple-700'
+                                    ? 'bg-yellow-500/70 shadow-inner' // Active state remains yellow/inner
+                                    : 'text-white bg-violet-500/70 hover:bg-violet-600/90' // Light Purple
                             }`}
-                            title="Download PDF (V2)"
-                            aria-label="Generate and download PDF certificate (Version 2)"
+                            title="Download Training Certificate"
+                            aria-label="Generate and download Training certificate (V2 template)"
                         >
                             {generatingPdfId === cert._id ? (
                                 <Loader2 className="w-4 h-4 animate-spin" />
@@ -238,14 +242,14 @@ const TableRow: React.FC<TableRowProps> = ({
                             )}
                         </button>
 
-                        {/* Edit Button */}
+                        {/* Edit Button (Sky Blue Glass) */}
                         <button
                             onClick={() => handleEdit(cert)}
                             disabled={isDisabled}
-                            className={`p-2 rounded-full w-8 h-8 flex items-center justify-center transition transform hover:scale-110 cursor-pointer shadow-md hover:shadow-lg ${
+                            className={`${glassBaseClasses} ${
                                 isDisabled 
-                                    ? 'bg-gray-200 text-gray-400 cursor-not-allowed' 
-                                    : 'text-sky-700 hover:text-white bg-sky-100/70 hover:bg-sky-600'
+                                    ? disabledGlassClasses
+                                    : 'text-sky-700 bg-sky-300/50 hover:text-white hover:bg-sky-500/70'
                             }`}
                             title="Edit"
                             aria-label="Edit certificate"
@@ -253,14 +257,14 @@ const TableRow: React.FC<TableRowProps> = ({
                             <Edit className="w-4 h-4" />
                         </button>
 
-                        {/* Delete Button */}
+                        {/* Delete Button (Red Glass) */}
                         <button
                             onClick={() => handleDelete(cert._id)}
                             disabled={isDisabled}
-                            className={`p-2 rounded-full w-8 h-8 flex items-center justify-center transition transform hover:scale-110 cursor-pointer shadow-md hover:shadow-lg ${
+                            className={`${glassBaseClasses} ${
                                 isDisabled 
-                                    ? 'bg-gray-200 text-gray-400 cursor-not-allowed'
-                                    : 'text-red-600 hover:text-white bg-red-100/70 hover:bg-red-600'
+                                    ? disabledGlassClasses
+                                    : 'text-red-600 bg-red-300/50 hover:text-white hover:bg-red-500/70'
                             }`}
                             title="Delete"
                             aria-label="Delete certificate"

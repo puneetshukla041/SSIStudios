@@ -18,9 +18,24 @@ const CertificateDatabasePage: React.FC = () => {
     const [uniqueHospitals, setUniqueHospitals] = useState<string[]>([]);
 
     // --- State for Search and Filter ---
-    const [searchQuery, setSearchQuery] = useState('');
+    // 1. New state for instant input value (used by the <input>)
+    const [inputQuery, setInputQuery] = useState('');
+    // 2. Original state for filtering (used by useCertificateData, updated after debounce)
+    const [searchQuery, setSearchQuery] = useState(''); 
     const [hospitalFilter, setHospitalFilter] = useState('');
     const [isAddFormVisible, setIsAddFormVisible] = useState(false);
+
+    // --- Debounce Logic (NEW) ---
+    useEffect(() => {
+        // Set a timer to update the actual search query state (searchQuery) 500ms after the user stops typing (inputQuery changes).
+        const delayDebounceFn = setTimeout(() => {
+            setSearchQuery(inputQuery);
+        }, 500);
+
+        // Cleanup: If the user types again, clear the old timer.
+        return () => clearTimeout(delayDebounceFn);
+    }, [inputQuery]); // Run this effect ONLY when the *input* changes.
+
 
     // --- Placeholder Alert (for UploadButton/Child props) ---
     const handleAlert = useCallback(
@@ -131,9 +146,10 @@ const CertificateDatabasePage: React.FC = () => {
                     refreshKey={refreshKey}
                     onRefresh={handleTableDataUpdate as any} 
                     onAlert={handleAlert}
-                    // Pass search/filter state and setters
+                    // Pass DEBOUNCED searchQuery to the table's data hook (useCertificateData)
                     searchQuery={searchQuery}
-                    setSearchQuery={setSearchQuery}
+                    // Pass the INSTANT inputQuery SETTER to the table's QuickActionBar via props tunneling
+                    setSearchQuery={setInputQuery} 
                     hospitalFilter={hospitalFilter}
                     setHospitalFilter={setHospitalFilter}
                     isAddFormVisible={isAddFormVisible}
