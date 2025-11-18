@@ -72,17 +72,14 @@ const templateCards: TemplateCard[] = [
   },
 ];
 
-
 export default function Templates() {
   // 👈 HOOK: Initialize the router
   const router = useRouter(); 
 
   const navigateTo = (path: string) => {
-    // 🗑️ REMOVE: console.log(`Navigation placeholder: Directing to ${path}`);
-    // 🚀 ACTION: Use router.push() to perform the actual client-side navigation
+
     router.push(path); 
   };
-
   return (
     // ... (Rest of the component remains the same)
     <section className="mb-12 mt-12">
