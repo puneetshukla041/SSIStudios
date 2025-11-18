@@ -365,7 +365,7 @@ const BugReportApp: React.FC = () => {
 
                     {/* 5. Satisfaction Stars (Mandatory) */}
                     {/* Color coding: light blue for trust, light red for mandatory warning */}
-                    <div className={`pt-3 p-4 rounded-xl shadow-inner transition-all duration-300 ${satisfaction === 0 ? 'bg-red-50 border border-red-400' : 'bg-blue-50 border border-blue-300'}`}>
+                    <div className={`pt-3 p-4 rounded-xl shadow-inner transition-all duration-300 ${satisfaction === 0 ? 'bg-green-50 border border-blue-400' : 'bg-blue-50 border border-blue-300'}`}>
                         <label className="block text-sm font-extrabold text-gray-700 mb-3 uppercase tracking-wide">
                             5. Overall Satisfaction Rating <span className="text-red-600">*</span>
                         </label>
@@ -376,11 +376,11 @@ const BugReportApp: React.FC = () => {
                                     {renderStars()}
                                 </div>
                                 <span className="text-xs font-bold text-gray-700">
-                                    {satisfaction > 0 ? `(${selectedSatisfaction.value}/5 Stars - ${selectedSatisfaction.label})` : <span className="text-red-600 font-bold">(Mandatory)</span>}
+                                    {satisfaction > 0 ? `(${selectedSatisfaction.value}/5 Stars - ${selectedSatisfaction.label})` : <span className="text-red-600 font-bold"></span>}
                                 </span>
                             </div>
 
-                            <p className={`text-xs font-medium ${satisfaction === 0 ? 'text-red-800' : 'text-gray-700'}`}>
+                            <p className={`text-xs font-medium ${satisfaction === 0 ? 'text-green-800' : 'text-gray-700'}`}>
                                 <span className="transition-colors duration-150">
                                     {getSatisfactionDescription()}
                                 </span>
@@ -410,6 +410,7 @@ const BugReportApp: React.FC = () => {
                             <>
                                 <Loader2 className="w-4 h-4 animate-spin" /> 
                                 <span>Submitting...</span>
+                                
                             </>
                         ) : (
                             <>
