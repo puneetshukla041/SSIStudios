@@ -3,13 +3,13 @@
 import React from 'react';
 import {
     Download,
-    Search,
+    // Search, // REMOVED
     Filter,
     Plus,
     Trash2,
     FileCheck, // For V1 PDF
-    FileText,  // For V2 PDF
-    Loader2,   // For loading state
+    FileText,  // For V2 PDF
+    Loader2,   // For loading state
 } from 'lucide-react';
 
 // Assuming imports from constants/types needed by this component exist
@@ -20,12 +20,12 @@ interface QuickActionBarProps {
     isAddFormVisible: boolean; 
     selectedIds: string[];
     uniqueHospitals: string[];
-    searchQuery: string;
+    // searchQuery: string; // REMOVED
     hospitalFilter: string;
     isBulkGeneratingV1: boolean; 
     isBulkGeneratingV2: boolean; 
     setIsAddFormVisible: React.Dispatch<React.SetStateAction<boolean>>; // 💡 FIX: Included
-    setSearchQuery: React.Dispatch<React.SetStateAction<string>>;
+    // setSearchQuery: React.Dispatch<React.SetStateAction<string>>; // REMOVED
     setHospitalFilter: React.Dispatch<React.SetStateAction<string>>;
     handleBulkDelete: () => Promise<void>;
     handleDownload: (type: 'xlsx' | 'csv') => Promise<void>;
@@ -37,12 +37,12 @@ const QuickActionBar: React.FC<QuickActionBarProps> = ({
     isAddFormVisible, // Destructured here
     selectedIds,
     uniqueHospitals,
-    searchQuery,
+    // searchQuery, // REMOVED
     hospitalFilter,
     isBulkGeneratingV1,
     isBulkGeneratingV2,
     setIsAddFormVisible, // Destructured here
-    setSearchQuery,
+    // setSearchQuery, // REMOVED
     setHospitalFilter,
     handleBulkDelete,
     handleDownload,
@@ -58,7 +58,7 @@ const QuickActionBar: React.FC<QuickActionBarProps> = ({
     return (
         <div className="flex flex-col md:flex-row justify-between items-center space-y-4 md:space-y-0 md:space-x-4 p-4 sm:p-5 bg-white/80 rounded-xl border border-gray-200 backdrop-blur-sm">
 
-            {/* Left Side: Add, Search, Filters */}
+            {/* Left Side: Add, Filters (Search removed) */}
             <div className="flex flex-col sm:flex-row w-full space-y-3 sm:space-y-0 sm:space-x-4">
                 <button
                     onClick={() => setIsAddFormVisible(prev => !prev)}
@@ -68,6 +68,7 @@ const QuickActionBar: React.FC<QuickActionBarProps> = ({
                     {isAddFormVisible ? 'Hide Form' : 'Add New Data'}
                 </button>
 
+                {/* 💡 REMOVED SEARCH INPUT FIELD ENTIRELY 
                 <div className="relative w-full sm:w-64">
                     <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-gray-400" />
                     <input
@@ -78,6 +79,7 @@ const QuickActionBar: React.FC<QuickActionBarProps> = ({
                         className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-xl bg-white/90 focus:ring-sky-500 focus:border-sky-500 transition duration-300 outline-none shadow-sm"
                     />
                 </div>
+                */}
 
                 {/* Hospital Filter */}
                 <div className="relative w-full sm:w-68">
@@ -108,7 +110,7 @@ const QuickActionBar: React.FC<QuickActionBarProps> = ({
                                 ? 'bg-yellow-500/70 cursor-wait shadow-inner' 
                                 : 'bg-emerald-600/90 hover:bg-emerald-700'
                         }`}
-                        title="Export Selected V1 PDFs (ZIP)"
+                        title="Export Selected  PDFs (ZIP)"
                     >
                         {isBulkGeneratingV1 ? (
                             <Loader2 className="w-4 h-4 mr-2 animate-spin" />
@@ -129,7 +131,7 @@ const QuickActionBar: React.FC<QuickActionBarProps> = ({
                                 ? 'bg-yellow-500/70 cursor-wait shadow-inner' 
                                 : 'bg-purple-600/90 hover:bg-purple-700'
                         }`}
-                        title="Export Selected V2 PDFs (ZIP)"
+                        title="Export Selected PDFs (ZIP)"
                     >
                         {isBulkGeneratingV2 ? (
                             <Loader2 className="w-4 h-4 mr-2 animate-spin" />

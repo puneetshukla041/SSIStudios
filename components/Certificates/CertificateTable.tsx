@@ -1,4 +1,4 @@
-// D:\ssistudios\ssistudios\components\Certificates\CertificateTable.tsx
+'use client';
 
 import React, { useEffect, useState, useCallback } from 'react';
 import { BadgeCheck, Loader2, Square, ChevronLeft, ChevronRight, Check, Info, AlertCircle } from 'lucide-react'; 
@@ -11,7 +11,7 @@ import { ICertificateClient, CertificateTableProps, PAGE_LIMIT, NotificationStat
 
 // Import UI Components
 import AddCertificateForm from './ui/AddCertificateForm';
-import QuickActionBar from './ui/QuickActionBar'; 
+import QuickActionBar from './ui/QuickActionBar'; // Still imported for use in JSX
 import TableHeader from './ui/TableHeader';
 import TableRow from './ui/TableRow';
 import MailComposer from './ui/MailComposer'; 
@@ -52,15 +52,10 @@ const SkeletonLoader = () => (
 );
 
 
-// MODIFIED PROPS INTERFACE
-interface CertificateTableExtendedProps extends Omit<CertificateTableProps, 'onRefresh'> {
-    refreshKey: number;
-    // FIX: Update onRefresh signature to match constants.ts
-    onRefresh: (data: ICertificateClient[], totalCount: number, uniqueHospitalsList: string[]) => void;
-    onAlert: (message: string, isError: boolean) => void;
-    
+// 💡 FIXED PROPS INTERFACE: Restoring setSearchQuery as hook requires 7 args
+interface CertificateTableExtendedProps extends CertificateTableProps {
     searchQuery: string;
-    setSearchQuery: React.Dispatch<React.SetStateAction<string>>;
+    setSearchQuery: React.Dispatch<React.SetStateAction<string>>; // <-- RESTORED
     hospitalFilter: string;
     setHospitalFilter: React.Dispatch<React.SetStateAction<string>>;
     isAddFormVisible: boolean;
@@ -74,30 +69,32 @@ const CertificateTable: React.FC<CertificateTableExtendedProps> = ({
     onAlert: legacyOnAlert,
     // Destructure new props from parent
     searchQuery,
-    setSearchQuery,
+    setSearchQuery, // <-- RESTORED FOR HOOK
     hospitalFilter,
     setHospitalFilter,
     isAddFormVisible,
     setIsAddFormVisible,
 }) => {
     
-    // NEW: Notification State
+    // 💡 NEW: Notification State
     const [notification, setNotification] = useState<NotificationState | null>(null);
 
-    // NEW: showNotification function 
+    // 💡 NEW: showNotification function (as requested)
     const showNotification = useCallback((message: string, type: NotificationType) => {
         setNotification({ message, type, active: true });
         
+        // Hide animation: 3000ms duration + 300ms transition time
         setTimeout(() => {
             setNotification(prev => prev ? { ...prev, active: false } : null);
         }, 3000);
         
+        // Remove from DOM after transition
         setTimeout(() => {
             setNotification(null);
         }, 3300);
     }, []);
 
-    // FIX: Proxy function to intercept and SILENCE successful legacy alerts, 
+    // 💡 FIX: Proxy function to intercept and SILENCE successful legacy alerts, 
     const pdfOnAlert = useCallback((message: string, isError: boolean) => {
         
         if (!isError && (message.includes('synchronized') || message.includes('loaded'))) {
@@ -126,13 +123,14 @@ const CertificateTable: React.FC<CertificateTableExtendedProps> = ({
         requestSort,
         sortedCertificates,
         setIsLoading,
-    // Passing all required search/filter states/setters to useCertificateData
+    // 💡 FIXED: Passing 7 arguments to satisfy the hook's required signature.
     } = useCertificateData(refreshKey, onRefresh, showNotification, searchQuery, hospitalFilter, setSearchQuery, setHospitalFilter); 
 
     // 2. Action Management (CRUD, Bulk Actions, PDF, Download)
     const {
         editingId,
         editFormData,
+        // isAddFormVisible is now passed via props
         newCertificateData,
         isAdding,
         flashId,
@@ -143,6 +141,7 @@ const CertificateTable: React.FC<CertificateTableExtendedProps> = ({
         isBulkGeneratingV2, 
         setEditingId,
         setEditFormData,
+        // setIsAddFormVisible is now passed via props
         setNewCertificateData,
         setFlashId,
         handleSelectOne,
@@ -249,7 +248,7 @@ const CertificateTable: React.FC<CertificateTableExtendedProps> = ({
 
     return (
         <>
-            {/* DYNAMIC ISLAND STYLE TOAST NOTIFICATION */}
+            {/* 💡 DYNAMIC ISLAND STYLE TOAST NOTIFICATION (UNCHANGED) */}
             {notification && (
                 <div
                     className={`
@@ -276,15 +275,13 @@ const CertificateTable: React.FC<CertificateTableExtendedProps> = ({
             
             <div className="space-y-6 w-full p-3 md:p-0">
 
-                {/* Quick Action Bar */}
+                {/* 💡 Quick Action Bar: Only receives filter props, not search input props */}
                 <QuickActionBar
                     isAddFormVisible={isAddFormVisible}
                     selectedIds={selectedIds}
                     uniqueHospitals={uniqueHospitals}
-                    searchQuery={searchQuery}
                     hospitalFilter={hospitalFilter}
                     setIsAddFormVisible={setIsAddFormVisible}
-                    setSearchQuery={setSearchQuery}
                     setHospitalFilter={setHospitalFilter}
                     handleBulkDelete={handleBulkDelete}
                     handleDownload={handleDownload}

@@ -1,12 +1,19 @@
 'use client';
 
 import React, { useState, useCallback, useEffect } from 'react';
-import { FiRefreshCw } from 'react-icons/fi';
+
+import { FiRefreshCw, FiSearch } from 'react-icons/fi'; // Import FiSearch
+
 import UploadButton from '@/components/UploadButton';
+
 import CertificateTable from '@/components/Certificates/CertificateTable';
-import QuickActionBar from '@/components/Certificates/ui/QuickActionBar'; 
+
+import QuickActionBar from '@/components/Certificates/ui/QuickActionBar';
+
 import { ICertificateClient, NotificationType } from '@/components/Certificates/utils/constants';
-import HospitalPieChart from '@/components/Certificates/analysis/HospitalPieChart'; 
+
+import HospitalPieChart from '@/components/Certificates/analysis/HospitalPieChart';
+
 
 const CertificateDatabasePage: React.FC = () => {
     const [refreshKey, setRefreshKey] = useState(0);
@@ -21,7 +28,7 @@ const CertificateDatabasePage: React.FC = () => {
     // 1. New state for instant input value (used by the <input>)
     const [inputQuery, setInputQuery] = useState('');
     // 2. Original state for filtering (used by useCertificateData, updated after debounce)
-    const [searchQuery, setSearchQuery] = useState(''); 
+    const [searchQuery, setSearchQuery] = useState('');
     const [hospitalFilter, setHospitalFilter] = useState('');
     const [isAddFormVisible, setIsAddFormVisible] = useState(false);
 
@@ -86,25 +93,55 @@ const CertificateDatabasePage: React.FC = () => {
     );
 
     return (
-        <div className="min-h-screen bg-gray-50 px-4 sm:px-6 py-3">
-            <main className="mx-auto space-y-3 w-full max-w-[1200px] lg:max-w-[1100px] xl:max-w-[1280px] 2xl:max-w-screen-2xl">
-                
+        // Base padding (px-4) handles small screens, py-3 provides vertical margin
+<div className="
+    min-h-screen 
+    bg-gray-white
+    px-0 
+    py-3
+    md:px-6                 /* Tablets */
+    lg:pl-20 lg:pr-0        /* Laptops → big left, ZERO right */
+    2xl:px-0                /* Ultra-wide screens reset */
+">
+    <main className="mx-auto space-y-4 w-full max-w-screen-2xl">
+
+
+
+
                 {/* Header Row */}
-                <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 py-2">
+                {/* Responsive layout shift: column on xs, row on sm+ */}
+                <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 md:gap-4 py-2">
                     
-                    {/* Total Records */}
-                    <div className="flex-shrink-0">
-                        <p className="text-sm sm:text-base font-semibold text-gray-700 text-center sm:text-left">
+                    {/* Total Records and Search Input (Combined Left Group) */}
+                    {/* flex-col on xs, flex-row on sm+, gap-3 or gap-4 for tighter grouping */}
+                    <div className="flex flex-col sm:flex-row sm:items-center gap-3 md:gap-4 flex-shrink-0 w-full sm:w-auto">
+                        <p className="text-sm sm:text-base font-semibold text-gray-700 text-center sm:text-left whitespace-nowrap">
                             Total Records:{' '}
-                            <strong className="text-indigo-600">{totalRecords}</strong>
+                            <strong className="text-indigo-600 text-lg sm:text-xl">{totalRecords}</strong> {/* Responsive font size for record count */}
                         </p>
+                        
+                        {/* 💡 MOVED SEARCH INPUT FIELD */}
+                        {/* w-full on xs, w-48 to w-64 on sm+ */}
+                        <div className="relative w-full sm:w-56 md:w-64">
+                            <input
+                                type="text"
+                                placeholder="Search records..."
+                                value={inputQuery} // Binds to INSTANT inputQuery
+                                onChange={(e) => setInputQuery(e.target.value)} // Updates INSTANT inputQuery
+                                className="block w-full rounded-lg border-0 py-1.5 pl-10 pr-4 text-gray-900 shadow-sm ring-1 ring-inset ring-gray-300 placeholder:text-gray-400 focus:ring-2 focus:ring-inset focus:ring-indigo-600 text-sm sm:text-base sm:leading-6" // Text size adjusted
+                            />
+                            <div className="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-3">
+                                <FiSearch className="h-4 w-4 sm:h-5 sm:w-5 text-gray-400" aria-hidden="true" /> {/* Icon size adjusted */}
+                            </div>
+                        </div>
                     </div>
 
-                    {/* Controls */}
-                    <div className="flex flex-wrap justify-center sm:justify-end items-center gap-2 sm:gap-3">
+                    {/* Controls (Right Group: Upload + Sync) */}
+                    <div className="flex flex-wrap justify-center sm:justify-end items-center gap-2 sm:gap-3 md:gap-4 w-full sm:w-auto">
                         
-                        {/* Left group: Upload + Sync */}
-                        <div className="flex flex-wrap justify-center sm:justify-start items-center gap-2">
+                        {/* Left group of controls: Upload + Sync */}
+                        {/* Added w-full to buttons on mobile for stacking, sm:w-auto to revert on desktop */}
+                        <div className="flex flex-wrap justify-center sm:justify-start items-center gap-2 sm:gap-3 md:gap-4 w-full sm:w-auto">
                             <UploadButton
                                 onUploadSuccess={handleUploadSuccess}
                                 onUploadError={handleUploadError}
@@ -114,7 +151,7 @@ const CertificateDatabasePage: React.FC = () => {
                                 onClick={handleRefresh}
                                 disabled={isRefreshing}
                                 className={`
-                                    flex items-center justify-center px-3 sm:px-4 py-1.5 sm:py-2 text-sm sm:text-base font-semibold rounded-lg shadow-md 
+                                    w-full sm:w-auto flex items-center justify-center px-4 py-1.5 sm:py-2 text-sm sm:text-base font-semibold rounded-lg shadow-md 
                                     transition-all duration-300 bg-indigo-600 hover:bg-indigo-700 text-white 
                                     focus:outline-none focus:ring-4 focus:ring-indigo-500 focus:ring-opacity-50 
                                     disabled:bg-indigo-400 disabled:cursor-wait
@@ -127,9 +164,9 @@ const CertificateDatabasePage: React.FC = () => {
                             </button>
                         </div>
 
-                        {/* Right group: Export Excel (Placeholder) */}
-                        <div className="flex justify-center sm:justify-end">
-                            {/* Keep your existing Export Excel button here (or move it to QuickActionBar) */}
+                        {/* Right group: Export Excel (Placeholder) - Assuming this is empty or handled by QuickActionBar */}
+                        <div className="hidden sm:flex justify-end">
+                            {/* Placeholder for potential Export button */}
                         </div>
                     </div>
                 </div>
@@ -148,8 +185,8 @@ const CertificateDatabasePage: React.FC = () => {
                     onAlert={handleAlert}
                     // Pass DEBOUNCED searchQuery to the table's data hook (useCertificateData)
                     searchQuery={searchQuery}
-                    // Pass the INSTANT inputQuery SETTER to the table's QuickActionBar via props tunneling
-                    setSearchQuery={setInputQuery} 
+                    // 💡 FIX: Pass setSearchQuery (which updates the debounced state) back to the table
+                    setSearchQuery={setSearchQuery} 
                     hospitalFilter={hospitalFilter}
                     setHospitalFilter={setHospitalFilter}
                     isAddFormVisible={isAddFormVisible}
