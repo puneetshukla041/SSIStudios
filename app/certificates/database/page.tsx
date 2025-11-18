@@ -99,11 +99,20 @@ const CertificateDatabasePage: React.FC = () => {
     bg-gray-white
     px-0 
     py-3
-    md:px-6                 /* Tablets */
-    lg:pl-20 lg:pr-0        /* Laptops → big left, ZERO right */
-    2xl:px-0                /* Ultra-wide screens reset */
+    md:px-6
+    lg:pl-24 lg:pr-0      /* More left padding + small right space */
+    2xl:px-0
 ">
-    <main className="mx-auto space-y-4 w-full max-w-screen-2xl">
+
+    <main className="
+    mx-auto 
+    space-y-4 
+    w-full 
+    max-w-screen-2xl 
+    lg:scale-[0.96]      /* Slightly smaller on laptops */
+    lg:origin-top-left   /* Align scaling anchor */
+">
+
 
 
 
