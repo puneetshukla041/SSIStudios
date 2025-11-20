@@ -45,7 +45,7 @@ export const useMailCertificate = (onAlert: (message: string, isError: boolean) 
             setIsPdfGenerating(false);
         }
     }, [onAlert]);
-
+    
     // 2. Mail Send Logic
     // UPDATED SIGNATURE: Accepts recipientEmail, ccEmail (string), and mailContent
     const handleSendMail = useCallback(async (recipientEmail: string, ccEmail: string, mailContent: string) => {
@@ -53,7 +53,7 @@ export const useMailCertificate = (onAlert: (message: string, isError: boolean) 
             onAlert('Cannot send mail: Missing certificate data or PDF attachment.', true);
             return;
         }
-
+           
         setIsSending(true);
         
         // MOCK DATA ACCESS for names/hospital
