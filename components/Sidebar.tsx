@@ -432,7 +432,7 @@ export default function Sidebar({ forceActive, isOpen, toggleSidebar }: SidebarP
           SSI STUDIOS v.1.08.25
         </div>
         <div className="text-gray-500 text-xs text-center select-none">
-          Developed By Creative Operations
+          Developed By Puneeet Shukla
         </div>
         <div className="text-green-500 text-xs text-center select-none">
           Beta Version
