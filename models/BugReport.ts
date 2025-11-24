@@ -1,5 +1,4 @@
 import mongoose, { Schema, Document, Model } from "mongoose";
-
 export interface IBugReport extends Document {
     userId: string;
     title: string;
@@ -9,7 +8,6 @@ export interface IBugReport extends Document {
     status: string;
     createdAt: Date;
 }
-
 const BugReportSchema: Schema<IBugReport> = new Schema(
     {
         userId: {
@@ -43,9 +41,7 @@ const BugReportSchema: Schema<IBugReport> = new Schema(
         timestamps: { createdAt: true, updatedAt: false },
     }
 );
-
 // This ensures the model is not redefined on hot reload in Next.js
 const BugReport: Model<IBugReport> =
     mongoose.models.BugReport || mongoose.model<IBugReport>("BugReport", BugReportSchema);
-
 export default BugReport;

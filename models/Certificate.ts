@@ -1,5 +1,4 @@
 import mongoose, { Document, Schema, Model } from 'mongoose';
-
 // Interface for the document data
 export interface ICertificate {
   certificateNo: string;
@@ -7,10 +6,8 @@ export interface ICertificate {
   hospital: string;
   doi: string; // Stored as DD-MM-YYYY string
 }
-
 // Interface for the document with Mongoose properties
 export interface ICertificateDocument extends ICertificate, Document {}
-
 // Define the schema
 const CertificateSchema: Schema<ICertificateDocument> = new Schema(
   {
@@ -41,10 +38,8 @@ const CertificateSchema: Schema<ICertificateDocument> = new Schema(
     timestamps: true,
   }
 );
-
 // Create the model, checking if it already exists to prevent re-compilation in development
 const Certificate: Model<ICertificateDocument> =
   (mongoose.models.Certificate as Model<ICertificateDocument>) ||
   mongoose.model<ICertificateDocument>('Certificate', CertificateSchema);
-
 export default Certificate;

@@ -170,5 +170,4 @@ This is a system-generated email. Please do not reply.
         </div>
     );
 };
-
 export default MailComposer;

@@ -3,15 +3,15 @@
 import React, { useMemo } from 'react';
 import { PieChart, Pie, Cell, Tooltip, ResponsiveContainer, Legend } from 'recharts';
 import { Hospital, LayoutDashboard } from 'lucide-react';
-import { getHospitalColor } from '../utils/helpers'; 
-import { ICertificateClient } from '../utils/constants'; 
+import { getHospitalColor } from '../utils/helpers';
+import { ICertificateClient } from '../utils/constants';
 
 // Define the structure for the chart data
 interface HospitalData {
     name: string;
-    value: number; 
+    value: number;
     colorClass: string;
-    [key: string]: any; 
+    [key: string]: any;
 }
 
 interface HospitalPieChartProps {
@@ -20,17 +20,19 @@ interface HospitalPieChartProps {
     certificates: ICertificateClient[]; // Current page/view data (used for counting)
 }
 
-const CustomTooltip = ({ active, payload }: any) => {
-    if (active && payload && payload.length) {
+// FIX: CustomTooltip now accepts 'chartTotal' as a prop
+const CustomTooltip = ({ active, payload, chartTotal }: any) => {
+    if (active && payload && payload.length && chartTotal > 0) {
         const data = payload[0].payload;
-        // Calculate the total based on the slices currently visible in the pie chart
-        const total = payload.reduce((sum: number, entry: any) => sum + entry.value, 0);
+        
+        // FIX: The calculation now uses the correct total count of all slices in the chart.
+        const percentage = ((payload[0].value / chartTotal) * 100).toFixed(1);
 
         return (
             <div className="p-3 bg-white/90 backdrop-blur-sm border border-gray-200 rounded-lg shadow-xl text-sm font-semibold text-gray-800">
                 <p className="font-bold text-sky-600">{data.name}</p>
                 <p className="mt-1">Count: <span className="text-gray-900">{payload[0].value}</span></p>
-                <p>Percentage: <span className="text-gray-900">{((payload[0].value / total) * 100).toFixed(1)}%</span></p>
+                <p>Percentage: <span className="text-gray-900">{percentage}%</span></p>
             </div>
         );
     }
@@ -70,7 +72,7 @@ const HospitalPieChart: React.FC<HospitalPieChartProps> = ({ uniqueHospitals, to
                 value: hospitalCounts[hospital] || 0, // Gets count from live data
                 colorClass: getHospitalColor(hospital),
             }))
-            .filter(data => data.value > 0); 
+            .filter(data => data.value > 0);
     }, [uniqueHospitals, hospitalCounts]);
 
     const chartTotal = pieData.reduce((sum, item) => sum + item.value, 0);
@@ -82,17 +84,21 @@ const HospitalPieChart: React.FC<HospitalPieChartProps> = ({ uniqueHospitals, to
             </h3>
 
             {pieData.length > 0 ? (
-                <div className="flex flex-col lg:flex-row items-center justify-between">
-                    <div className="w-full lg:w-3/5 h-64 md:h-80">
+                // Use a column layout by default, then switch to row on large screens
+                <div className="flex flex-col lg:flex-row items-start justify-between">
+                    {/* The chart container width is full on small screens, and 3/5 on large screens */}
+                    <div className="w-full lg:w-3/5 h-72 md:h-80">
                         <ResponsiveContainer width="100%" height="100%">
-                            <PieChart>
+                            {/* Adjusted margins to provide better clearance for the chart */}
+                            <PieChart margin={{ top: 10, right: 10, bottom: 10, left: 10 }}>
                                 <Pie
                                     data={pieData}
                                     dataKey="value"
                                     nameKey="name"
                                     cx="50%"
                                     cy="50%"
-                                    outerRadius={120}
+                                    // Reduced outerRadius to 100 for better fit within vertical/horizontal legend configurations
+                                    outerRadius={100}
                                     fill="#8884d8"
                                     labelLine={false}
                                     animationBegin={300}
@@ -102,19 +108,25 @@ const HospitalPieChart: React.FC<HospitalPieChartProps> = ({ uniqueHospitals, to
                                         <Cell key={`cell-${index}`} fill={getColorHex(entry.colorClass)} />
                                     ))}
                                 </Pie>
-                                <Tooltip content={<CustomTooltip />} />
+                                {/* FIX: Pass the chartTotal to the CustomTooltip */}
+                                <Tooltip content={<CustomTooltip chartTotal={chartTotal} />} />
+                                {/* Legend for responsiveness: 
+                                1. Horizontal/Bottom for all sizes to save horizontal space.
+                                2. Removed fixed padding style. */}
                                 <Legend
-                                    layout="vertical"
-                                    verticalAlign="middle"
-                                    align="right"
+                                    layout="horizontal"
+                                    verticalAlign="bottom"
+                                    align="center"
                                     iconType="circle"
-                                    wrapperStyle={{ paddingLeft: '20px' }}
+                                    wrapperStyle={{ paddingTop: '10px' }}
                                 />
                             </PieChart>
                         </ResponsiveContainer>
                     </div>
 
-                    <div className="w-full lg:w-2/5 mt-4 lg:mt-0 lg:ml-6 p-4 bg-sky-50 rounded-xl border border-sky-200">
+                    {/* Summary box now serves as a detailed list/legend. 
+                    Added items-start to the parent container's class to better align the summary on large screens. */}
+                    <div className="w-full lg:w-2/5 mt-4 lg:mt-0 lg:ml-6 p-4 bg-sky-50 rounded-xl border border-sky-200 shadow-inner">
                         <p className="text-xl font-bold text-gray-700 mb-2 border-b pb-1">Summary</p>
                         <p className="text-sm text-gray-600 flex justify-between">
                             Total Records (in View): <span className="font-bold text-indigo-600">{chartTotal}</span>

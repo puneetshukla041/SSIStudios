@@ -146,7 +146,6 @@ export default function LoginLayout() {
     isLoading, showTick, showWelcome, showPassword,
     handleLogin, togglePasswordVisibility, setShowRequestModal
   };
-
   // Props for RequestModal
   const requestModalProps = {
     showRequestModal, setShowRequestModal, requestName, setRequestName,
@@ -155,8 +154,6 @@ export default function LoginLayout() {
     isRequestLoading, handleRequestAccess, handleIDFileChange,
     MAX_FILE_SIZE_MB, MAX_FILE_SIZE_BYTES
   };
-
-
   return (
     <div className="min-h-screen flex flex-col md:flex-row items-center justify-center bg-transparent relative p-4 md:p-10 font-sans">
       
@@ -165,7 +162,6 @@ export default function LoginLayout() {
         <AuthBg />
       </div>
       <AnimatedModals {...modalProps} />
-
       {/* --- Desktop View (Large component split into Layout and Form) --- */}
       <div className="hidden md:flex relative z-10 w-full max-w-7xl h-[650px] rounded-[3rem] p-12
                       bg-gradient-to-tr from-gray-900/40 to-black/30

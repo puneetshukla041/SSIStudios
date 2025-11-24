@@ -44,7 +44,7 @@ const FloatingNotification: React.FC<FloatingNotificationProps> = ({ message, ty
     return (
         <div 
             className={`
-                fixed top-4 left-1/2 transform -translate-x-1/2 
+                fixed top-32 left-1/2 transform -translate-x-1/2  /* 💡 CHANGED: top-24 is now top-32 */
                 max-w-xs w-full z-[1000] 
                 transition-all duration-500 ease-out 
                 p-3 rounded-full shadow-2xl backdrop-blur-sm

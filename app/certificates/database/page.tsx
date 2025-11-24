@@ -1,19 +1,22 @@
 'use client';
 
 import React, { useState, useCallback, useEffect } from 'react';
+import { FiRefreshCw, FiSearch, FiHelpCircle } from 'react-icons/fi';
+import { AnimatePresence } from 'framer-motion';
 
-import { FiRefreshCw, FiSearch } from 'react-icons/fi'; // Import FiSearch
+// --- NEW IMPORT ---
+import HelpCard from '@/components/Certificates/ui/HelpCard'; 
+// ------------------
 
 import UploadButton from '@/components/UploadButton';
-
 import CertificateTable from '@/components/Certificates/CertificateTable';
-
-import QuickActionBar from '@/components/Certificates/ui/QuickActionBar';
-
 import { ICertificateClient, NotificationType } from '@/components/Certificates/utils/constants';
-
 import HospitalPieChart from '@/components/Certificates/analysis/HospitalPieChart';
 
+
+// =======================================================================
+// MAIN COMPONENT: CertificateDatabasePage
+// =======================================================================
 
 const CertificateDatabasePage: React.FC = () => {
     const [refreshKey, setRefreshKey] = useState(0);
@@ -25,14 +28,16 @@ const CertificateDatabasePage: React.FC = () => {
     const [uniqueHospitals, setUniqueHospitals] = useState<string[]>([]);
 
     // --- State for Search and Filter ---
-    // 1. New state for instant input value (used by the <input>)
     const [inputQuery, setInputQuery] = useState('');
-    // 2. Original state for filtering (used by useCertificateData, updated after debounce)
     const [searchQuery, setSearchQuery] = useState('');
     const [hospitalFilter, setHospitalFilter] = useState('');
     const [isAddFormVisible, setIsAddFormVisible] = useState(false);
+    
+    // State for the help card visibility
+    const [isHelpCardVisible, setIsHelpCardVisible] = useState(false); 
 
-    // --- Debounce Logic (NEW) ---
+
+    // --- Debounce Logic ---
     useEffect(() => {
         // Set a timer to update the actual search query state (searchQuery) 500ms after the user stops typing (inputQuery changes).
         const delayDebounceFn = setTimeout(() => {
@@ -93,64 +98,62 @@ const CertificateDatabasePage: React.FC = () => {
     );
 
     return (
-        // Base padding (px-4) handles small screens, py-3 provides vertical margin
-<div className="
-    min-h-screen 
-    bg-gray-white
-    px-0 
-    py-3
-    md:px-6
-    lg:pl-24 lg:pr-0      /* More left padding + small right space */
-    2xl:px-0
-">
+        <div className="
+             min-h-screen 
+             bg-gray-white
+             px-0 
+             py-3
+             md:px-6
+             lg:pl-24 lg:pr-0
+             2xl:px-0
+         ">
+            
+            {/* Help Card Integration: Show the modal if state is true */}
+            <AnimatePresence>
+                {isHelpCardVisible && <HelpCard onClose={() => setIsHelpCardVisible(false)} />}
+            </AnimatePresence>
 
-    <main className="
-    mx-auto 
-    space-y-4 
-    w-full 
-    max-w-screen-2xl 
-    lg:scale-[0.96]      /* Slightly smaller on laptops */
-    lg:origin-top-left   /* Align scaling anchor */
-">
-
-
-
-
-
-                {/* Header Row */}
-                {/* Responsive layout shift: column on xs, row on sm+ */}
-                <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 md:gap-4 py-2">
-                    
-                    {/* Total Records and Search Input (Combined Left Group) */}
-                    {/* flex-col on xs, flex-row on sm+, gap-3 or gap-4 for tighter grouping */}
-                    <div className="flex flex-col sm:flex-row sm:items-center gap-3 md:gap-4 flex-shrink-0 w-full sm:w-auto">
-                        <p className="text-sm sm:text-base font-semibold text-gray-700 text-center sm:text-left whitespace-nowrap">
-                            Total Records:{' '}
-                            <strong className="text-indigo-600 text-lg sm:text-xl">{totalRecords}</strong> {/* Responsive font size for record count */}
-                        </p>
-                        
-                        {/* 💡 MOVED SEARCH INPUT FIELD */}
-                        {/* w-full on xs, w-48 to w-64 on sm+ */}
-                        <div className="relative w-full sm:w-56 md:w-64">
-                            <input
-                                type="text"
-                                placeholder="Search records..."
-                                value={inputQuery} // Binds to INSTANT inputQuery
-                                onChange={(e) => setInputQuery(e.target.value)} // Updates INSTANT inputQuery
-                                className="block w-full rounded-lg border-0 py-1.5 pl-10 pr-4 text-gray-900 shadow-sm ring-1 ring-inset ring-gray-300 placeholder:text-gray-400 focus:ring-2 focus:ring-inset focus:ring-indigo-600 text-sm sm:text-base sm:leading-6" // Text size adjusted
-                            />
-                            <div className="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-3">
-                                <FiSearch className="h-4 w-4 sm:h-5 sm:w-5 text-gray-400" aria-hidden="true" /> {/* Icon size adjusted */}
-                            </div>
+            <main className="
+                mx-auto 
+                space-y-4 
+                w-full 
+                max-w-screen-2xl 
+                lg:scale-[0.96]
+                lg:origin-top-left
+            ">
+                                            
+                {/* Search Bar Container (Centered) */}
+                <div className="flex justify-center w-full mb-4">
+                    <div className="relative w-full px-4 sm:w-80 md:w-96">
+                        <input
+                            type="text"
+                            placeholder="Search records..."
+                            value={inputQuery} // Binds to INSTANT inputQuery
+                            onChange={(e) => setInputQuery(e.target.value)} // Updates INSTANT inputQuery
+                            className="block w-full rounded-full border-0 py-1.5 pl-10 pr-4 text-gray-900 shadow-sm ring-1 ring-inset ring-gray-300 placeholder:text-gray-400 focus:ring-2 focus:ring-inset focus:ring-indigo-600 text-sm sm:text-base sm:leading-6"
+                        />
+                        <div className="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-7 sm:pl-7">
+                            <FiSearch className="h-4 w-4 sm:h-5 sm:w-5 text-gray-400" aria-hidden="true" />
                         </div>
                     </div>
+                </div>
 
-                    {/* Controls (Right Group: Upload + Sync) */}
-                    <div className="flex flex-wrap justify-center sm:justify-end items-center gap-2 sm:gap-3 md:gap-4 w-full sm:w-auto">
+                {/* Header Row (Total Records and Controls) */}
+                <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 md:gap-4 py-2">
+                    
+                    {/* Total Records (Left Group) */}
+                    <div className="flex flex-col sm:flex-row sm:items-center gap-3 md:gap-4 flex-shrink-0 w-full sm:w-auto">
+                        <p className="text-sm sm:text-base font-semibold text-gray-700 text-center sm:text-left whitespace-nowrap px-4 md:px-0">
+                            Total Records:{' '}
+                            <strong className="text-indigo-600 text-lg sm:text-xl">{totalRecords}</strong>
+                        </p>
+                    </div>
+
+                    {/* Controls (Right Group: Upload + Sync + Help Icon) */}
+                    <div className="flex flex-wrap justify-center sm:justify-end items-center gap-2 sm:gap-3 md:gap-4 w-full sm:w-auto px-4 md:px-0">
                         
-                        {/* Left group of controls: Upload + Sync */}
-                        {/* Added w-full to buttons on mobile for stacking, sm:w-auto to revert on desktop */}
-                        <div className="flex flex-wrap justify-center sm:justify-start items-center gap-2 sm:gap-3 md:gap-4 w-full sm:w-auto">
+                        {/* Left group of controls: Upload + Sync + Help Icon */}
+                        <div className="flex flex-wrap justify-center sm:justify-end items-center gap-2 sm:gap-3 md:gap-4 w-full sm:w-auto">
                             <UploadButton
                                 onUploadSuccess={handleUploadSuccess}
                                 onUploadError={handleUploadError}
@@ -160,10 +163,10 @@ const CertificateDatabasePage: React.FC = () => {
                                 onClick={handleRefresh}
                                 disabled={isRefreshing}
                                 className={`
-                                    w-full sm:w-auto flex items-center justify-center px-4 py-1.5 sm:py-2 text-sm sm:text-base font-semibold rounded-lg shadow-md 
-                                    transition-all duration-300 bg-indigo-600 hover:bg-indigo-700 text-white 
-                                    focus:outline-none focus:ring-4 focus:ring-indigo-500 focus:ring-opacity-50 
-                                    disabled:bg-indigo-400 disabled:cursor-wait
+                                     w-full sm:w-auto flex items-center justify-center px-4 py-1.5 sm:py-2 text-sm sm:text-base font-semibold rounded-lg shadow-md 
+                                     transition-all duration-300 bg-indigo-600 hover:bg-indigo-700 text-white 
+                                     focus:outline-none focus:ring-4 focus:ring-indigo-500 focus:ring-opacity-50 
+                                     disabled:bg-indigo-400 disabled:cursor-wait
                                 `}
                             >
                                 <FiRefreshCw
@@ -171,9 +174,22 @@ const CertificateDatabasePage: React.FC = () => {
                                 />
                                 {isRefreshing ? 'Syncing...' : 'Sync Data'}
                             </button>
+                            
+                            {/* Help Icon Button */}
+                            <button
+                                onClick={() => setIsHelpCardVisible(true)}
+                                aria-label="Open Help Guide"
+                                className="
+                                     flex items-center justify-center h-9 w-9 sm:h-10 sm:w-10 rounded-full 
+                                     bg-gray-100 hover:bg-gray-200 text-indigo-600 hover:text-indigo-700 
+                                     transition-colors duration-200 shadow-md flex-shrink-0
+                                "
+                            >
+                                <FiHelpCircle className="h-5 w-5 sm:h-6 sm:w-6" />
+                            </button>
                         </div>
 
-                        {/* Right group: Export Excel (Placeholder) - Assuming this is empty or handled by QuickActionBar */}
+                        {/* Right group: Export Excel (Placeholder) */}
                         <div className="hidden sm:flex justify-end">
                             {/* Placeholder for potential Export button */}
                         </div>
@@ -194,7 +210,7 @@ const CertificateDatabasePage: React.FC = () => {
                     onAlert={handleAlert}
                     // Pass DEBOUNCED searchQuery to the table's data hook (useCertificateData)
                     searchQuery={searchQuery}
-                    // 💡 FIX: Pass setSearchQuery (which updates the debounced state) back to the table
+                    // Pass setSearchQuery (which updates the debounced state) back to the table
                     setSearchQuery={setSearchQuery} 
                     hospitalFilter={hospitalFilter}
                     setHospitalFilter={setHospitalFilter}

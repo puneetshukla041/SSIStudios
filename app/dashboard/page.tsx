@@ -9,6 +9,7 @@ import {
   Palette,
   Eraser,
   Settings,
+  Layers2Icon,
 } from "lucide-react";
 
 import { useAuth } from "@/contexts/AuthContext";
@@ -44,6 +45,14 @@ export default function DashboardPage() {
       hoverColor: "hover:bg-blue-500/30 hover:border-blue-400/60",
       action: () => navigateTo("/poster/editor"),
     },
+        {
+      id: "upload-asset",
+      label: "Manage Certificates",
+      icon: <Layers2Icon size={20} />,
+      color: "bg-orange-500/20 border-orange-400/40 text-orange-700",
+      hoverColor: "hover:bg-orange-500/30 hover:border-orange-400/60",
+      action: () => navigateTo("/selector/visitingcard"),
+    },
     {
       id: "bg-remover",
       label: "bgremover",
@@ -53,21 +62,14 @@ export default function DashboardPage() {
       action: () => navigateTo("/bgremover"),
     },
     {
-      id: "reportabug",
-      label: "Report a Bug",
+      id: "managevisiting cards",
+      label: "Manage Visiting Cards",
       icon: <LayoutGrid size={20} />,
       color: "bg-purple-500/20 border-purple-400/40 text-purple-700",
       hoverColor: "hover:bg-purple-500/30 hover:border-purple-400/60",
       action: () => navigateTo("/selector/idcard"),
     },
-    {
-      id: "upload-asset",
-      label: "Upload-Asset",
-      icon: <Upload size={20} />,
-      color: "bg-orange-500/20 border-orange-400/40 text-orange-700",
-      hoverColor: "hover:bg-orange-500/30 hover:border-orange-400/60",
-      action: () => navigateTo("/selector/visitingcard"),
-    },
+
     {
       id: "Themes",
       label: "Design Tools",

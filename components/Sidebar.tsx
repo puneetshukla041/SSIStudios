@@ -44,12 +44,33 @@ type MenuItem = {
 
 const menu: MenuItem[] = [
   { name: 'Dashboard', icon: Home, path: '/dashboard' },
+
+  {
+    name: 'Certificates',
+    icon: Layers,
+    requiredAccess: 'certificateEditor',
+    children: [
+      { name: 'Database', path: '/certificates/database' },
+     
+      { name: 'Analysis', path: '/certificates/analysis' },
+    ],
+  },
   {
     name: 'Bg Remover',
     icon: FileImage,
     path: "/bgremover",
     requiredAccess: 'bgRemover',
   },
+    {
+    name: 'Visiting Cards',
+    icon: FileText,
+    requiredAccess: 'visitingCard',
+    children: [
+      { name: 'Dark Theme', path: '/selector/visitingcard/dark' },
+      { name: 'Light Theme', path: '/selector/visitingcard/light' },
+    ],
+  },
+
   {
     name: 'Image Enhancer',
     icon: Star,
@@ -69,25 +90,7 @@ const menu: MenuItem[] = [
     requiredAccess: 'posterEditor',
   },
   
-  {
-    name: 'Visiting Cards',
-    icon: FileText,
-    requiredAccess: 'visitingCard',
-    children: [
-      { name: 'Dark Theme', path: '/selector/visitingcard/dark' },
-      { name: 'Light Theme', path: '/selector/visitingcard/light' },
-    ],
-  },
-    {
-    name: 'Certificates',
-    icon: Layers,
-    requiredAccess: 'certificateEditor',
-    children: [
-      { name: 'Database', path: '/certificates/database' },
-     
-      { name: 'Analysis', path: '/certificates/analysis' },
-    ],
-  },
+
 
   {
     name: 'Branding Assets',
