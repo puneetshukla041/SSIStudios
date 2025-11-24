@@ -154,7 +154,6 @@ const CertificateDatabasePage: React.FC = () => {
                  lg:scale-[0.96]
                  lg:origin-top-left
              ">
-                                                
                 {/* Search Bar Container (Centered) */}
                 <div className="flex justify-center w-full mb-4">
                     <div className="relative w-full px-4 sm:w-80 md:w-96">

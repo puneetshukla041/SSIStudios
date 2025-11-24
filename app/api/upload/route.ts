@@ -13,7 +13,7 @@ interface InsertManyRawResult {
     writeErrors?: Array<any>; // Contains details about documents that failed to insert
 }
 
-// Helper function to validate DOI format (DD-MM-YYYY)
+// Helper function to validate DOI format (DD-MM-YYYY) - UNUSED FOR STRING DATES NOW
 const isValidDOI = (doi: string): boolean => {
     if (!doi || typeof doi !== 'string' || doi.length !== 10) return false;
     const regex = /^\d{2}-\d{2}-\d{4}$/;
@@ -66,7 +66,9 @@ export async function POST(req: NextRequest) {
         
         // 3. Read file into buffer
         const buffer = Buffer.from(await file.arrayBuffer());
-        const workbook = XLSX.read(buffer, { type: 'buffer' });
+        // Use raw: true to prevent XLSX.js from auto-formatting date strings,
+        // which helps us keep the original text formats like "31st August 2023"
+        const workbook = XLSX.read(buffer, { type: 'buffer', cellDates: false, raw: true });
         
         const sheetName = workbook.SheetNames[0];
         const worksheet = workbook.Sheets[sheetName];
@@ -119,28 +121,29 @@ export async function POST(req: NextRequest) {
                     let rawValue = row[index];
                     let value: string = '';
 
-                    // Step 1: Handle DOI Conversion Robustly
-                    if (dbField === 'doi') {
+                    // Handle other string fields (certificateNo, name, hospital) first
+                    if (dbField !== 'doi') {
+                        value = rawValue !== undefined && rawValue !== null ? String(rawValue).trim() : '';
+                    } else {
+                        // --- MODIFIED DOI HANDLING (Step 1 & 2 combined) ---
                         if (typeof rawValue === 'number') {
+                            // If it's a number (Excel serial date), try to convert it to the standardized format
                             const doiString = safeXlsxDateToDoi(rawValue);
                             if (doiString) {
                                 value = doiString;
                             } else {
-                                // Rejects row if date parsing fails (e.g., number is not a valid date serial)
-                                throw new Error(`Invalid or unparsable date value (${rawValue}) for DOI.`);
+                                // Numeric date failed to parse (e.g., 0 or bad serial number)
+                                console.warn(`Row ${processedCount}: Unparsable numeric date value (${rawValue}) for DOI. Treating as empty string.`);
+                                value = ''; 
                             }
                         } else {
-                            // If not a number, convert to string and trim.
+                            // If it's a string, accept the raw string value as is, no format validation.
                             value = rawValue !== undefined && rawValue !== null ? String(rawValue).trim() : '';
                         }
 
-                        // Step 2: Validate the final DOI format (after conversion/trimming)
-                        if (value !== '' && !isValidDOI(value)) {
-                            throw new Error(`Invalid DOI format: "${value}". Expected DD-MM-YYYY.`);
-                        }
-                    } else {
-                        // Handle other string fields (certificateNo, name, hospital)
-                        value = rawValue !== undefined && rawValue !== null ? String(rawValue).trim() : '';
+                        // ❌ REMOVED: The strict isValidDOI check for non-empty strings is removed here.
+                        // All non-empty strings (including "31st August 2023" and "2/13/2024") are now allowed to pass.
+                        // --- END MODIFIED DOI HANDLING ---
                     }
 
                     // Enforce presence ONLY for 'certificateNo' (the unique key)
@@ -158,7 +161,7 @@ export async function POST(req: NextRequest) {
                 }
                 
             } catch (e: any) {
-                // Log and count rows that failed internal processing (e.g., validation, date parsing)
+                // Log and count rows that failed internal processing (e.g., missing Certificate No.)
                 console.error(`Row processing failed (row ${processedCount}): ${e.message}`);
                 failedCount++;
             }
@@ -201,7 +204,7 @@ export async function POST(req: NextRequest) {
 
         let responseMessage = `${insertedCount} unique certificates successfully uploaded.`;
         if (finalFailedCount > 0) {
-            responseMessage += ` ${finalFailedCount} rows were skipped due to errors (e.g., duplicate Certificate No., invalid date, or processing failures).`;
+            responseMessage += ` ${finalFailedCount} rows were skipped due to errors (e.g., duplicate Certificate No. or processing failures).`;
         }
 
         return NextResponse.json({

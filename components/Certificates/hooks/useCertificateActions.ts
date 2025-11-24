@@ -202,7 +202,7 @@ export const useCertificateActions = ({
         }, 300);
     };
 
-    // --- Edit Handlers (UNCHANGED) ---
+    // --- Edit Handlers (MODIFIED) ---
     const handleEdit = (certificate: ICertificateClient) => {
         setEditingId(certificate._id);
         setEditFormData({ ...certificate });
@@ -213,11 +213,14 @@ export const useCertificateActions = ({
             showNotification('All fields are required.', 'error');
             return;
         }
+        // Removed strict date validation to allow inconsistent formats like "9th Apr 2025" or empty strings.
+        /*
         const doiRegex = /^\d{2}-\d{2}-\d{4}$/;
         if (!doiRegex.test(editFormData.doi || '')) {
             showNotification('DOI must be in DD-MM-YYYY format.', 'error');
             return;
         }
+        */
 
         try {
             const response = await fetch(`/api/certificates/${id}`, {
@@ -248,7 +251,7 @@ export const useCertificateActions = ({
     };
 
 
-    // --- Add Handlers (UNCHANGED) ---
+    // --- Add Handlers (MODIFIED) ---
     const handleAddCertificate = async () => {
         if (isAdding) return;
 
@@ -257,11 +260,14 @@ export const useCertificateActions = ({
             showNotification('All fields are required for the new certificate.', 'error');
             return;
         }
+        // Removed strict date validation to allow inconsistent formats like "9th Apr 2025" or empty strings.
+        /*
         const doiRegex = /^\d{2}-\d{2}-\d{4}$/;
         if (!doiRegex.test(newCertificateData.doi || '')) {
             showNotification('DOI must be in DD-MM-YYYY format.', 'error');
             return;
         }
+        */
 
         setIsAdding(true);
         const newIdPlaceholder = `temp-${Date.now()}`;
@@ -379,7 +385,7 @@ export const useCertificateActions = ({
         }
     }
 
-    // --- Export Handler (UPDATED) ---
+    // --- Export Handler (UNCHANGED) ---
     const handleDownload = async (type: 'xlsx' | 'csv') => {
         showNotification('Fetching all filtered records for export, please wait...', 'info');
 
@@ -408,7 +414,7 @@ export const useCertificateActions = ({
         if (type === 'xlsx') {
             // Need a separate config for export since we added 'S. No.'
             const exportColumnConfig = [
-                { wch: 8 },  // S. No.
+                { wch: 8 },  // S. No.
                 { wch: 18 }, // Certificate No.
                 { wch: 30 }, // Name
                 { wch: 55 }, // Hospital
