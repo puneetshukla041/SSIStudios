@@ -36,17 +36,50 @@ const CertificateDatabasePage: React.FC = () => {
     // State for the help card visibility
     const [isHelpCardVisible, setIsHelpCardVisible] = useState(false); 
 
+    // --- NEW: State for Animated Count ---
+    const [animatedTotalRecords, setAnimatedTotalRecords] = useState(0);
+
 
     // --- Debounce Logic ---
     useEffect(() => {
-        // Set a timer to update the actual search query state (searchQuery) 500ms after the user stops typing (inputQuery changes).
         const delayDebounceFn = setTimeout(() => {
             setSearchQuery(inputQuery);
         }, 500);
-
-        // Cleanup: If the user types again, clear the old timer.
         return () => clearTimeout(delayDebounceFn);
-    }, [inputQuery]); // Run this effect ONLY when the *input* changes.
+    }, [inputQuery]);
+
+
+    // --- NEW: Animation Effect for Total Records ---
+    useEffect(() => {
+        // Only run if the new totalRecords is different from the current displayed count
+        if (totalRecords === animatedTotalRecords) return;
+
+        let start = animatedTotalRecords;
+        const end = totalRecords;
+        const duration = 2000; // 1 second animation
+        const steps = 50;
+        const stepTime = duration / steps;
+        // Calculate the increment required per step
+        const increment = (end - start) / steps; 
+
+        let currentStep = 0;
+
+        const timer = setInterval(() => {
+            currentStep++;
+            if (currentStep <= steps) {
+                // Calculate the new value based on linear interpolation
+                start += increment;
+                setAnimatedTotalRecords(Math.round(start));
+            } else {
+                // Ensure the final value is exactly the target
+                setAnimatedTotalRecords(end);
+                clearInterval(timer);
+            }
+        }, stepTime);
+
+        // Cleanup function to clear the interval if the component unmounts or state changes again
+        return () => clearInterval(timer);
+    }, [totalRecords]); // Dependency on the actual fetched count
 
 
     // --- Placeholder Alert (for UploadButton/Child props) ---
@@ -90,7 +123,7 @@ const CertificateDatabasePage: React.FC = () => {
     const handleTableDataUpdate = useCallback(
         (data: ICertificateClient[], totalCount: number, uniqueHospitalsList: string[]) => {
              setCertificateData(data);
-             setTotalRecords(totalCount);
+             setTotalRecords(totalCount); // This triggers the animation useEffect
              setUniqueHospitals(uniqueHospitalsList); // Update unique hospitals list
              setIsRefreshing(false);
         },
@@ -114,14 +147,14 @@ const CertificateDatabasePage: React.FC = () => {
             </AnimatePresence>
 
             <main className="
-                mx-auto 
-                space-y-4 
-                w-full 
-                max-w-screen-2xl 
-                lg:scale-[0.96]
-                lg:origin-top-left
-            ">
-                                            
+                 mx-auto 
+                 space-y-4 
+                 w-full 
+                 max-w-screen-2xl 
+                 lg:scale-[0.96]
+                 lg:origin-top-left
+             ">
+                                                
                 {/* Search Bar Container (Centered) */}
                 <div className="flex justify-center w-full mb-4">
                     <div className="relative w-full px-4 sm:w-80 md:w-96">
@@ -141,12 +174,31 @@ const CertificateDatabasePage: React.FC = () => {
                 {/* Header Row (Total Records and Controls) */}
                 <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 md:gap-4 py-2">
                     
-                    {/* Total Records (Left Group) */}
-                    <div className="flex flex-col sm:flex-row sm:items-center gap-3 md:gap-4 flex-shrink-0 w-full sm:w-auto">
-                        <p className="text-sm sm:text-base font-semibold text-gray-700 text-center sm:text-left whitespace-nowrap px-4 md:px-0">
-                            Total Records:{' '}
-                            <strong className="text-indigo-600 text-lg sm:text-xl">{totalRecords}</strong>
-                        </p>
+                    {/* Total Records (Left Group: Glassmorphism Card) */}
+                    <div className="flex flex-col sm:flex-row sm:items-center gap-3 md:gap-4 flex-shrink-0 w-full sm:w-auto px-4 md:px-0">
+                        
+                        {/* Glassmorphism Card for Total Records */}
+                        <div className="
+                            p-4 rounded-xl shadow-lg 
+                            backdrop-blur-sm bg-white/20 
+                            border border-white/50 
+                            transition-all duration-300 hover:shadow-xl
+                            flex items-center justify-center
+                            w-full sm:w-auto
+                        ">
+                            <p className="text-sm sm:text-base font-semibold text-gray-800 whitespace-nowrap">
+                                Total Records:
+                            </p>
+                            <strong className="
+                                text-indigo-700 text-xl sm:text-2xl ml-2 
+                                font-extrabold tracking-tight 
+                                transition-colors duration-500
+                            ">
+                                {animatedTotalRecords.toLocaleString()} 
+                                {/* .toLocaleString() for thousands separator */}
+                            </strong>
+                        </div>
+
                     </div>
 
                     {/* Controls (Right Group: Upload + Sync + Help Icon) */}
@@ -157,16 +209,18 @@ const CertificateDatabasePage: React.FC = () => {
                             <UploadButton
                                 onUploadSuccess={handleUploadSuccess}
                                 onUploadError={handleUploadError}
+                                // Note: UploadButton requires cursor-pointer applied internally or via a prop if available.
                             />
 
+                            {/* Sync Data Button (with cursor-pointer fix) */}
                             <button
                                 onClick={handleRefresh}
                                 disabled={isRefreshing}
                                 className={`
-                                     w-full sm:w-auto flex items-center justify-center px-4 py-1.5 sm:py-2 text-sm sm:text-base font-semibold rounded-lg shadow-md 
-                                     transition-all duration-300 bg-indigo-600 hover:bg-indigo-700 text-white 
-                                     focus:outline-none focus:ring-4 focus:ring-indigo-500 focus:ring-opacity-50 
-                                     disabled:bg-indigo-400 disabled:cursor-wait
+                                    w-full sm:w-auto flex items-center justify-center px-4 py-1.5 sm:py-2 text-sm sm:text-base font-semibold rounded-lg shadow-md 
+                                    transition-all duration-300 bg-indigo-600 hover:bg-indigo-700 text-white cursor-pointer
+                                    focus:outline-none focus:ring-4 focus:ring-indigo-500 focus:ring-opacity-50 
+                                    disabled:bg-indigo-400 disabled:cursor-wait
                                 `}
                             >
                                 <FiRefreshCw
@@ -175,14 +229,14 @@ const CertificateDatabasePage: React.FC = () => {
                                 {isRefreshing ? 'Syncing...' : 'Sync Data'}
                             </button>
                             
-                            {/* Help Icon Button */}
+                            {/* Help Icon Button (with cursor-pointer fix) */}
                             <button
                                 onClick={() => setIsHelpCardVisible(true)}
                                 aria-label="Open Help Guide"
                                 className="
-                                     flex items-center justify-center h-9 w-9 sm:h-10 sm:w-10 rounded-full 
-                                     bg-gray-100 hover:bg-gray-200 text-indigo-600 hover:text-indigo-700 
-                                     transition-colors duration-200 shadow-md flex-shrink-0
+                                    flex items-center justify-center h-9 w-9 sm:h-10 sm:w-10 rounded-full 
+                                    bg-gray-100 hover:bg-gray-200 text-indigo-600 hover:text-indigo-700 
+                                    transition-colors duration-200 shadow-md flex-shrink-0 cursor-pointer
                                 "
                             >
                                 <FiHelpCircle className="h-5 w-5 sm:h-6 sm:w-6" />
