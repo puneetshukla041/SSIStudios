@@ -1,6 +1,10 @@
+// D:\ssistudios\ssistudios\app\reportbug\page.tsx
+
 'use client'
 import React, { useState, useEffect, useCallback } from 'react';
 import { ShieldAlert, Send, Star, Loader2, ChevronDown, MessageSquare, Bug, ThumbsUp, Activity, Lock, Image, CheckCircle } from 'lucide-react';
+// IMPORT useAuth HOOK
+import { useAuth } from '@/contexts/AuthContext'; 
 
 // --- Feedback Type Options ---
 const FEEDBACK_TYPES = [
@@ -11,7 +15,7 @@ const FEEDBACK_TYPES = [
     { value: 'General', label: 'General Feedback', icon: ThumbsUp },
 ];
 
-// --- CONTENT PRESETS (Genuine, structured dropdown options) ---
+// --- CONTENT PRESETS ---
 const CONTENT_PRESETS: Record<string, { summaries: string[] }> = {
     Bug: {
         summaries: [
@@ -62,7 +66,7 @@ const CONTENT_PRESETS: Record<string, { summaries: string[] }> = {
     },
 };
 
-// --- SATISFACTION Options (1-5 where 5 is best, plus 0 for default) ---
+// --- SATISFACTION Options ---
 const SATISFACTION_OPTIONS = [
     { value: 5, stars: 5, label: 'Excellent', description: 'Exceptional experience. I love using this application!' },
     { value: 4, stars: 4, label: 'Very Good', description: 'Solid experience. Just a few minor things to iron out.' },
@@ -73,11 +77,12 @@ const SATISFACTION_OPTIONS = [
 ];
 
 const BugReportApp: React.FC = () => {
+    const { user, isLoading: authLoading } = useAuth(); // Destructure user and loading state
     const DEFAULT_SATISFACTION = 0; 
     
     const [feedbackType, setFeedbackType] = useState(FEEDBACK_TYPES[0].value);
     const [title, setTitle] = useState(CONTENT_PRESETS.Bug.summaries[0]);
-    const [customTitle, setCustomTitle] = useState(''); // New state for custom title input
+    const [customTitle, setCustomTitle] = useState(''); 
     const [description, setDescription] = useState(''); 
     const [imageFile, setImageFile] = useState<File | null>(null); 
     
@@ -85,13 +90,9 @@ const BugReportApp: React.FC = () => {
     const [hoverSatisfaction, setHoverSatisfaction] = useState(0); 
     const [isSubmitting, setIsSubmitting] = useState(false);
     const [message, setMessage] = useState<{ text: string, type: 'success' | 'error' | 'info' } | null>(null);
-    const [userId, setUserId] = useState<string>('');
-
-    useEffect(() => {
-        // Simple fallback if crypto.randomUUID is not available in some older environments
-        setUserId(typeof crypto.randomUUID === 'function' ? crypto.randomUUID() : Math.random().toString(36).substring(2, 15) + Math.random().toString(36).substring(2, 15));
-    }, []);
     
+    // NOTE: userId state removed. We use user.username and user.id directly.
+
     const selectedSatisfaction = SATISFACTION_OPTIONS.find(opt => opt.value === satisfaction) || SATISFACTION_OPTIONS[5];
 
     const handleFeedbackTypeChange = (newType: string) => {
@@ -111,7 +112,12 @@ const BugReportApp: React.FC = () => {
     const handleSubmit = useCallback(async (e: React.FormEvent) => {
         e.preventDefault();
 
-        // 1. Mandatory Satisfaction Check
+        if (!user) {
+             setMessage({ text: 'Error: User authentication data is missing.', type: 'error' });
+             return;
+        }
+
+        // 1. Mandatory Checks
         if (satisfaction === 0) {
              setMessage({ text: 'The Overall Satisfaction Rating is required.', type: 'error' });
              return;
@@ -126,7 +132,6 @@ const BugReportApp: React.FC = () => {
             }
             finalTitle = customTitle.trim();
         } else if (title === CONTENT_PRESETS[feedbackType].summaries[0]) {
-             // If they haven't selected a summary, but also haven't provided a description, we should prompt.
              if (!description.trim()) {
                 setMessage({ text: 'Please provide a Summary or a Detailed Description.', type: 'error' });
                 return;
@@ -136,22 +141,22 @@ const BugReportApp: React.FC = () => {
         // Use default description if empty
         const finalDescription = description.trim() || `No detailed description provided. Type: ${feedbackType}.`;
 
-
         setIsSubmitting(true);
         setMessage(null);
 
         try {
-            // **FIX: Send data to Next.js API route**
+            // **CRITICAL FIX: Sending user.username (as userId) and user.id (as actual mongo _id) to the server**
             const response = await fetch('/api/bug-report', {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
                 },
                 body: JSON.stringify({
-                    userId: userId,
+                    // Send the username for the server-side lookup
+                    userId: user.username, 
                     title: finalTitle,
                     description: finalDescription,
-                    rating: satisfaction, // satisfaction state maps to rating field in MongoDB
+                    rating: satisfaction, 
                     feedbackType: feedbackType,
                 }),
             });
@@ -159,21 +164,20 @@ const BugReportApp: React.FC = () => {
             const data = await response.json();
 
             if (!response.ok) {
-                // Check for server-side error message
                 throw new Error(data.error || `Submission failed with status: ${response.status}`);
             }
 
-            // Mock image upload if file exists (implementation needed for real upload, but we clear it here)
+            // Mock image upload if file exists
             if (imageFile) {
                 console.log(`Simulating upload of image: ${imageFile.name}`);
             }
-            // End FIX
 
             setMessage({ text: 'Report submitted successfully! Thank you for your rating and feedback.', type: 'success' });
             
-            // Reset form state
+            // Reset form state (keep submittedUser logic removed)
             handleFeedbackTypeChange(FEEDBACK_TYPES[0].value);
             setCustomTitle('');
+            setDescription('');
             setSatisfaction(DEFAULT_SATISFACTION);
             setImageFile(null);
             
@@ -183,7 +187,7 @@ const BugReportApp: React.FC = () => {
         } finally {
             setIsSubmitting(false);
         }
-    }, [satisfaction, feedbackType, title, customTitle, description, userId, imageFile]); 
+    }, [satisfaction, feedbackType, title, customTitle, description, user, imageFile]); 
 
     // Renders the golden stars 
     const renderStars = () => {
@@ -192,7 +196,6 @@ const BugReportApp: React.FC = () => {
 
         for (let i = 1; i <= 5; i++) {
             const isFilled = i <= starsToFill; 
-            // MODIFICATION: Changed base fill to a very light, semi-transparent blue for a better look on a light background.
             const starColor = isFilled ? 'text-amber-400 fill-amber-400' : 'text-blue-200/50 fill-blue-50/50';
 
             stars.push(
@@ -234,31 +237,50 @@ const BugReportApp: React.FC = () => {
     
     const IconComponent = getFeedbackIcon();
 
+    // Show a loading or empty state if auth is not ready
+    if (authLoading || !user) {
+        return (
+            <div className="min-h-screen flex items-center justify-center bg-gray-50">
+                <div className="text-center text-gray-700">
+                    <Loader2 className="w-8 h-8 animate-spin mx-auto mb-4 text-indigo-600" />
+                    <p className="text-base font-medium">Loading user session...</p>
+                </div>
+            </div>
+        );
+    }
+
     return (
-        // Added a gradient background to make the glassmorphism effect visible
         <div className="min-h-screen p-4 sm:p-8 flex justify-center items-start font-sans bg-white">
-            {/* Main Container - Compact Size */}
             <div className="w-full max-w-xl bg-gradient-to-br from-white-200 to-indigo-100 shadow-xl rounded-xl p-5 sm:p-6 border border-gray-300">
 
                 <header className="flex flex-col items-center mb-5 pb-3 border-b border-gray-100">
                     <div className="p-2 bg-blue-600 rounded-full mb-3 shadow-md">
-                        {/* Primary Icon is now Blue */}
                         <CheckCircle className="w-6 h-6 text-white" /> 
                     </div>
                     <h1 className="text-2xl font-extrabold text-gray-900 tracking-tight">Feedback Submission</h1>
                     <p className="text-sm text-gray-500 mt-1 text-center">Your input drives our improvements. Rating is mandatory.</p>
                 </header>
 
-                {/* Diagnostic ID */}
-                <div className="mb-4 p-3 bg-gray-50 border border-gray-200 text-gray-600 rounded-lg text-xs font-medium shadow-inner">
-                    <p className="font-semibold text-gray-700 mb-1">Diagnostic ID:</p>
-                    <code className="break-all font-mono text-[10px] bg-white p-1 rounded-md border border-gray-200 block select-all">
-                        {userId}
-                    </code>
-                </div>
+                <form onSubmit={handleSubmit} className="space-y-4"> 
 
-                <form onSubmit={handleSubmit} className="space-y-4"> {/* Reduced vertical spacing */}
-
+                    {/* FIXED: AUTOMATICALLY FETCHED USERNAME/ID DISPLAY */}
+                    <div>
+                        <label htmlFor="submitted-user" className="flex items-center text-sm font-semibold text-gray-700 mb-1">
+                            <ShieldAlert className="w-4 h-4 mr-1 text-green-600" /> Logged In User/ID 
+                        </label>
+                        <div className="flex items-center space-x-2">
+                             <input
+                                type="text"
+                                value={user.username} // Displaying the logged-in username
+                                readOnly
+                                className="flex-1 px-3 py-2 border border-gray-300 rounded-lg bg-gray-100 cursor-default text-sm font-bold text-green-700"
+                            />
+                            <div className="px-3 py-2 text-xs font-mono text-gray-600 bg-gray-100 border border-gray-300 rounded-lg select-all">
+                                ID: {user.id.substring(0, 8)}...
+                            </div>
+                        </div>
+                    </div>
+                    
                     {/* 1. Feedback Type Dropdown (Optional) */}
                     <div>
                         <label htmlFor="feedback-type" className="flex items-center text-sm font-semibold text-gray-700 mb-1">
@@ -277,6 +299,7 @@ const BugReportApp: React.FC = () => {
                                         {type.label}
                                     </option>
                                 ))}
+                                <option disabled value="">Select Type</option> 
                             </select>
                             <ChevronDown className="absolute right-2 top-1/2 transform -translate-y-1/2 w-4 h-4 text-gray-400 pointer-events-none" />
                         </div>
@@ -293,7 +316,6 @@ const BugReportApp: React.FC = () => {
                                 value={title}
                                 onChange={(e) => {
                                     setTitle(e.target.value);
-                                    // Clear custom title when switching back to a preset
                                     if(e.target.value !== "Custom Summary") {
                                         setCustomTitle('');
                                     }
@@ -314,7 +336,7 @@ const BugReportApp: React.FC = () => {
                             </select>
                             <ChevronDown className="absolute right-2 top-1/2 transform -translate-y-1/2 w-4 h-4 text-gray-400 pointer-events-none" />
                         </div>
-                        {/* Custom entry if selected, now using customTitle state */}
+                        {/* Custom entry if selected */}
                         {title === "Custom Summary" && (
                             <input
                                 type="text"
@@ -323,7 +345,7 @@ const BugReportApp: React.FC = () => {
                                 placeholder="Enter your custom summary here"
                                 className="w-full mt-2 px-3 py-2 border border-gray-300 rounded-lg focus:ring-blue-500 focus:border-blue-500 transition shadow-sm text-sm"
                                 disabled={isSubmitting}
-                                maxLength={100} // Added a helpful constraint
+                                maxLength={100} 
                             />
                         )}
                     </div>
@@ -335,7 +357,7 @@ const BugReportApp: React.FC = () => {
                         </label>
                         <textarea
                             id="description"
-                            rows={4} // Further reduced rows for less height
+                            rows={4} 
                             value={description}
                             onChange={(e) => setDescription(e.target.value)}
                             placeholder="Please provide any relevant details, steps, or suggestions here."
@@ -357,7 +379,7 @@ const BugReportApp: React.FC = () => {
                             className="w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-gray-100 file:text-gray-700 hover:file:bg-gray-200"
                             disabled={isSubmitting}
                         />
-                         {imageFile && (
+                        {imageFile && (
                             <p className="mt-1 text-xs text-gray-500">
                                 Attached: {imageFile.name} ({(imageFile.size / 1024).toFixed(1)} KB)
                             </p>
@@ -366,7 +388,6 @@ const BugReportApp: React.FC = () => {
 
 
                     {/* 5. Satisfaction Stars (Mandatory) */}
-                    {/* Color coding: light blue for trust, light red for mandatory warning */}
                     <div className={`pt-3 p-4 rounded-xl shadow-inner transition-all duration-300 ${satisfaction === 0 ? 'bg-green-50 border border-blue-400' : 'bg-blue-50 border border-blue-300'}`}>
                         <label className="block text-sm font-extrabold text-gray-700 mb-3 uppercase tracking-wide">
                             5. Overall Satisfaction Rating <span className="text-red-600">*</span>
@@ -397,15 +418,13 @@ const BugReportApp: React.FC = () => {
                         </div>
                     )}
 
-                    {/* Submit Button (Glassmorphism Themed) */}
+                    {/* Submit Button */}
                     <button
                         type="submit"
                         disabled={isSubmitting}
                         className={`w-full flex justify-center items-center space-x-2 px-3 py-2.5 text-base font-bold rounded-lg transition-all duration-300 ease-in-out backdrop-blur-md 
                             ${isSubmitting 
-                                // Disabled state
                                 ? 'bg-blue-400/50 text-white cursor-not-allowed border border-blue-300/50' 
-                                // Glassmorphism style
                                 : 'bg-white/30 text-blue-800 border border-blue-300/50 shadow-lg shadow-blue-500/20 hover:bg-white/50 hover:shadow-xl hover:shadow-blue-500/30'
                             }
                         `}

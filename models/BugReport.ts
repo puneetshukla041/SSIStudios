@@ -1,13 +1,15 @@
 import mongoose, { Schema, Document, Model } from "mongoose";
+
 export interface IBugReport extends Document {
     userId: string;
     title: string;
-    username: string;
+    username: string; // This is now explicitly required
     description: string;
     rating: number;
     status: string;
     createdAt: Date;
 }
+
 const BugReportSchema: Schema<IBugReport> = new Schema(
     {
         userId: {
@@ -20,9 +22,16 @@ const BugReportSchema: Schema<IBugReport> = new Schema(
             required: true,
             trim: true,
         },
+        // --- MODIFICATION START: Added 'username' field to the Mongoose Schema ---
+        username: {
+            type: String,
+            required: true, // Now required as requested
+            trim: true,
+        },
+        // --- MODIFICATION END ---
         description: {
             type: String,
-            required: true, // Must ensure client sends a non-empty string
+            required: true, 
             trim: true,
         },
         rating: {
@@ -41,7 +50,9 @@ const BugReportSchema: Schema<IBugReport> = new Schema(
         timestamps: { createdAt: true, updatedAt: false },
     }
 );
+
 // This ensures the model is not redefined on hot reload in Next.js
 const BugReport: Model<IBugReport> =
     mongoose.models.BugReport || mongoose.model<IBugReport>("BugReport", BugReportSchema);
+
 export default BugReport;
