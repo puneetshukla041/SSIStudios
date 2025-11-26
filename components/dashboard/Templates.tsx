@@ -1,126 +1,175 @@
-// components/dashboard/Templates.tsx
 "use client";
-import { motion } from "framer-motion";
-// 👈 IMPORT: Import useRouter for Next.js navigation
+
+import { motion, AnimatePresence } from "framer-motion";
 import { useRouter } from 'next/navigation'; 
+import { ArrowUpRight, Sparkles, Frown } from "lucide-react";
 
 interface TemplateCard {
   id: string;
   title: string;
+  category: string;
   imageSrc: string;
   imageAlt: string;
   path: string;
   bgColorClass: string;
-  textColorClass: string;
 }
 
 const templateCards: TemplateCard[] = [
-  // ... (Your templateCards array remains the same)
   {
     id: "Poster1",
-    title: "Poster",
+    title: "Event Poster",
+    category: "Marketing",
     imageSrc: "/posters/images/coverimage.png",
     imageAlt: "Presentation template",
     path: "/poster/editor",
-    bgColorClass: "bg-gradient-to-br from-orange-200 to-orange-100",
-    textColorClass: "text-gray-900",
+    bgColorClass: "bg-orange-50",
   },
   {
     id: "ID Card",
-    title: "ID Card",
+    title: "Corporate Identity",
+    category: "Identity",
     imageSrc: "/idcard/images/coverimage.png",
     imageAlt: "ID Card template",
     path: "/idcard/images/coverimage.png",
-    bgColorClass: "bg-gradient-to-br from-purple-200 to-purple-100",
-    textColorClass: "text-gray-900",
+    bgColorClass: "bg-purple-50",
   },
   {
     id: "visitingcards",
-    title: "VisitingCards(Dark)",
+    title: "Modern Dark Card",
+    category: "Business",
     imageSrc: "/visitingcard/images/coverimagedark.jpg",
     imageAlt: "Resume template",
     path: "/visitingcards/dark",
-    bgColorClass: "bg-gradient-to-br from-pink-200 to-pink-100",
-    textColorClass: "text-gray-900",
+    bgColorClass: "bg-pink-50",
   },
   {
     id: "email",
-    title: "Email",
+    title: "Minimal Light Card",
+    category: "Business",
     imageSrc: "/visitingcard/images/coverimagelight.jpg",
     imageAlt: "Email template",
     path: "/visitingcards/light",
-    bgColorClass: "bg-gradient-to-br from-blue-200 to-blue-100",
-    textColorClass: "text-gray-900",
+    bgColorClass: "bg-blue-50",
   },
   {
     id: "certificate1",
-    title: "certificate1",
+    title: "Proctoring Cert",
+    category: "Education",
     imageSrc: "/certificates/images/coverimageproctoriong.jpg",
     imageAlt: "certificate1",
     path: "/editor/instagram-post",
-    bgColorClass: "bg-gradient-to-br from-rose-200 to-rose-100",
-    textColorClass: "text-gray-900",
+    bgColorClass: "bg-rose-50",
   },
   {
     id: "certificate2",
-    title: "certificate2",
+    title: "Training Completion",
+    category: "Education",
     imageSrc: "/certificates/images/coverimagetraining.jpg",
     imageAlt: "certificate2",
     path: "/editor/video",
-    bgColorClass: "bg-gradient-to-br from-violet-200 to-violet-100",
-    textColorClass: "text-gray-900",
+    bgColorClass: "bg-violet-50",
   },
 ];
 
-export default function Templates() {
-  // 👈 HOOK: Initialize the router
+// 1. Accept the prop
+export default function Templates({ searchQuery = "" }: { searchQuery?: string }) {
   const router = useRouter(); 
 
   const navigateTo = (path: string) => {
-
     router.push(path); 
   };
+
+  // 2. Perform Filtering
+  const filteredTemplates = templateCards.filter(card => {
+    const query = searchQuery.toLowerCase();
+    return (
+      card.title.toLowerCase().includes(query) ||
+      card.category.toLowerCase().includes(query)
+    );
+  });
+
   return (
-    // ... (Rest of the component remains the same)
-    <section className="mb-12 mt-12">
-      <h2 className="text-xl sm:text-2xl font-semibold mb-6 text-gray-900">
-        Explore templates
-      </h2>
+    <section className="w-full">
+      {/* 3. Render Filtered List */}
+      <motion.div 
+        layout
+        className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6"
+      >
+        <AnimatePresence>
+          {filteredTemplates.length > 0 ? (
+            filteredTemplates.map((card, index) => (
+              <motion.div
+                key={card.id}
+                layout // Smooth layout reflow
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0, scale: 0.9 }}
+                transition={{ duration: 0.3, type: "spring", stiffness: 100 }}
+                whileHover={{ y: -8 }} 
+                className="group relative flex flex-col gap-3 cursor-pointer"
+                onClick={() => navigateTo(card.path)}
+              >
+                {/* Image Container */}
+                <div className="relative aspect-video w-full overflow-hidden rounded-2xl border border-slate-200/60 shadow-sm transition-all duration-500 group-hover:shadow-[0_20px_40px_-15px_rgba(0,0,0,0.1)] group-hover:border-indigo-500/30">
+                  <div className={`absolute inset-0 z-0 ${card.bgColorClass}`} />
+                  <div
+                    className="absolute inset-0 z-10 bg-cover bg-center transition-transform duration-700 ease-out group-hover:scale-110"
+                    style={{ backgroundImage: `url(${card.imageSrc})` }}
+                  />
+                  <div className="absolute inset-0 z-20 bg-gradient-to-t from-black/60 via-black/0 to-black/0 opacity-0 transition-opacity duration-300 group-hover:opacity-100" />
+                  
+                  {/* Category Badge */}
+                  <div className="absolute top-3 left-3 z-30">
+                    <div className="backdrop-blur-md bg-white/70 border border-white/50 px-2.5 py-1 rounded-lg shadow-sm">
+                      <span className="text-[10px] font-bold uppercase tracking-wider text-slate-700">
+                        {card.category}
+                      </span>
+                    </div>
+                  </div>
 
-      <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-4">
-        {templateCards.map((card, index) => (
-          <motion.button
-            key={card.id}
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: index * 0.08 + 0.4, duration: 0.3 }}
-            whileHover={{ scale: 1.03 }}
-            whileTap={{ scale: 0.98 }}
-            onClick={() => navigateTo(card.path)} // This line correctly triggers navigation
-            className={`
-              relative flex items-end justify-end p-4 rounded-xl shadow-lg
-              transition-all duration-300 group cursor-pointer overflow-hidden
-              ${card.bgColorClass}
-              
-              aspect-square sm:aspect-video
-            `}
-          >
-            {/* Background image */}
-            <div
-              className="absolute inset-0 z-0 bg-cover bg-no-repeat bg-right-bottom transition-transform duration-300 group-hover:scale-105"
-              style={{
-                backgroundImage: `url(${card.imageSrc})`,
-                backgroundPosition: "center",
-                backgroundSize: "cover", 
-              }}
-            />
+                  {/* Hover Action */}
+                  <div className="absolute inset-0 z-30 flex items-center justify-center opacity-0 transition-all duration-300 group-hover:opacity-100 group-hover:scale-100 scale-90">
+                    <button className="flex items-center gap-2 rounded-full bg-white/95 px-5 py-2.5 text-sm font-bold text-slate-900 shadow-xl backdrop-blur-xl hover:bg-white transition-colors">
+                      <Sparkles size={16} className="text-indigo-600" />
+                      Use this template
+                    </button>
+                  </div>
+                </div>
 
-            {/* Hover overlay: Provides contrast for white text on hover */}
-            <div className="absolute inset-0 z-0 bg-black opacity-0 group-hover:opacity-20 transition-opacity duration-300"></div>
-            
-          </motion.button>
-        ))}
-      </div>
+                {/* Metadata */}
+                <div className="flex items-center justify-between px-1">
+                  <div>
+                     <h3 className="text-sm font-bold text-slate-700 group-hover:text-indigo-600 transition-colors">
+                      {card.title}
+                     </h3>
+                  </div>
+                  <div className="relative h-6 w-6 overflow-hidden">
+                    <div className="absolute inset-0 flex items-center justify-center transition-transform duration-300 group-hover:-translate-y-full group-hover:translate-x-full">
+                      <ArrowUpRight size={16} className="text-slate-300" />
+                    </div>
+                    <div className="absolute inset-0 flex items-center justify-center -translate-x-full translate-y-full transition-transform duration-300 group-hover:translate-x-0 group-hover:translate-y-0">
+                      <ArrowUpRight size={16} className="text-indigo-600" />
+                    </div>
+                  </div>
+                </div>
+              </motion.div>
+            ))
+          ) : (
+            // 4. Empty State
+            <motion.div 
+              initial={{ opacity: 0 }} 
+              animate={{ opacity: 1 }} 
+              className="col-span-full py-12 flex flex-col items-center justify-center text-slate-400"
+            >
+              <div className="w-16 h-16 bg-slate-100 rounded-full flex items-center justify-center mb-4">
+                <Frown size={32} />
+              </div>
+              <p className="text-lg font-medium">No templates found for "{searchQuery}"</p>
+              <p className="text-sm">Try searching for "Business", "Certificate", or "Poster"</p>
+            </motion.div>
+          )}
+        </AnimatePresence>
+      </motion.div>
     </section>
   );
 }

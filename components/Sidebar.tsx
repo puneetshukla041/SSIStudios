@@ -1,29 +1,35 @@
 // Sidebar.tsx
 'use client'
 
-import { useState, useEffect, useCallback } from 'react'
-import { motion, AnimatePresence, useAnimation, Variants } from 'framer-motion'
+import { useState, useEffect } from 'react'
+import { motion, AnimatePresence, Variants } from 'framer-motion'
 import Image from "next/image"
 import { Tooltip } from 'react-tooltip'
 
 import Logo from '@/components/aminations/Logo'
+
+// Importing "Best" React Icons (Tabler Icons)
 import {
-  Home,
-  FileText,
-  Layers,
-  Palette,
-  Settings,
-  BugIcon,
-  ChevronDown,
-  ChevronRight,
-  FileImage,
-  LayoutTemplate,
-  LogOut,
-  Layout,
-  RotateCcw,
-  Star,
-  Folder,
-} from 'lucide-react'
+  TbLayoutDashboard,
+  TbCertificate,
+  TbEraser, // For Bg Remover
+  TbIdBadge2, // For Visiting Cards
+  TbWand, // For Image Enhancer
+  TbId, // For ID Card
+  TbLayoutCollage, // For Posters
+  TbPalette,
+  TbSettings,
+  TbBug,
+  TbLogout,
+  TbChevronDown,
+  TbChevronRight,
+  // New icons for the footer
+  TbBrandAndroid,
+  TbDeviceDesktop,
+  TbVersions,
+  TbCode,
+} from 'react-icons/tb'
+
 import { useAuth } from '@/contexts/AuthContext'
 import { useRouter, usePathname } from 'next/navigation'
 import LoadingScreen from '@/components/aminations/LoadingScreen'
@@ -43,55 +49,52 @@ type MenuItem = {
 }
 
 const menu: MenuItem[] = [
-  { name: 'Dashboard', icon: Home, path: '/dashboard' },
+  { name: 'Dashboard', icon: TbLayoutDashboard, path: '/dashboard' },
 
   {
     name: 'Certificates',
-    icon: Layers,
+    icon: TbCertificate,
     requiredAccess: 'certificateEditor',
     children: [
       { name: 'Database', path: '/certificates/database' },
-     
       { name: 'Analysis', path: '/certificates/analysis' },
     ],
   },
   {
     name: 'Bg Remover',
-    icon: FileImage,
+    icon: TbEraser,
     path: "/bgremover",
     requiredAccess: 'bgRemover',
   },
   {
     name: 'VisitingCards',
-    icon: Layout,
+    icon: TbIdBadge2,
     path: "/visitingcards",
     requiredAccess: 'bgRemover',
   },
 
   {
     name: 'Image Enhancer',
-    icon: Star,
+    icon: TbWand,
     path: '/imageenhancer',
     requiredAccess: 'imageEnhancer',
   },
   {
     name: 'ID Card Maker',
-    icon: LayoutTemplate,
+    icon: TbId,
     path: "/idcard",
     requiredAccess: 'idCard',
   },
     {
     name: 'Posters',
-    icon: Layout,
+    icon: TbLayoutCollage,
     path: "/poster/editor",
     requiredAccess: 'posterEditor',
   },
   
-
-
   {
     name: 'Branding Assets',
-    icon: Palette,
+    icon: TbPalette,
     requiredAccess: 'assets',
     children: [
       { name: 'Logo Library', path: '/logo' },
@@ -99,7 +102,7 @@ const menu: MenuItem[] = [
   },
   {
     name: 'Settings',
-    icon: Settings,
+    icon: TbSettings,
     children: [
       { name: 'Theme', path: '/theme' },
       { name: 'Profile & Preferences', path: '/userprofile' },
@@ -107,12 +110,12 @@ const menu: MenuItem[] = [
   },
     {
     name: 'Report an Bug',
-    icon: BugIcon,
+    icon: TbBug,
     path: "/reportbug",
     requiredAccess: 'idCard',
   },
 
-  { name: 'Logout', icon: LogOut, mobileOnly: true },
+  { name: 'Logout', icon: TbLogout, mobileOnly: true },
 ]
 
 // Define the menu items that should NOT show the loading animation
@@ -156,8 +159,6 @@ export default function Sidebar({ forceActive, isOpen, toggleSidebar }: SidebarP
   // State to manage redirection and loading
   const [redirectUrl, setRedirectUrl] = useState<string | null>(null);
 
-  // --- Removed all MongoDB Progress Bar State & Controls ---
-  
   // Control body overflow on sidebar open/close
   useEffect(() => {
     if (isOpen) {
@@ -240,7 +241,6 @@ export default function Sidebar({ forceActive, isOpen, toggleSidebar }: SidebarP
         {menu.map((item) => {
           // This is the access check logic.
           const hasAccess = !item.requiredAccess || (user?.access?.[item.requiredAccess] ?? false);
-          // A new variable to make the code cleaner.
           const isRestricted = !hasAccess;
 
           // If the user doesn't have the required access, don't render it
@@ -259,7 +259,6 @@ export default function Sidebar({ forceActive, isOpen, toggleSidebar }: SidebarP
           `;
 
           return (
-            // Updated `div` with motion variant 
             <motion.div key={item.name} className="mb-1.5" variants={menuItemVariants}>
               <button
                 onClick={() => {
@@ -282,14 +281,13 @@ export default function Sidebar({ forceActive, isOpen, toggleSidebar }: SidebarP
                 }}
                 className={`group flex items-center justify-between w-full px-3 py-2.5 rounded-lg transition-all duration-200 relative ${buttonClass}`}
                 type="button"
-                // Add tooltip attributes here
                 data-tooltip-id={`tooltip-${item.name.replace(/\s/g, '-')}`}
                 data-tooltip-content="Take permission from admin"
-                disabled={isRestricted} // Disable the button.
+                disabled={isRestricted}
               >
                 <div className="relative flex items-center gap-3 overflow-hidden">
                   <Icon
-                    size={18}
+                    size={22}
                     className={`transition-colors flex-shrink-0 text-white ${isRestricted ? 'opacity-40' : 'opacity-100'}`}
                   />
                   <span
@@ -308,13 +306,13 @@ export default function Sidebar({ forceActive, isOpen, toggleSidebar }: SidebarP
                 {item.children &&
                   (isMobile || isDesktopHovered ? (
                     isOpenMenuItem ? (
-                      <ChevronDown
-                        size={16}
+                      <TbChevronDown
+                        size={18}
                         className={`text-gray-500 group-hover:text-gray-300 transition-transform duration-200 flex-shrink-0 rotate-180 ${isRestricted ? 'opacity-0' : 'opacity-100'}`}
                       />
                     ) : (
-                      <ChevronRight
-                        size={16}
+                      <TbChevronRight
+                        size={18}
                         className={`text-gray-500 group-hover:text-gray-300 transition-transform duration-200 flex-shrink-0 ${isRestricted ? 'opacity-0' : 'opacity-100'}`}
                       />
                     )
@@ -366,83 +364,74 @@ export default function Sidebar({ forceActive, isOpen, toggleSidebar }: SidebarP
             </motion.div>
           )
         })}
-
-        {/* --- Removed the entire MongoDB Progress Bar Section from here --- */}
-
       </motion.nav>
 
-      {/* Footer section is also updated to use motion variant */}
+      {/* --- PROFESSIONAL FOOTER SECTION --- */}
       <motion.div
-        className={`p-4 border-t border-gray-800/50 w-full mt-auto hidden lg:block transition-opacity duration-300 ${
+        className={`px-4 py-4 border-t border-white/5 w-full mt-auto hidden lg:flex flex-col gap-4 transition-opacity duration-300 ${
           isDesktopHovered ? "opacity-100" : "opacity-0"
         }`}
         variants={isDesktopHovered ? menuItemVariants : undefined}
       >
-        {/* Download Android App Button */}
-        <a
-          href="https://drive.google.com/file/d/1AgSWuLtwlhmCxMTsDuHLxvmA8MuKDbTL/view?usp=sharing"
-          target="_blank"
-          rel="noopener noreferrer"
-          className="w-full mb-3 flex items-center justify-center gap-2 rounded-lg
-            bg-gradient-to-r from-green-600 via-green-700 to-green-800
-            hover:from-green-500 hover:via-green-600 hover:to-green-700
-            text-white font-medium text-sm py-2.5
-            shadow-md shadow-black/30 backdrop-blur-md
-            transition-all cursor-pointer active:scale-[0.97]"
-        >
-          <svg
-            xmlns="http://www.w3.org/2000/svg"
-            className="h-4 w-4"
-            fill="currentColor"
-            viewBox="0 0 24 24"
-          >
-            <path d="M12 2a10 10 0 1 0 10 10A10.011 10.011 0 0 0 12 2Zm0 18a8 8 0 1 1 8-8 8.009 8 0 0 1-8 8Zm-1-13h2v6h-2Zm0 8h2v2h-2Z"/>
-          </svg>
-          Download Android App
-        </a>
+        {/* Ecosystem Downloads */}
+        <div>
+          <div className="text-[10px] font-bold text-gray-500 uppercase tracking-widest mb-2 px-1">
+            Ecosystem
+          </div>
+          <div className="grid grid-cols-2 gap-2">
+            {/* Android */}
+            <a
+              href="https://drive.google.com/file/d/1AgSWuLtwlhmCxMTsDuHLxvmA8MuKDbTL/view?usp=sharing"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="group flex flex-col items-center justify-center p-2 rounded-lg border border-white/5 bg-white/[0.02] hover:bg-white/[0.05] hover:border-green-500/20 transition-all cursor-pointer"
+            >
+              <TbBrandAndroid size={20} className="text-gray-400 group-hover:text-green-500 transition-colors mb-1.5" />
+              <span className="text-[10px] font-medium text-gray-400 group-hover:text-gray-200">Android</span>
+            </a>
 
-        {/* Download Desktop App Button */}
-        <a
-          href="https://drive.google.com/uc?export=download&id=1wsR2aYD_iW_dFCKuP-f2IwOusziUHQiK"
-          download
-          className="w-full mb-3 flex items-center justify-center gap-2 rounded-lg
-            bg-gradient-to-r from-gray-700 via-gray-800 to-gray-900
-            hover:from-gray-600 hover:via-gray-700 hover:to-gray-800
-            text-gray-200 font-medium text-sm py-2.5
-            shadow-md shadow-black/30 backdrop-blur-md
-            transition-all cursor-pointer active:scale-[0.97]"
-        >
-          <svg
-            xmlns="http://www.w3.org/2000/svg"
-            className="h-4 w-4"
-            fill="none"
-            viewBox="0 0 24 24"
-            stroke="currentColor"
-            strokeWidth={2}
-          >
-            <path
-              strokeLinecap="round"
-              strokeLinejoin="round"
-              d="M4 16v2a2 2 0 002 2h12a2 2 0 002-2v-2M7 10l5 5m0 0l5-5m-5 5V4"
-            />
-          </svg>
-          Download Desktop App
-        </a>
-        <div className="text-gray-500 text-xs text-center select-none">
-          SSI STUDIOS v.1.08.25
+            {/* Desktop */}
+            <a
+              href="https://drive.google.com/uc?export=download&id=1wsR2aYD_iW_dFCKuP-f2IwOusziUHQiK"
+              download
+              className="group flex flex-col items-center justify-center p-2 rounded-lg border border-white/5 bg-white/[0.02] hover:bg-white/[0.05] hover:border-blue-500/20 transition-all cursor-pointer"
+            >
+              <TbDeviceDesktop size={20} className="text-gray-400 group-hover:text-blue-500 transition-colors mb-1.5" />
+              <span className="text-[10px] font-medium text-gray-400 group-hover:text-gray-200">Desktop</span>
+            </a>
+          </div>
         </div>
-        <div className="text-gray-500 text-xs text-center select-none">
-          Developed By Puneeet Shukla
+
+        {/* System Info & Credits - Minimalist List */}
+        <div className="space-y-1.5 px-1 pt-1">
+          <div className="flex items-center justify-between text-[10px] text-gray-500">
+             <div className="flex items-center gap-2">
+                <TbVersions size={13} className="text-gray-600" />
+                <span className="font-medium tracking-wide">v.1.08.25</span>
+             </div>
+             <span className="bg-emerald-500/5 text-emerald-500 px-1.5 rounded-[4px] text-[9px] font-semibold tracking-wide border border-emerald-500/10">
+                BETA
+             </span>
+          </div>
+          <div className="flex items-center gap-2 text-[10px] text-gray-600">
+             <TbCode size={13} />
+             <span>Dev: <span className="text-gray-500 font-medium">Puneet Shukla</span></span>
+          </div>
         </div>
-        <div className="text-green-500 text-xs text-center select-none">
-          Beta Version
-        </div>
+
+        {/* Divider */}
+        <div className="h-px w-full bg-white/5" />
+
+        {/* Minimal Sign Out */}
         <button
           onClick={handleLogout}
-          className="flex items-center justify-center gap-2 text-sm text-red-500 hover:text-red-400 transition-colors w-full py-2 rounded-lg hover:bg-red-500/10 cursor-pointer mt-3"
+          className="group flex w-full items-center gap-3 px-1 py-1 text-xs font-medium text-gray-400 hover:text-red-400 transition-colors"
           type="button"
         >
-          Logout
+          <div className="flex items-center justify-center h-7 w-7 rounded-md bg-white/5 group-hover:bg-red-500/10 transition-colors text-inherit">
+             <TbLogout size={14} />
+          </div>
+          <span>Sign Out</span>
         </button>
       </motion.div>
     </aside>

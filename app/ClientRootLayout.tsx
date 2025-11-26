@@ -72,7 +72,7 @@ function AppLayout({ children }: { children: ReactNode }) {
   // ✅ Updated Logic: Added specific background for /idcard to match the component
   const themeBg =
     pathname === "/bgremover"
-      ? "bg-black text-gray-900"
+      ? "bg-white text-gray-900"
       : pathname === "/idcard"
       ? "bg-slate-100 text-slate-900" // Matches your ID Card component background
       : theme === "light"

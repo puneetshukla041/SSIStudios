@@ -10,7 +10,10 @@ import {
   SparklesIcon,
   PhotoIcon,
   ArrowPathIcon,
-  PauseCircleIcon,
+  XMarkIcon,
+  ClipboardDocumentCheckIcon,
+  LinkIcon,
+  FolderArrowDownIcon,
 } from "@heroicons/react/24/outline";
 import { motion, AnimatePresence } from "framer-motion";
 
@@ -25,32 +28,33 @@ export default function BgRemoverFullPage() {
   const [file, setFile] = useState<File | null>(null);
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
   const [outputUrl, setOutputUrl] = useState<string | null>(null);
+  // New state to store the raw blob for uploading
+  const [resultBlob, setResultBlob] = useState<Blob | null>(null);
+  
   const [loading, setLoading] = useState(false);
   const [uploadProgress, setUploadProgress] = useState<number>(0);
-  const [processingProgress, setProcessingProgress] = useState<number | null>(
-    null
-  );
   const [dragActive, setDragActive] = useState(false);
   const [toasts, setToasts] = useState<Toast[]>([]);
-  const [fitMode, setFitMode] = useState<"contain" | "cover">("contain");
-  const [optimiseForWeb, setOptimiseForWeb] = useState(true);
+  
+  // Asset saving state
+  const [isSavingAsset, setIsSavingAsset] = useState(false);
+  const [showSaveModal, setShowSaveModal] = useState(false);
+  const [assetName, setAssetName] = useState("");
 
-  // Simplified downloadState: only tracking local download status
   const [downloadState, setDownloadState] = useState<
     "idle" | "downloading" | "downloaded" | "error"
   >("idle");
 
-  // helper: show toast
+  // --- Toast Logic ---
   const pushToast = useCallback((type: Toast["type"], message: string) => {
     const id = `${Date.now()}-${Math.random().toString(36).slice(2, 9)}`;
     setToasts((t) => [...t, { id, type, message }]);
-    // auto-dismiss
     setTimeout(() => {
       setToasts((t) => t.filter((x) => x.id !== id));
-    }, 6000);
+    }, 5000);
   }, []);
 
-  // Clean up created object URLs to avoid memory leaks
+  // --- Cleanup ---
   useEffect(() => {
     return () => {
       if (previewUrl) URL.revokeObjectURL(previewUrl);
@@ -58,16 +62,14 @@ export default function BgRemoverFullPage() {
     };
   }, [previewUrl, outputUrl]);
 
-  // Handle file selection
+  // --- File Handling ---
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const f = e.target.files?.[0];
     if (!f) return;
     handleNewFile(f);
   };
 
-  // Validate & set file
   const handleNewFile = (f: File | Blob) => {
-    // If it's a Blob from paste, we need to treat it as a File for type checking/naming
     const fileToUse = f instanceof File ? f : new File([f], `pasted-image-${Date.now()}.${f.type.split('/')[1] || 'png'}`, { type: f.type });
 
     if (!ALLOWED_TYPES.includes(fileToUse.type)) {
@@ -76,32 +78,21 @@ export default function BgRemoverFullPage() {
     }
 
     if (fileToUse.size > MAX_FILE_SIZE_BYTES) {
-      pushToast(
-        "error",
-        `File too large. Max ${(MAX_FILE_SIZE_BYTES / 1024 / 1024).toFixed(
-          0
-        )} MB.`
-      );
+      pushToast("error", `File too large. Max ${(MAX_FILE_SIZE_BYTES / 1024 / 1024).toFixed(0)} MB.`);
       return;
     }
 
-    if (previewUrl) {
-      URL.revokeObjectURL(previewUrl);
-      setPreviewUrl(null);
-    }
-    if (outputUrl) {
-      URL.revokeObjectURL(outputUrl);
-      setOutputUrl(null);
-    }
+    handleReset(); 
 
     setFile(fileToUse);
     setPreviewUrl(URL.createObjectURL(fileToUse));
-    setUploadProgress(0);
-    setProcessingProgress(null);
-    pushToast("info", `Loaded ${fileToUse.name} — ${Math.round(fileToUse.size / 1024)} KB`);
+    // Pre-fill asset name with original filename (minus extension)
+    const nameWithoutExt = fileToUse.name.split('.').slice(0, -1).join('.') || "processed-image";
+    setAssetName(`${nameWithoutExt}-bg-removed`);
+    pushToast("info", `Loaded ${fileToUse.name}`);
   };
 
-  // Drag handlers
+  // --- Drag & Drop ---
   const handleDrag = (e: React.DragEvent<HTMLDivElement>) => {
     e.preventDefault();
     e.stopPropagation();
@@ -116,16 +107,14 @@ export default function BgRemoverFullPage() {
     if (f) handleNewFile(f);
   };
 
-  // Paste support (paste image from clipboard)
+  // --- Paste Support ---
   useEffect(() => {
     const pasteHandler = (e: ClipboardEvent) => {
       if (!e.clipboardData) return;
       const items = e.clipboardData.items;
-      if (!items) return;
       for (let i = 0; i < items.length; i++) {
-        const it = items[i];
-        if (it.type.startsWith("image/")) {
-          const blob = it.getAsFile();
+        if (items[i].type.startsWith("image/")) {
+          const blob = items[i].getAsFile();
           if (blob) {
             handleNewFile(blob);
             e.preventDefault();
@@ -135,36 +124,17 @@ export default function BgRemoverFullPage() {
       }
     };
     window.addEventListener("paste", pasteHandler);
-    // Include all state dependencies for handleNewFile via useCallback or pass them as an object/array to the dependency array.
-    // For simplicity and correctness with a complex function like handleNewFile, it's safer to include all dependencies.
-    // However, since handleNewFile uses pushToast (which is memoized with useCallback) and its own internal state setters, 
-    // we only need to include the stable dependencies here.
     return () => window.removeEventListener("paste", pasteHandler);
-  }, [previewUrl, outputUrl, pushToast]); // Depend on related state and stable functions
+  }, [pushToast]); 
 
-  // Cancel upload/processing
-  const cancelProcessing = () => {
-    if (currentController.current) {
-      currentController.current.abort();
-      currentController.current = null;
-      setLoading(false);
-      setUploadProgress(0);
-      setProcessingProgress(null);
-      pushToast("info", "Cancelled");
-    }
-  };
-
-  // Submit to backend
+  // --- API Call: Remove BG ---
   const handleRemoveBG = async () => {
-    if (!file) {
-      pushToast("error", "No file selected.");
-      return;
-    }
+    if (!file) return;
 
     setLoading(true);
     setUploadProgress(0);
-    setProcessingProgress(null);
     setOutputUrl(null);
+    setResultBlob(null);
     setDownloadState("idle");
 
     const controller = new AbortController();
@@ -173,7 +143,6 @@ export default function BgRemoverFullPage() {
     try {
       const form = new FormData();
       form.append("image", file);
-      form.append("optimize", optimiseForWeb ? "1" : "0");
 
       const res = await axios.post("/api/remove-bg", form, {
         responseType: "blob",
@@ -187,17 +156,15 @@ export default function BgRemoverFullPage() {
       });
 
       const blob = res.data as Blob;
-      // Revoke old output URL if any before creating a new one
-      if (outputUrl) URL.revokeObjectURL(outputUrl);
       const objUrl = URL.createObjectURL(blob);
+      
+      setResultBlob(blob); // Store raw blob for saving later
       setOutputUrl(objUrl);
-      pushToast("success", "Background removed successfully!");
+      pushToast("success", "Magic complete!");
     } catch (err: any) {
-      if (axios.isCancel(err) || err?.name === "CanceledError") {
-        pushToast("info", "Request cancelled.");
-      } else {
-        console.error("remove-bg error:", err);
-        pushToast("error", "Failed to remove background. Try again later.");
+      if (!axios.isCancel(err)) {
+        console.error("Error:", err);
+        pushToast("error", "Failed to process image.");
       }
     } finally {
       setLoading(false);
@@ -206,417 +173,425 @@ export default function BgRemoverFullPage() {
     }
   };
 
-  // Reset everything
   const handleReset = () => {
-    if (previewUrl) {
-      URL.revokeObjectURL(previewUrl);
-      setPreviewUrl(null);
-    }
-    if (outputUrl) {
-      URL.revokeObjectURL(outputUrl);
-      setOutputUrl(null);
-    }
+    if (previewUrl) URL.revokeObjectURL(previewUrl);
+    if (outputUrl) URL.revokeObjectURL(outputUrl);
+    setPreviewUrl(null);
+    setOutputUrl(null);
+    setResultBlob(null);
     setFile(null);
-    setUploadProgress(0);
-    setProcessingProgress(null);
     setLoading(false);
     setDownloadState("idle");
     if (fileInput.current) fileInput.current.value = "";
   };
 
-  // Simplified single-step local download logic
   const handleDownload = () => {
-    if (!outputUrl) {
-      pushToast("error", "No result to download.");
-      return;
-    }
+    if (!outputUrl) return;
     setDownloadState("downloading");
-
     try {
-      // Step: Download locally
       const a = document.createElement("a");
       a.href = outputUrl;
-      // Use original file name as base if available, otherwise default
       const originalFileName = file?.name.split('.').slice(0, -1).join('.') || "image";
-      a.download = `${originalFileName}-bg-removed.png`; 
+      a.download = `${originalFileName}-bg-removed.png`;
       document.body.appendChild(a);
       a.click();
       a.remove();
-      
       setDownloadState("downloaded");
-      pushToast("success", "File downloaded successfully!");
-    } catch (err: any) {
-      console.error("Download error:", err);
+      setTimeout(() => setDownloadState("idle"), 2000);
+    } catch (err) {
       setDownloadState("error");
-      pushToast("error", "An error occurred during local download.");
-    } finally {
-      // Reset state after a short delay for visual feedback
-      setTimeout(() => setDownloadState("idle"), 2000); 
+      pushToast("error", "Download failed.");
     }
   };
 
-  // Copy output link (still copies the Blob URL)
   const handleCopyLink = async () => {
-    if (!outputUrl) return pushToast("error", "No result to copy.");
+    if (!outputUrl) return;
     try {
-      // NOTE: Copying a Blob URL to the clipboard is possible but usually not useful outside the current session.
-      // Keeping for functionality parity.
       await navigator.clipboard.writeText(outputUrl);
-      pushToast("success", "Result URL copied to clipboard.");
+      pushToast("success", "Link copied!");
     } catch {
-      pushToast("error", "Failed to copy to clipboard.");
+      pushToast("error", "Failed to copy.");
     }
+  };
+
+  // --- Save to Assets Logic ---
+  const handleOpenSaveModal = () => {
+    if (!resultBlob) return;
+    setShowSaveModal(true);
+  };
+
+  const handleConfirmSave = async () => {
+    if (!resultBlob || !assetName.trim()) return;
+    
+    setIsSavingAsset(true);
+    
+    try {
+        const formData = new FormData();
+        // Create a new file from the blob to send to backend
+        const imageFile = new File([resultBlob], `${assetName}.png`, { type: "image/png" });
+        
+        formData.append("file", imageFile);
+        formData.append("name", assetName);
+        formData.append("type", "removed-bg");
+
+        const response = await axios.post("/api/assets/save", formData);
+
+        if (response.data.success) {
+            pushToast("success", "Saved to Assets Library!");
+            setShowSaveModal(false);
+        } else {
+            throw new Error(response.data.message || "Save failed");
+        }
+    } catch (error) {
+        console.error("Save error:", error);
+        pushToast("error", "Failed to save to cloud.");
+    } finally {
+        setIsSavingAsset(false);
+    }
+  };
+
+  // --- CSS for Checkerboard Background ---
+  const transparencyGridStyle = {
+    backgroundImage: `
+      linear-gradient(45deg, #f1f5f9 25%, transparent 25%),
+      linear-gradient(-45deg, #f1f5f9 25%, transparent 25%),
+      linear-gradient(45deg, transparent 75%, #f1f5f9 75%),
+      linear-gradient(-45deg, transparent 75%, #f1f5f9 75%)
+    `,
+    backgroundSize: '20px 20px',
+    backgroundPosition: '0 0, 0 10px, 10px -10px, -10px 0px'
   };
 
   return (
-    <div
-      className="min-h-screen w-full flex flex-col items-center justify-start p-4 md:p-6 lg:p-10 
-                   bg-transparent text-white"
-    >
-      <div className="w-full max-w-6xl">
-        <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
-          {/* Left: uploader + controls */}
-          <div className="lg:col-span-7">
-            {/* Uploader Box */}
-            <div
-              onDragOver={handleDrag}
-              onDragLeave={handleDrag}
-              onDrop={handleDrop}
-              onClick={() => fileInput.current?.click()}
-              role="button"
-              tabIndex={0}
-              onKeyDown={(e) => {
-                if (e.key === "Enter") fileInput.current?.click();
-              }}
-              className={`relative h-80 rounded-2xl border-2 border-dashed transition-all duration-200 flex items-center justify-center p-4 md:p-6 cursor-pointer
-                ${
-                  dragActive
-                    ? "border-cyan-400 bg-slate-800/60"
-                    : "border-slate-700 bg-slate-900/40"
-                }`}
-            >
-              <input
-                ref={fileInput}
-                type="file"
-                accept={ALLOWED_TYPES.join(",")}
-                onChange={handleFileChange}
-                className="hidden"
-              />
+    <div className="min-h-screen w-full bg-[#FAFAFA] text-slate-900 font-sans selection:bg-indigo-100 selection:text-indigo-700 flex flex-col overflow-x-hidden p-4 sm:p-6 md:p-8">
+      
+      {/* Branding / Title Area */}
+      <div className="max-w-7xl mx-auto w-full mb-6 sm:mb-8 flex items-center justify-between">
+         <div className="flex items-center gap-3">
+            <div className="relative w-10 h-10 sm:w-12 sm:h-12 transition-transform duration-300 hover:scale-105 cursor-pointer">
+                <img 
+                    src="/logos/ssilogo.png" 
+                    alt="SSI Logo" 
+                    className="w-full h-full object-contain drop-shadow-sm" 
+                />
+            </div>
+            <div className="flex flex-col justify-center">
+                <h1 className="text-lg sm:text-2xl font-black tracking-tight text-slate-900">
+                    SSI Studios
+                </h1>
+                <div className="flex items-center gap-2">
+                    <span className="text-[10px] font-bold uppercase tracking-widest text-indigo-500 leading-none">
+                        Background Remover
+                    </span>
+                    <span className="px-1.5 py-0.5 rounded bg-indigo-50 text-indigo-600 text-[9px] font-bold border border-indigo-100">BETA</span>
+                </div>
+            </div>
+         </div>
+      </div>
 
-              {/* If no file: show upload prompt */}
-              {!previewUrl ? (
-                <div className="flex flex-col items-center gap-3 text-slate-300 select-none px-4 text-center">
-                  <div className="p-3 rounded-full bg-gradient-to-br from-cyan-600/20 to-blue-600/20 border border-slate-700">
-                    <CloudArrowUpIcon className="h-10 w-10 md:h-12 md:w-12 text-cyan-400" />
+      <main className="flex-1 w-full max-w-7xl mx-auto">
+        
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 sm:gap-8 h-auto lg:min-h-[600px]">
+          
+          {/* --- LEFT COLUMN: INPUT & CONTROLS --- */}
+          <div className="flex flex-col gap-6 h-full order-1">
+            
+            {/* Upload Card */}
+            <div className="bg-white rounded-[1.5rem] sm:rounded-[2.5rem] shadow-2xl shadow-slate-200/50 border border-white overflow-hidden flex-1 flex flex-col relative transition-all duration-300 hover:shadow-slate-200/80 ring-1 ring-slate-100">
+              
+              {/* If File Exists: Show Preview */}
+              {file && previewUrl ? (
+                <div className="flex-1 relative group bg-slate-50 flex items-center justify-center p-4 sm:p-8 overflow-hidden min-h-[300px]">
+                  <motion.img 
+                    initial={{ opacity: 0, scale: 0.95 }}
+                    animate={{ opacity: 1, scale: 1 }}
+                    src={previewUrl} 
+                    alt="Original" 
+                    className="max-w-full max-h-[300px] sm:max-h-[400px] object-contain shadow-xl rounded-2xl z-10" 
+                  />
+                  <div className="absolute top-4 left-4 sm:top-6 sm:left-6 bg-white/80 backdrop-blur-md border border-white/50 text-[10px] sm:text-xs font-extrabold px-3 py-1.5 sm:px-4 sm:py-2 rounded-full text-slate-600 shadow-sm z-20 pointer-events-none">
+                    ORIGINAL
                   </div>
-                  <div className="text-base md:text-lg font-semibold">
-                    Drag & drop, paste, or click to upload
-                  </div>
-                  <div className="text-sm text-slate-400">
-                    PNG / JPG / WEBP — up to{" "}
-                    {(MAX_FILE_SIZE_BYTES / 1024 / 1024).toFixed(0)} MB
-                  </div>
-                  <div className="mt-3 flex flex-col sm:flex-row gap-2">
-                    <button
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        fileInput.current?.click();
-                      }}
-                      className="px-4 py-2 bg-cyan-600 text-black rounded-md font-medium hover:scale-[1.02] transition w-full sm:w-auto"
-                    >
-                      Select File
-                    </button>
-                  </div>
+                  <button 
+                    onClick={handleReset}
+                    disabled={loading}
+                    className="absolute top-4 right-4 sm:top-6 sm:right-6 p-2.5 sm:p-3 bg-white/90 hover:bg-rose-50 text-rose-500 rounded-full shadow-lg backdrop-blur-sm border border-white transition-all hover:scale-110 cursor-pointer z-20 disabled:opacity-0 group/trash"
+                  >
+                    <TrashIcon className="w-4 h-4 sm:w-5 sm:h-5 group-hover/trash:rotate-12 transition-transform" />
+                  </button>
                 </div>
               ) : (
-                <div className="w-full h-full flex items-center justify-center p-2">
-                  <div className="relative w-full h-full rounded-lg overflow-hidden bg-black/40 border border-slate-700 p-2 md:p-3">
-                    <img
-                      src={previewUrl}
-                      alt="preview"
-                      className={`max-h-full max-w-full object-${fitMode} mx-auto`}
-                      style={{ transform: "translateZ(0)" }}
-                    />
-                    {/* file info */}
-                    <div className="absolute left-2 top-2 bg-slate-900/60 px-2 py-1 rounded-md text-xs">
-                      <div className="font-medium truncate max-w-[100px] sm:max-w-none">
-                        {file?.name}
+                // If No File: Upload UI
+                <div 
+                  onDragOver={handleDrag}
+                  onDragLeave={handleDrag}
+                  onDrop={handleDrop}
+                  onClick={() => fileInput.current?.click()}
+                  className={`flex-1 flex flex-col items-center justify-center p-6 sm:p-12 transition-all duration-300 cursor-pointer border-4 border-dashed m-4 sm:m-6 rounded-[2rem] group min-h-[400px]
+                    ${dragActive ? "border-indigo-500 bg-indigo-50/50 scale-[0.99]" : "border-slate-100 hover:border-indigo-300 hover:bg-slate-50/50"}
+                  `}
+                >
+                  <div className="w-20 h-20 sm:w-28 sm:h-28 bg-indigo-50 rounded-full flex items-center justify-center mb-6 sm:mb-8 group-hover:scale-110 group-hover:bg-indigo-100 transition-all duration-300 shadow-sm">
+                    <CloudArrowUpIcon className="w-10 h-10 sm:w-14 sm:h-14 text-indigo-500 group-hover:text-indigo-600 transition-colors" />
+                  </div>
+                  <h3 className="text-xl sm:text-3xl font-black text-slate-800 mb-3 sm:mb-4 text-center tracking-tight">Upload Image</h3>
+                  <p className="text-sm sm:text-base text-slate-400 text-center max-w-xs mb-8 sm:mb-10 font-medium leading-relaxed">
+                    Drag & drop or click to browse. <br/> Supports high-res PNG, JPG, WEBP
+                  </p>
+                  <button className="px-8 sm:px-10 py-3.5 sm:py-4 bg-slate-900 text-white rounded-2xl font-bold text-sm sm:text-base hover:bg-indigo-600 transition-all shadow-xl shadow-slate-200 hover:shadow-indigo-200 hover:-translate-y-1 active:translate-y-0 active:scale-95 cursor-pointer">
+                    Choose from Device
+                  </button>
+                  <input ref={fileInput} type="file" hidden accept={ALLOWED_TYPES.join(",")} onChange={handleFileChange} />
+                </div>
+              )}
+
+              {/* Action Bar */}
+              {file && (
+                <div className="p-6 sm:p-8 bg-white border-t border-slate-100 z-10 relative">
+                  <div className="flex flex-col gap-4 sm:gap-6">
+                    <div className="flex items-center justify-between text-sm font-medium text-slate-500 bg-slate-50 p-3 sm:p-4 rounded-2xl border border-slate-100">
+                      <div className="flex items-center gap-3 overflow-hidden">
+                        <div className="w-10 h-10 rounded-xl bg-white flex items-center justify-center border border-slate-200 shadow-sm flex-shrink-0">
+                            <PhotoIcon className="w-5 h-5 text-indigo-400"/>
+                        </div>
+                        <div className="flex flex-col min-w-0">
+                            <span className="truncate max-w-[120px] sm:max-w-[180px] font-bold text-slate-700 leading-tight">{file.name}</span>
+                            <span className="text-[10px] text-slate-400 font-bold">READY TO PROCESS</span>
+                        </div>
                       </div>
-                      <div className="text-slate-400">
-                        {Math.round((file?.size || 0) / 1024)} KB
-                      </div>
+                      <span className="bg-white px-2.5 py-1 rounded-lg border border-slate-200 text-xs font-bold">{(file.size / 1024 / 1024).toFixed(2)} MB</span>
                     </div>
 
-                    {/* small action buttons on preview */}
-                    <div className="absolute right-2 top-2 flex flex-col gap-2">
-                      <button
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          setFitMode((m) =>
-                            m === "contain" ? "cover" : "contain"
-                          );
-                        }}
-                        title="Toggle fit"
-                        className="bg-slate-800/70 p-1 md:p-2 rounded-md hover:bg-slate-700"
-                      >
-                        <PhotoIcon className="h-4 w-4 md:h-5 md:w-5 text-slate-200" />
-                      </button>
-                      <button
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          handleReset();
-                        }}
-                        title="Reset"
-                        className="bg-red-700/80 p-1 md:p-2 rounded-md hover:bg-red-600"
-                      >
-                        <TrashIcon className="h-4 w-4 md:h-5 md:w-5 text-white" />
-                      </button>
-                    </div>
+                    {loading && (
+                      <div className="w-full h-2 bg-slate-100 rounded-full overflow-hidden relative">
+                        <motion.div 
+                          className="h-full bg-gradient-to-r from-indigo-500 to-violet-500"
+                          initial={{ width: 0 }}
+                          animate={{ width: `${uploadProgress === 100 ? 100 : uploadProgress}%` }}
+                        />
+                      </div>
+                    )}
+
+                    <button
+                      onClick={handleRemoveBG}
+                      disabled={loading || !!outputUrl}
+                      className={`w-full py-4 sm:py-5 rounded-2xl font-black text-base sm:text-lg flex items-center justify-center gap-3 transition-all shadow-lg cursor-pointer relative overflow-hidden group
+                        ${loading 
+                          ? "bg-slate-100 text-slate-400 cursor-not-allowed shadow-none" 
+                          : outputUrl
+                            ? "bg-emerald-50 text-emerald-600 border-2 border-emerald-100 hover:bg-emerald-100"
+                            : "bg-gradient-to-r from-indigo-600 to-violet-600 text-white hover:shadow-indigo-500/30 hover:scale-[1.01] active:scale-95"
+                        }
+                      `}
+                    >
+                      {loading ? (
+                        <>
+                          <ArrowPathIcon className="w-5 h-5 sm:w-6 sm:h-6 animate-spin" />
+                          {uploadProgress < 100 ? "Uploading..." : "Processing..."}
+                        </>
+                      ) : outputUrl ? (
+                        <>
+                          <CheckCircleIcon className="w-5 h-5 sm:w-6 sm:h-6" />
+                          Processing Complete
+                        </>
+                      ) : (
+                        <>
+                          <div className="absolute inset-0 bg-gradient-to-r from-violet-600 to-indigo-600 opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
+                          <SparklesIcon className="w-5 h-5 sm:w-6 sm:h-6 text-indigo-200 relative z-10" />
+                          <span className="relative z-10">Remove Background</span>
+                        </>
+                      )}
+                    </button>
                   </div>
                 </div>
               )}
             </div>
+          </div>
 
-            {/* Controls */}
-            <div className="mt-4 flex flex-col sm:flex-row items-stretch sm:items-center gap-3">
-              {/* Reset/Add buttons - Full width on small screens */}
-              <div className="flex-1 flex gap-3">
-                <button
-                  onClick={() => fileInput.current?.click()}
-                  className="flex-1 px-4 py-3 rounded-xl bg-gradient-to-r from-slate-700/60 to-slate-600/40 border border-slate-700 hover:from-slate-600 hover:to-slate-500 transition text-white font-semibold"
-                >
-                  Add / Replace
-                </button>
-
-                <button
-                  onClick={handleReset}
-                  className="px-4 py-3 rounded-xl border border-slate-700 text-slate-200 hover:bg-slate-800"
-                >
-                  Reset
-                </button>
+          {/* --- RIGHT COLUMN: OUTPUT --- */}
+          <div className="flex flex-col h-full order-2">
+            <div className="bg-white rounded-[1.5rem] sm:rounded-[2.5rem] shadow-2xl shadow-slate-200/60 border border-white overflow-hidden flex-1 flex flex-col relative h-full min-h-[400px] lg:min-h-[500px] ring-1 ring-slate-100/50">
+              
+              <div className="absolute top-4 left-4 sm:top-6 sm:left-6 right-6 flex justify-between items-center z-20 pointer-events-none">
+                 <div className="bg-white/80 backdrop-blur-md border border-white/50 text-[10px] sm:text-xs font-extrabold px-3 py-1.5 sm:px-4 sm:py-2 rounded-full text-slate-600 shadow-sm">
+                    RESULT
+                 </div>
               </div>
 
-              {/* Optimization and Process buttons - Wrap on small screen */}
-              <div className="flex flex-col sm:flex-row gap-2 sm:items-center w-full sm:w-auto">
-                {/* Optimization checkbox */}
-                <label className="flex items-center gap-2 text-sm text-slate-300 py-2 sm:py-0">
-                  <input
-                    type="checkbox"
-                    checked={optimiseForWeb}
-                    onChange={(e) => setOptimiseForWeb(e.target.checked)}
-                    className="accent-cyan-500"
+              <div className="flex-1 relative flex items-center justify-center bg-slate-50 p-4 sm:p-8 overflow-hidden">
+                <div className="absolute inset-0 opacity-50 pointer-events-none" style={transparencyGridStyle}></div>
+
+                {outputUrl ? (
+                  <motion.img 
+                    initial={{ opacity: 0, scale: 0.9, y: 20 }}
+                    animate={{ opacity: 1, scale: 1, y: 0 }}
+                    transition={{ type: "spring", bounce: 0.4 }}
+                    src={outputUrl} 
+                    alt="Result" 
+                    className="relative z-10 max-w-full max-h-[350px] lg:max-h-[450px] object-contain drop-shadow-2xl hover:scale-105 transition-transform duration-500 cursor-pointer"
                   />
-                  <span className="whitespace-nowrap">Optimize output</span>
-                </label>
-
-                {/* Remove BG Button */}
-                <button
-                  onClick={handleRemoveBG}
-                  disabled={!file || loading}
-                  className={`flex-1 px-4 py-3 rounded-xl font-semibold text-black bg-gradient-to-r from-cyan-400 to-blue-500 shadow-lg transition transform ${
-                    !file || loading
-                      ? "opacity-60 cursor-not-allowed"
-                      : "hover:scale-[1.02]"
-                  }`}
-                >
-                  {loading ? (
-                    <span className="flex items-center justify-center gap-2">
-                      <ArrowPathIcon className="h-5 w-5 animate-spin text-white" />
-                      Processing...
-                    </span>
-                  ) : (
-                    <span className="flex items-center justify-center gap-2">
-                      <SparklesIcon className="h-5 w-5 text-white" />
-                      Remove Background
-                    </span>
-                  )}
-                </button>
-
-                {/* Cancel Button */}
-                {loading && (
-                  <button
-                    onClick={cancelProcessing}
-                    className="px-3 py-3 rounded-xl border border-red-600 text-red-400 hover:bg-red-700/10"
-                    title="Cancel"
-                    aria-label="Cancel processing"
-                  >
-                    <PauseCircleIcon className="h-5 w-5" />
-                  </button>
+                ) : (
+                  <div className="relative z-10 text-center opacity-100 flex flex-col items-center justify-center h-full px-4 py-12">
+                    <div className="w-24 h-24 sm:w-32 sm:h-32 bg-white rounded-full flex items-center justify-center shadow-sm mb-4 sm:mb-6 border border-slate-100">
+                        <PhotoIcon className="w-10 h-10 sm:w-12 sm:h-12 text-slate-300" />
+                    </div>
+                    <p className="text-lg sm:text-xl font-black text-slate-800 mb-2">No Result Yet</p>
+                    <p className="text-sm sm:text-base text-slate-400 font-medium max-w-xs mx-auto">
+                        Upload an image and click the magic button to see the transparency here.
+                    </p>
+                  </div>
                 )}
               </div>
-            </div>
 
-            {/* Progress bars - already responsive */}
-            <div className="mt-4">
-              <AnimatePresence>
-                {(uploadProgress > 0 && uploadProgress < 100) || loading ? (
-                  <motion.div
-                    key="progress"
-                    initial={{ opacity: 0, y: 6 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    exit={{ opacity: 0, y: 6 }}
-                    className="space-y-2"
-                  >
-                    {/* Upload */}
-                    {uploadProgress > 0 && (
-                      <div>
-                        <div className="text-xs text-slate-300 mb-1">
-                          Upload: {uploadProgress}%
-                        </div>
-                        <div className="w-full h-2 bg-slate-700 rounded-full overflow-hidden">
-                          <div
-                            className="h-2 bg-cyan-400 transition-all"
-                            style={{ width: `${uploadProgress}%` }}
-                          />
-                        </div>
-                      </div>
-                    )}
-
-                    {/* Processing */}
-                    {loading && uploadProgress >= 100 && (
-                      <div>
-                        <div className="flex items-center justify-between text-xs text-slate-300 mb-1">
-                          <div>Processing</div>
-                          <div>
-                            {processingProgress ? `${processingProgress}%` : "..."}
-                          </div>
-                        </div>
-                        <div className="w-full h-2 bg-slate-700 rounded-full overflow-hidden">
-                          <div
-                            className="h-2 bg-blue-500 animate-[pulse_2s_infinite] opacity-80"
-                            style={{
-                              width: processingProgress ? `${processingProgress}%` : "50%",
-                            }}
-                          />
-                        </div>
-                      </div>
-                    )}
-                  </motion.div>
-                ) : null}
-              </AnimatePresence>
-            </div>
-          </div>
-
-          {/* Right: preview results */}
-          <div className="lg:col-span-5 flex flex-col gap-6">
-            <div className="rounded-2xl border border-slate-700 bg-slate-900/40 p-4 flex flex-col">
-              <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 sm:gap-2">
-                <div className="sm:block">
-                  <div className="text-sm text-slate-300 font-semibold hidden sm:block">
-                    Result Preview
-                  </div>
-                  <div className="text-xs text-slate-400 hidden sm:block">
-                    Original vs processed
-                  </div>
-                </div>
-                <button
-                  onClick={handleCopyLink}
-                  disabled={!outputUrl || downloadState !== "idle"}
-                  className={`px-3 py-2 rounded-md border border-slate-700 text-sm w-full sm:w-auto ${
-                    !outputUrl || downloadState !== "idle"
-                      ? "opacity-50 cursor-not-allowed"
-                      : "hover:bg-slate-800"
-                  }`}
-                  title="Copy result URL"
-                >
-                  Copy Link
-                </button>
-              </div>
-
-              {/* Previews */}
-              <div className="mt-3 flex-1 grid grid-cols-2 gap-3 min-h-[160px]">
-                {/* Original Preview */}
-                <div className="rounded-lg overflow-hidden border border-slate-800 bg-slate-900/60 p-2 flex flex-col items-center justify-center">
-                  <div className="text-xs text-slate-400 mb-2">Original</div>
-                  {previewUrl ? (
-                    <img
-                      src={previewUrl}
-                      alt="original"
-                      className="max-h-full object-contain"
-                    />
-                  ) : (
-                    <div className="text-slate-500 text-sm">No file</div>
-                  )}
-                </div>
-
-                {/* Result Preview */}
-                <div className="rounded-lg overflow-hidden border border-slate-800 bg-slate-900/60 p-2 flex flex-col items-center justify-center">
-                  <div className="text-xs text-slate-400 mb-2">Result</div>
-                  {outputUrl ? (
-                    <img
-                      src={outputUrl}
-                      alt="result"
-                      className="max-h-full object-contain"
-                    />
-                  ) : (
-                    <div className="text-slate-500 text-sm">No result yet</div>
-                  )}
-                </div>
-              </div>
-            </div>
-
-            {/* Download Button Only */}
-            {outputUrl && (
-              <div className="rounded-xl border border-slate-700 bg-slate-800/60 p-4">
-                <div className="flex items-center justify-between">
-                  <div className="text-sm font-semibold text-slate-300">
-                    Download
-                  </div>
-                </div>
-
-                {/* The main download button */}
-                <motion.button
-                  onClick={handleDownload}
-                  disabled={downloadState !== "idle"}
-                  className={`w-full mt-4 px-4 py-3 rounded-xl font-semibold text-black bg-gradient-to-r from-cyan-400 to-blue-500 shadow-lg transition transform ${
-                    downloadState !== "idle"
-                      ? "opacity-60 cursor-not-allowed"
-                      : "hover:scale-[1.02]"
-                  }`}
-                >
-                  <span className="flex items-center justify-center gap-2">
+              {/* Output Actions */}
+              <div className="p-6 sm:p-8 bg-white border-t border-slate-100 flex flex-col gap-4 z-20">
+                <div className="flex flex-col sm:flex-row gap-3 sm:gap-4 w-full">
+                    <button
+                    onClick={handleDownload}
+                    disabled={!outputUrl || downloadState !== "idle"}
+                    className={`flex-1 px-6 py-3.5 sm:py-4 rounded-2xl font-bold text-base sm:text-lg flex items-center justify-center gap-3 transition-all shadow-lg cursor-pointer
+                        ${!outputUrl 
+                        ? "bg-slate-100 text-slate-400 cursor-not-allowed shadow-none" 
+                        : "bg-slate-900 text-white hover:bg-indigo-600 hover:shadow-indigo-200 hover:-translate-y-1 active:scale-95"
+                        }
+                    `}
+                    >
                     {downloadState === "downloading" ? (
-                      <ArrowPathIcon className="h-5 w-5 animate-spin" />
-                    ) : downloadState === "downloaded" ? (
-                      <CheckCircleIcon className="h-5 w-5" />
+                        <ArrowPathIcon className="w-5 h-5 sm:w-6 sm:h-6 animate-spin" />
                     ) : (
-                      <ArrowDownTrayIcon className="h-5 w-5" />
+                        <ArrowDownTrayIcon className="w-5 h-5 sm:w-6 sm:h-6" />
                     )}
-                    {downloadState === "downloading"
-                      ? "Preparing Download..."
-                      : downloadState === "downloaded"
-                      ? "Downloaded!"
-                      : "Download Result"}
-                  </span>
-                </motion.button>
+                    {downloadState === "downloaded" ? "Saved!" : "Download HD"}
+                    </button>
+
+                    {/* Save to Assets Button */}
+                    <button
+                        onClick={handleOpenSaveModal}
+                        disabled={!outputUrl}
+                        className={`px-6 py-3.5 sm:py-4 rounded-2xl font-bold text-sm sm:text-base flex items-center justify-center gap-2 transition-all border-2 cursor-pointer
+                            ${!outputUrl 
+                                ? "bg-slate-50 border-slate-100 text-slate-300 cursor-not-allowed" 
+                                : isSavingAsset 
+                                    ? "bg-indigo-50 border-indigo-100 text-indigo-400"
+                                    : "bg-white border-slate-200 text-slate-700 hover:border-indigo-500 hover:text-indigo-600 hover:shadow-md"
+                            }
+                        `}
+                    >
+                        {isSavingAsset ? (
+                            <ArrowPathIcon className="w-5 h-5 animate-spin" />
+                        ) : (
+                            <FolderArrowDownIcon className="w-5 h-5" />
+                        )}
+                        <span className="hidden sm:inline">Save to Assets</span>
+                    </button>
+                </div>
+
+                <div className="flex gap-2 justify-center sm:justify-start">
+                   <button 
+                    onClick={handleCopyLink}
+                    disabled={!outputUrl}
+                    className="px-4 py-2 rounded-xl text-xs font-bold text-slate-400 hover:text-indigo-500 hover:bg-indigo-50 disabled:opacity-30 transition-colors flex items-center gap-2 cursor-pointer"
+                   >
+                     <LinkIcon className="w-4 h-4" /> Copy Link
+                   </button>
+                </div>
               </div>
-            )}
+            </div>
           </div>
         </div>
+      </main>
 
-        {/* Toasts - already responsive (fixed position) */}
-        <div className="fixed right-4 sm:right-6 bottom-4 sm:bottom-6 z-50 flex flex-col gap-2">
-          <AnimatePresence>
-            {toasts.map((t) => (
-              <motion.div
-                key={t.id}
-                initial={{ opacity: 0, x: 20 }}
-                animate={{ opacity: 1, x: 0 }}
-                exit={{ opacity: 0, x: 20 }}
-                className={`px-4 py-2 rounded-md shadow-lg max-w-xs ${
-                  t.type === "error"
-                    ? "bg-red-600 text-white"
-                    : t.type === "success"
-                    ? "bg-green-600 text-white"
-                    : "bg-slate-800 text-slate-100"
-                }`}
-              >
-                {t.message}
-              </motion.div>
-            ))}
-          </AnimatePresence>
-        </div>
+      {/* Save to Assets Modal */}
+      <AnimatePresence>
+        {showSaveModal && (
+            <motion.div 
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                exit={{ opacity: 0 }}
+                className="fixed inset-0 z-[60] flex items-center justify-center bg-slate-900/60 backdrop-blur-sm p-4"
+            >
+                <motion.div 
+                    initial={{ scale: 0.95, y: 20 }}
+                    animate={{ scale: 1, y: 0 }}
+                    exit={{ scale: 0.95, y: 20 }}
+                    className="bg-white w-full max-w-md rounded-3xl shadow-2xl p-6 sm:p-8 relative"
+                >
+                    <button 
+                        onClick={() => setShowSaveModal(false)}
+                        className="absolute top-4 right-4 p-2 hover:bg-slate-100 rounded-full text-slate-400 hover:text-slate-600 transition-colors"
+                    >
+                        <XMarkIcon className="w-6 h-6" />
+                    </button>
+
+                    <h3 className="text-2xl font-black text-slate-800 mb-2">Save to Assets</h3>
+                    <p className="text-slate-500 mb-6 text-sm">Name your processed image to save it to your cloud library.</p>
+
+                    <div className="space-y-4">
+                        <div>
+                            <label className="block text-xs font-bold uppercase text-slate-400 mb-1 ml-1">Asset Name</label>
+                            <input 
+                                type="text" 
+                                value={assetName}
+                                onChange={(e) => setAssetName(e.target.value)}
+                                className="w-full bg-slate-50 border-2 border-slate-200 rounded-xl px-4 py-3 font-bold text-slate-700 focus:outline-none focus:border-indigo-500 focus:ring-4 focus:ring-indigo-500/10 transition-all"
+                                placeholder="my-awesome-image"
+                            />
+                        </div>
+
+                        <div className="flex gap-3 pt-2">
+                            <button 
+                                onClick={() => setShowSaveModal(false)}
+                                className="flex-1 py-3.5 rounded-xl font-bold text-slate-500 hover:bg-slate-100 transition-colors"
+                            >
+                                Cancel
+                            </button>
+                            <button 
+                                onClick={handleConfirmSave}
+                                disabled={isSavingAsset || !assetName.trim()}
+                                className="flex-1 py-3.5 rounded-xl font-bold text-white bg-indigo-600 hover:bg-indigo-700 shadow-lg shadow-indigo-200 disabled:opacity-50 disabled:cursor-not-allowed transition-all flex items-center justify-center gap-2"
+                            >
+                                {isSavingAsset ? <ArrowPathIcon className="w-5 h-5 animate-spin" /> : "Save Asset"}
+                            </button>
+                        </div>
+                    </div>
+                </motion.div>
+            </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* Floating Toast Notifications */}
+      <div className="fixed bottom-6 sm:bottom-auto sm:top-10 left-4 right-4 sm:left-auto sm:right-6 z-[70] flex flex-col gap-3 sm:gap-4 pointer-events-none items-center sm:items-end">
+        <AnimatePresence>
+          {toasts.map((t) => (
+            <motion.div
+              key={t.id}
+              initial={{ opacity: 0, y: 20, scale: 0.9 }}
+              animate={{ opacity: 1, y: 0, scale: 1 }}
+              exit={{ opacity: 0, y: 20, scale: 0.9 }}
+              className={`pointer-events-auto flex items-center gap-3 sm:gap-4 pl-4 pr-6 py-3 sm:py-4 rounded-2xl shadow-2xl border backdrop-blur-xl w-full max-w-sm sm:min-w-[320px] cursor-pointer
+                ${t.type === 'success' ? 'bg-white/95 border-emerald-100 text-slate-800' : ''}
+                ${t.type === 'error' ? 'bg-white/95 border-rose-100 text-rose-600' : ''}
+                ${t.type === 'info' ? 'bg-white/95 border-indigo-100 text-slate-600' : ''}
+              `}
+            >
+              <div className={`p-2 rounded-full ${
+                  t.type === 'success' ? 'bg-emerald-100 text-emerald-600' : 
+                  t.type === 'error' ? 'bg-rose-100 text-rose-600' : 
+                  'bg-indigo-100 text-indigo-600'
+              }`}>
+                  {t.type === 'success' && <CheckCircleIcon className="w-5 h-5" />}
+                  {t.type === 'error' && <XMarkIcon className="w-5 h-5" />}
+                  {t.type === 'info' && <ClipboardDocumentCheckIcon className="w-5 h-5" />}
+              </div>
+              <div className="flex flex-col">
+                  <span className="text-[10px] sm:text-xs font-bold uppercase opacity-50 tracking-wider">{t.type}</span>
+                  <span className="font-bold text-xs sm:text-sm">{t.message}</span>
+              </div>
+            </motion.div>
+          ))}
+        </AnimatePresence>
       </div>
+
     </div>
   );
 }

@@ -16,53 +16,83 @@ import {
   Droplet,
   Layout,
   Maximize2,
-  X
+  X,
+  Hash // Keeping Hash for ID Number
 } from "lucide-react";
 import { generateIdCardPDF, IIdCardData } from "@/components/Certificates/utils/idCardGenerator";
 
+// --- Helper: Blood Group Image Mapping ---
+const getBloodGroupImage = (bg: string) => {
+  const map: Record<string, string> = {
+    "A+": "/bloodgroup/aplus.png",
+    "A-": "/bloodgroup/aminus.png",
+    "B+": "/bloodgroup/bplus.png",
+    "B-": "/bloodgroup/bminus.png",
+    "AB+": "/bloodgroup/abplus.png",
+    "AB-": "/bloodgroup/abminus.png",
+    "O+": "/bloodgroup/oplus.png",
+    "O-": "/bloodgroup/ominus.png",
+  };
+  return map[bg] || null;
+};
+
 // --- Responsive UI Components ---
 
+// FIX: Added '|| ""' to value prop to prevent 'undefined' (uncontrolled) error
 const InputComponent = ({ label, value, onChange, placeholder, type = "text", icon: Icon }: any) => (
-  <div className="group relative w-full">
-    <div className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 group-focus-within:text-indigo-600 transition-colors duration-300 pointer-events-none">
-      {Icon && <Icon size={18} />}
-    </div>
-    <input
-      type={type}
-      value={value}
-      onChange={onChange}
-      placeholder=" " 
-      className={`peer w-full bg-slate-50/50 border border-slate-300 rounded-2xl py-3.5 sm:py-4 ${Icon ? 'pl-11' : 'pl-5'} pr-4 text-sm text-slate-800 font-medium outline-none focus:ring-4 focus:ring-indigo-500/10 focus:border-indigo-500 transition-all duration-300 shadow-sm hover:border-slate-400`}
-    />
-    <label className={`absolute left-4 ${Icon ? 'pl-8' : 'pl-2'} -top-2.5 bg-white px-2 text-[10px] font-bold uppercase tracking-wider text-slate-500 transition-all peer-placeholder-shown:top-3.5 sm:peer-placeholder-shown:top-4 peer-placeholder-shown:text-sm peer-placeholder-shown:font-medium peer-placeholder-shown:text-slate-500 peer-focus:-top-2.5 peer-focus:text-[10px] peer-focus:font-bold peer-focus:text-indigo-600 rounded-full pointer-events-none`}>
+  <div className="w-full">
+    <label className="block text-xs font-extrabold text-slate-600 uppercase tracking-wider mb-2 ml-1">
       {label}
     </label>
+    <div className="relative group">
+      <div className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 group-focus-within:text-indigo-600 transition-colors duration-300 pointer-events-none">
+        {Icon && <Icon size={20} />}
+      </div>
+      <input
+        type={type}
+        value={value || ""} 
+        onChange={onChange}
+        placeholder={placeholder}
+        className="w-full bg-white border border-slate-300 rounded-xl py-3.5 pl-12 pr-4 text-sm text-slate-900 font-bold outline-none focus:ring-4 focus:ring-indigo-500/10 focus:border-indigo-600 transition-all duration-300 shadow-sm hover:border-slate-500 placeholder:text-slate-300"
+      />
+    </div>
   </div>
 );
 
-const SelectComponent = ({ label, value, onChange, options, icon: Icon }: any) => (
-  <div className="group relative w-full">
-    <div className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 group-focus-within:text-indigo-600 transition-colors duration-300 pointer-events-none">
-      {Icon && <Icon size={18} />}
+// Updated SelectComponent to handle Image Icons
+const SelectComponent = ({ label, value, onChange, options, icon: IconOrUrl }: any) => {
+  const isImage = typeof IconOrUrl === 'string';
+
+  return (
+    <div className="w-full">
+      <label className="block text-xs font-extrabold text-slate-600 uppercase tracking-wider mb-2 ml-1">
+        {label}
+      </label>
+      <div className="relative group">
+        <div className="absolute left-4 top-1/2 -translate-y-1/2 flex items-center justify-center pointer-events-none">
+          {isImage ? (
+            <img src={IconOrUrl} alt="icon" className="w-6 h-6 object-contain opacity-90" />
+          ) : (
+             IconOrUrl && <IconOrUrl size={20} className="text-slate-400 group-focus-within:text-indigo-600 transition-colors" />
+          )}
+        </div>
+        <select
+          value={value || ""} // FIX: Added '|| ""' here as well for safety
+          onChange={onChange}
+          className="w-full bg-white border border-slate-300 rounded-xl py-3.5 pl-12 pr-10 text-sm text-slate-900 font-bold outline-none focus:ring-4 focus:ring-indigo-500/10 focus:border-indigo-600 transition-all duration-300 shadow-sm hover:border-slate-500 appearance-none cursor-pointer"
+        >
+          <option value="" disabled hidden>Select...</option>
+          {options.map((opt: string) => (
+            <option key={opt} value={opt}>{opt}</option>
+          ))}
+        </select>
+        <div className="absolute inset-y-0 right-0 flex items-center pr-4 pointer-events-none text-slate-500">
+          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M19 9l-7 7-7-7"></path></svg>
+        </div>
+      </div>
     </div>
-    <select
-      value={value}
-      onChange={onChange}
-      className={`peer w-full bg-slate-50/50 border border-slate-300 rounded-2xl py-3.5 sm:py-4 ${Icon ? 'pl-11' : 'pl-5'} pr-10 text-sm text-slate-800 font-medium outline-none focus:ring-4 focus:ring-indigo-500/10 focus:border-indigo-500 transition-all duration-300 shadow-sm hover:border-slate-400 appearance-none cursor-pointer`}
-    >
-      <option value="" disabled hidden></option>
-      {options.map((opt: string) => (
-        <option key={opt} value={opt}>{opt}</option>
-      ))}
-    </select>
-    <label className={`absolute left-4 ${Icon ? 'pl-8' : 'pl-2'} -top-2.5 bg-white px-2 text-[10px] font-bold uppercase tracking-wider text-slate-500 transition-all peer-placeholder-shown:top-3.5 sm:peer-placeholder-shown:top-4 peer-placeholder-shown:text-sm peer-placeholder-shown:font-medium peer-placeholder-shown:text-slate-500 peer-focus:-top-2.5 peer-focus:text-[10px] peer-focus:font-bold peer-focus:text-indigo-600 rounded-full pointer-events-none`}>
-      {label}
-    </label>
-    <div className="absolute inset-y-0 right-0 flex items-center pr-4 pointer-events-none text-slate-400">
-      <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 9l-7 7-7-7"></path></svg>
-    </div>
-  </div>
-);
+  );
+};
 
 // --- Main Page Component ---
 
@@ -72,7 +102,7 @@ export default function IdCardsPage() {
   const [selectedCardId, setSelectedCardId] = useState<string | null>(null);
   const [showPreviewModal, setShowPreviewModal] = useState(false);
   
-  // Form State
+  // Removed phoneNo
   const initialFormState: IIdCardData = {
     fullName: "",
     designation: "",
@@ -95,7 +125,6 @@ export default function IdCardsPage() {
   const dragStart = useRef({ x: 0, y: 0 });
   const fileInputRef = useRef<HTMLInputElement>(null);
 
-  // 1. Fetch Cards on Load
   useEffect(() => {
     fetchCards();
   }, []);
@@ -114,7 +143,6 @@ export default function IdCardsPage() {
     }
   };
 
-  // 2. Generate Preview Effect
   useEffect(() => {
     if (viewMode !== 'editor') return;
     const timer = setTimeout(async () => {
@@ -128,10 +156,10 @@ export default function IdCardsPage() {
     return () => clearTimeout(timer);
   }, [formData, viewMode]);
 
-  // 3. Handlers
   const handleEdit = (card: IIdCardData) => {
     setSelectedCardId(card._id || null);
-    setFormData(card);
+    // Ensure we merge with initialFormState so no fields are undefined
+    setFormData({ ...initialFormState, ...card });
     setViewMode('editor');
     window.scrollTo({ top: 0, behavior: 'smooth' });
   };
@@ -230,7 +258,6 @@ export default function IdCardsPage() {
     }
   };
 
-  // Dragging Logic
   const onDragStart = (e: React.MouseEvent) => {
     setIsDragging(true);
     dragStart.current = {
@@ -243,7 +270,6 @@ export default function IdCardsPage() {
     if (!isDragging) return;
     const newX = e.clientX - dragStart.current.x;
     const newY = e.clientY - dragStart.current.y;
-    // Constrain drag
     const constrainedX = Math.max(-15, Math.min(15, newX));
     const constrainedY = Math.max(-20, Math.min(20, newY));
 
@@ -252,7 +278,6 @@ export default function IdCardsPage() {
 
   const onDragEnd = () => setIsDragging(false);
 
-  // Filtering
   const filteredCards = cards.filter(c => 
     c.fullName.toLowerCase().includes(searchTerm.toLowerCase()) || 
     c.idCardNo.includes(searchTerm)
@@ -274,11 +299,10 @@ export default function IdCardsPage() {
       <div className="flex-shrink-0 z-30 pt-4 px-4 sm:px-8 md:px-12 lg:px-16 xl:px-24 sticky top-0 pointer-events-none w-full max-w-[1400px] mx-auto">
          <div className="pointer-events-auto w-full min-h-[5rem] bg-white border border-slate-300 shadow-2xl shadow-slate-300/50 rounded-[2rem] flex flex-col md:flex-row items-center justify-between px-4 sm:px-8 py-3 md:py-0 transition-all duration-300 gap-4 md:gap-0">
             
-            {/* Left Side */}
             <div className="flex items-center gap-3 sm:gap-5 w-full md:w-auto justify-between md:justify-start">
                 <div className="flex items-center gap-3 sm:gap-5">
                     {viewMode === 'editor' ? (
-                      <button onClick={handleBackToTable} className="p-2.5 rounded-full bg-slate-50 border border-slate-300 hover:bg-slate-100 text-slate-600 hover:text-slate-900 transition-all group shadow-sm active:scale-95 flex-shrink-0">
+                      <button onClick={handleBackToTable} className="cursor-pointer p-2.5 rounded-full bg-slate-100 border border-slate-300 hover:bg-slate-200 text-slate-700 hover:text-slate-900 transition-all group shadow-sm active:scale-95 flex-shrink-0">
                         <ArrowLeft size={18} className="group-hover:-translate-x-0.5 transition-transform" />
                       </button>
                     ) : (
@@ -297,12 +321,11 @@ export default function IdCardsPage() {
                     </div>
                 </div>
 
-                {/* Mobile: Action Button */}
                  <div className="md:hidden">
                     {viewMode === 'table' && (
                         <button 
                             onClick={handleCreateNew}
-                            className="bg-slate-900 hover:bg-indigo-600 text-white p-2.5 rounded-full transition-all shadow-lg active:scale-95"
+                            className="bg-slate-900 hover:bg-indigo-600 text-white p-2.5 rounded-full transition-all shadow-lg active:scale-95 cursor-pointer"
                         >
                             <Plus size={18} />
                         </button>
@@ -310,7 +333,6 @@ export default function IdCardsPage() {
                  </div>
             </div>
 
-            {/* Right Side - Actions */}
             <div className="flex flex-col sm:flex-row items-center gap-3 w-full md:w-auto">
                 {viewMode === 'table' && (
                   <div className="relative group w-full md:w-auto">
@@ -319,16 +341,15 @@ export default function IdCardsPage() {
                       value={searchTerm}
                       onChange={(e) => setSearchTerm(e.target.value)}
                       placeholder="Search..." 
-                      className="w-full md:w-64 bg-slate-50 border border-slate-300 focus:border-indigo-500 rounded-full pl-11 pr-4 py-2 text-sm font-medium outline-none transition-all shadow-inner focus:ring-2 focus:ring-indigo-500/10 focus:bg-white text-slate-700"
+                      className="w-full md:w-64 bg-slate-50 border border-slate-300 focus:border-indigo-600 rounded-full pl-11 pr-4 py-2 text-sm font-bold outline-none transition-all shadow-inner focus:ring-2 focus:ring-indigo-500/10 focus:bg-white text-slate-800"
                     />
                   </div>
                 )}
                 
-                {/* Desktop "Add" Button */}
                 {viewMode === 'table' && (
                   <button 
                     onClick={handleCreateNew}
-                    className="hidden md:flex bg-slate-900 hover:bg-indigo-600 text-white px-5 py-2.5 rounded-full text-sm font-bold items-center gap-2 transition-all shadow-xl shadow-slate-900/10 hover:shadow-indigo-600/20 active:scale-95 transform hover:-translate-y-0.5 whitespace-nowrap"
+                    className="cursor-pointer hidden md:flex bg-slate-900 hover:bg-indigo-600 text-white px-5 py-2.5 rounded-full text-sm font-bold items-center gap-2 transition-all shadow-xl shadow-slate-900/10 hover:shadow-indigo-600/20 active:scale-95 transform hover:-translate-y-0.5 whitespace-nowrap"
                   >
                     <Plus size={18} /> <span className="hidden lg:inline">Add Card</span>
                   </button>
@@ -343,10 +364,10 @@ export default function IdCardsPage() {
                         </div>
                       )}
                       
-                      <button onClick={handleSave} disabled={isSaving} className="flex-1 sm:flex-none justify-center text-slate-700 hover:text-indigo-700 font-bold text-xs sm:text-sm px-4 sm:px-5 py-2.5 rounded-full bg-slate-50 border border-slate-300 hover:bg-white transition-all disabled:opacity-50 flex items-center gap-2">
+                      <button onClick={handleSave} disabled={isSaving} className="cursor-pointer flex-1 sm:flex-none justify-center text-slate-700 hover:text-indigo-700 font-bold text-xs sm:text-sm px-4 sm:px-5 py-2.5 rounded-full bg-slate-50 border border-slate-300 hover:border-slate-500 hover:bg-white transition-all disabled:opacity-50 flex items-center gap-2">
                         <Save size={16} /> <span className="inline">{isSaving ? '...' : 'Save'}</span>
                       </button>
-                      <button onClick={handleDownload} className="flex-1 sm:flex-none justify-center bg-indigo-600 hover:bg-indigo-700 text-white px-4 sm:px-6 py-2.5 rounded-full text-xs sm:text-sm font-bold shadow-xl shadow-indigo-500/20 transition-all active:scale-95 flex items-center gap-2 hover:-translate-y-0.5">
+                      <button onClick={handleDownload} className="cursor-pointer flex-1 sm:flex-none justify-center bg-indigo-600 hover:bg-indigo-700 text-white px-4 sm:px-6 py-2.5 rounded-full text-xs sm:text-sm font-bold shadow-xl shadow-indigo-500/20 transition-all active:scale-95 flex items-center gap-2 hover:-translate-y-0.5">
                         <Download size={16} /> <span className="inline">Export</span>
                       </button>
                   </div>
@@ -360,22 +381,19 @@ export default function IdCardsPage() {
         <div className="flex-1 w-full max-w-[1400px] mx-auto px-4 sm:px-8 md:px-12 lg:px-16 xl:px-24 py-6">
             
             {viewMode === 'table' ? (
-              /* ================= TABLE VIEW ================= */
-              <div className="h-full min-h-[60vh] bg-white/40 backdrop-blur-md rounded-[1.5rem] sm:rounded-[2.5rem] border border-slate-200/50 shadow-none flex flex-col animate-in fade-in slide-in-from-bottom-4 duration-500">
+              <div className="h-full min-h-[60vh] bg-white/40 backdrop-blur-md rounded-[1.5rem] sm:rounded-[2.5rem] border border-slate-300 shadow-none flex flex-col animate-in fade-in slide-in-from-bottom-4 duration-500">
                  
-                 {/* Desktop Header Row (Hidden on Mobile) */}
-                 <div className="hidden md:grid grid-cols-12 gap-6 px-8 py-5 border-b border-slate-300 bg-slate-200/50 text-[11px] font-bold text-slate-600 uppercase tracking-wider rounded-t-[2.5rem] mb-2">
+                 <div className="hidden md:grid grid-cols-12 gap-6 px-8 py-5 border-b border-slate-300 bg-slate-200/80 text-[11px] font-extrabold text-slate-700 uppercase tracking-wider rounded-t-[2.5rem] mb-2">
                       <div className="col-span-5 pl-2">Employee Profile</div>
                       <div className="col-span-3">Designation</div>
                       <div className="col-span-2">ID Number</div>
                       <div className="col-span-2 text-right pr-4">Actions</div>
                  </div>
 
-                 {/* Content Area */}
                  <div className="flex-1 p-3 sm:p-2">
                     {loading ? (
                         <div className="flex flex-col items-center justify-center h-64 text-slate-500">
-                           <div className="animate-spin rounded-full h-8 w-8 border-2 border-slate-300 border-b-indigo-600 mb-4"></div>
+                           <div className="animate-spin rounded-full h-8 w-8 border-2 border-slate-400 border-b-indigo-600 mb-4"></div>
                            <span className="text-sm font-medium">Loading...</span>
                         </div>
                     ) : filteredCards.length === 0 ? (
@@ -389,9 +407,7 @@ export default function IdCardsPage() {
                       <div className="space-y-3">
                       {filteredCards.map((card) => (
                         <React.Fragment key={card._id}>
-                        {/* Desktop Row */}
-                        <div className="hidden md:grid grid-cols-12 gap-6 px-6 py-4 rounded-[1.5rem] bg-white border border-slate-300 shadow-sm items-center group cursor-default transition-all duration-200 hover:shadow-md hover:border-slate-800">
-                            {/* Profile */}
+                        <div className="hidden md:grid grid-cols-12 gap-6 px-6 py-4 rounded-[1.5rem] bg-white border border-slate-300 shadow-md items-center group cursor-pointer transition-all duration-200 hover:shadow-xl hover:border-slate-500 transform hover:-translate-y-0.5">
                             <div className="col-span-5 flex items-center gap-5 pl-2">
                               <div className="relative w-12 h-12 rounded-2xl bg-slate-100 border border-slate-300 overflow-hidden shadow-sm flex-shrink-0">
                                   {card.userImage ? (
@@ -403,57 +419,53 @@ export default function IdCardsPage() {
                                   )}
                               </div>
                               <div className="min-w-0">
-                                  <h3 className="text-sm font-bold text-slate-900 truncate">{card.fullName}</h3>
+                                  <h3 className="text-sm font-extrabold text-slate-900 truncate">{card.fullName}</h3>
                                   <div className="flex items-center gap-2 mt-0.5">
                                     <span className={`w-2 h-2 rounded-full border border-white shadow-sm ${card.bloodGroup ? 'bg-emerald-500' : 'bg-slate-300'}`}></span>
-                                    <p className="text-[11px] text-slate-500 truncate font-semibold">{card.bloodGroup ? `${card.bloodGroup}` : "N/A"}</p>
+                                    <p className="text-[11px] text-slate-600 truncate font-bold">{card.bloodGroup ? `${card.bloodGroup}` : "N/A"}</p>
                                   </div>
                               </div>
                             </div>
 
-                            {/* Role */}
                             <div className="col-span-3">
-                               <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-lg bg-slate-100 border border-slate-200 text-xs font-semibold text-slate-700">
+                               <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-lg bg-slate-100 border border-slate-300 text-xs font-bold text-slate-700">
                                   <Briefcase size={14} className="opacity-60" />
                                   <span className="truncate max-w-[140px]">{card.designation}</span>
                                </div>
                             </div>
 
-                            {/* ID */}
                             <div className="col-span-2">
-                                <span className="font-mono text-xs font-bold text-slate-600 bg-slate-100 px-3 py-1.5 rounded-md border border-slate-300">
+                                <span className="font-mono text-xs font-bold text-slate-700 bg-slate-100 px-3 py-1.5 rounded-md border border-slate-300">
                                   {card.idCardNo}
                                 </span>
                             </div>
 
-                            {/* Actions (Always Visible Now) */}
                             <div className="col-span-2 flex justify-end gap-2 pr-4">
-                               <button onClick={() => handleEdit(card)} className="p-2 rounded-xl bg-slate-50 hover:bg-indigo-600 hover:text-white border border-slate-300 hover:border-indigo-600 text-slate-500 transition-all shadow-sm">
+                               <button onClick={() => handleEdit(card)} className="cursor-pointer p-2 rounded-xl bg-slate-50 hover:bg-indigo-600 hover:text-white border border-slate-300 hover:border-indigo-600 text-slate-500 transition-all shadow-sm">
                                   <Edit size={16} />
                                </button>
-                               <button onClick={(e) => handleDelete(e, card._id!)} className="p-2 rounded-xl bg-slate-50 hover:bg-red-500 hover:text-white border border-slate-300 hover:border-red-500 text-slate-500 transition-all shadow-sm">
+                               <button onClick={(e) => handleDelete(e, card._id!)} className="cursor-pointer p-2 rounded-xl bg-slate-50 hover:bg-red-500 hover:text-white border border-slate-300 hover:border-red-500 text-slate-500 transition-all shadow-sm">
                                   <Trash2 size={16} />
                                </button>
                             </div>
                         </div>
 
-                        {/* Mobile Card Layout */}
-                        <div className="md:hidden bg-white rounded-2xl p-4 shadow-sm border border-slate-300 flex items-center justify-between mb-3">
+                        <div className="md:hidden bg-white rounded-2xl p-4 shadow-md border border-slate-300 flex items-center justify-between mb-3 hover:border-slate-500 transition-colors">
                             <div className="flex items-center gap-3">
                                 <div className="w-12 h-12 rounded-xl bg-slate-100 border border-slate-300 overflow-hidden flex-shrink-0">
                                    {card.userImage ? <img src={card.userImage} className="w-full h-full object-cover" /> : <div className="w-full h-full flex items-center justify-center text-slate-400"><User size={20} /></div>}
                                 </div>
                                 <div>
-                                    <h3 className="text-sm font-bold text-slate-900">{card.fullName}</h3>
-                                    <p className="text-xs text-slate-600 font-medium">{card.designation}</p>
+                                    <h3 className="text-sm font-extrabold text-slate-900">{card.fullName}</h3>
+                                    <p className="text-xs text-slate-600 font-bold">{card.designation}</p>
                                     <div className="flex items-center gap-2 mt-1">
-                                       <span className="text-[10px] font-mono bg-slate-100 px-1.5 py-0.5 rounded text-slate-700 border border-slate-200">#{card.idCardNo}</span>
+                                       <span className="text-[10px] font-mono bg-slate-100 px-1.5 py-0.5 rounded text-slate-700 border border-slate-300 font-bold">#{card.idCardNo}</span>
                                     </div>
                                 </div>
                             </div>
                             <div className="flex flex-col gap-2 pl-3 border-l border-slate-200">
-                                <button onClick={() => handleEdit(card)} className="p-2 text-indigo-600 bg-indigo-50 rounded-lg border border-indigo-100"><Edit size={16} /></button>
-                                <button onClick={(e) => handleDelete(e, card._id!)} className="p-2 text-red-500 bg-red-50 rounded-lg border border-red-100"><Trash2 size={16} /></button>
+                                <button onClick={() => handleEdit(card)} className="cursor-pointer p-2 text-indigo-600 bg-indigo-50 rounded-lg border border-indigo-200"><Edit size={16} /></button>
+                                <button onClick={(e) => handleDelete(e, card._id!)} className="cursor-pointer p-2 text-red-500 bg-red-50 rounded-lg border border-red-200"><Trash2 size={16} /></button>
                             </div>
                         </div>
                         </React.Fragment>
@@ -463,12 +475,10 @@ export default function IdCardsPage() {
                  </div>
               </div>
             ) : (
-              /* ================= EDITOR VIEW ================= */
               <div className="h-full bg-white rounded-[1.5rem] sm:rounded-[2.5rem] border border-slate-300 shadow-2xl shadow-slate-300/40 flex overflow-hidden animate-in zoom-in-95 duration-300 relative min-h-[70vh]">
                   
-                  {/* Sidebar */}
                   <div className="hidden xl:flex w-72 border-r border-slate-300 bg-slate-50/50 flex-col z-10">
-                      <div className="p-6 bg-white/50 backdrop-blur border-b border-slate-200 flex items-center justify-between">
+                      <div className="p-6 bg-white/50 backdrop-blur border-b border-slate-300 flex items-center justify-between">
                          <h3 className="text-[11px] font-bold uppercase tracking-wider text-slate-500">Directory</h3>
                          <div className="text-[10px] bg-indigo-50 px-2 py-0.5 rounded-md text-indigo-600 font-bold border border-indigo-100">{filteredCards.length}</div>
                       </div>
@@ -477,7 +487,7 @@ export default function IdCardsPage() {
                             <button 
                               key={card._id}
                               onClick={() => handleEdit(card)}
-                              className={`w-full text-left p-3 rounded-2xl flex items-center gap-3 transition-all group border ${selectedCardId === card._id ? 'bg-white border-indigo-300 shadow-md shadow-indigo-100/50 relative z-10 ring-1 ring-indigo-500/20' : 'hover:bg-white hover:border-slate-300 border-transparent'}`}
+                              className={`cursor-pointer w-full text-left p-3 rounded-2xl flex items-center gap-3 transition-all group border ${selectedCardId === card._id ? 'bg-white border-indigo-400 shadow-md shadow-indigo-100/50 relative z-10 ring-1 ring-indigo-500/20' : 'hover:bg-white hover:border-slate-400 border-transparent'}`}
                             >
                               <div className={`w-9 h-9 rounded-full flex items-center justify-center text-xs font-bold transition-colors flex-shrink-0 ${selectedCardId === card._id ? 'bg-indigo-600 text-white' : 'bg-slate-200 text-slate-600 group-hover:bg-slate-300'}`}>
                                   {card.fullName.charAt(0)}
@@ -491,7 +501,6 @@ export default function IdCardsPage() {
                       </div>
                   </div>
 
-                  {/* Form Area */}
                   <div className="flex-1 bg-white overflow-y-auto relative scroll-smooth custom-scrollbar">
                       <div className="max-w-3xl mx-auto p-6 md:p-10 lg:p-12 pb-32">
                           <div className="mb-6 md:mb-8 flex flex-col md:flex-row md:items-end justify-between gap-4">
@@ -502,15 +511,14 @@ export default function IdCardsPage() {
                             
                             <button 
                               onClick={() => setShowPreviewModal(true)}
-                              className="2xl:hidden w-full md:w-auto flex items-center justify-center gap-2 text-xs font-bold text-indigo-600 bg-indigo-50 px-4 py-2.5 rounded-xl border border-indigo-100 hover:bg-indigo-100 transition-colors"
+                              className="cursor-pointer 2xl:hidden w-full md:w-auto flex items-center justify-center gap-2 text-xs font-bold text-indigo-600 bg-indigo-50 px-4 py-2.5 rounded-xl border border-indigo-200 hover:bg-indigo-100 transition-colors"
                             >
                                 <Maximize2 size={16} /> Check Preview
                             </button>
                           </div>
 
                           <div className="space-y-6 md:space-y-8">
-                            {/* Image Section */}
-                            <div className="bg-slate-50/80 rounded-[1.5rem] md:rounded-[2rem] border-2 border-dashed border-slate-300 p-6 md:p-8 flex flex-col md:flex-row items-center gap-6 md:gap-8 group hover:border-indigo-400 hover:bg-indigo-50/10 transition-all">
+                            <div className="bg-slate-50/80 rounded-[1.5rem] md:rounded-[2rem] border-2 border-dashed border-slate-400 p-6 md:p-8 flex flex-col md:flex-row items-center gap-6 md:gap-8 group hover:border-indigo-500 hover:bg-indigo-50/10 transition-all">
                                <div className="relative flex-shrink-0">
                                   <div className="w-28 h-[149px] md:w-32 md:h-[170px] bg-white rounded-2xl shadow-xl ring-4 ring-white border border-slate-200 overflow-hidden relative cursor-grab active:cursor-grabbing transition-transform hover:scale-[1.02]" onMouseDown={onDragStart}>
                                     {formData.userImage ? (
@@ -522,7 +530,7 @@ export default function IdCardsPage() {
                                           />
                                           <button 
                                             onClick={(e) => { e.stopPropagation(); setFormData(prev => ({ ...prev, userImage: null })); }}
-                                            className="absolute top-2 right-2 bg-white/90 backdrop-blur text-slate-800 p-1.5 rounded-full hover:bg-red-500 hover:text-white transition-all shadow-sm opacity-100 md:opacity-0 group-hover:opacity-100"
+                                            className="cursor-pointer absolute top-2 right-2 bg-white/90 backdrop-blur text-slate-800 p-1.5 rounded-full hover:bg-red-500 hover:text-white transition-all shadow-sm opacity-100 md:opacity-0 group-hover:opacity-100"
                                           >
                                               <XCircle size={14} />
                                           </button>
@@ -542,28 +550,52 @@ export default function IdCardsPage() {
                                     Upload a professional headshot. <br className="hidden md:block"/> Plain background recommended.
                                   </p>
                                   <div className="flex gap-3 justify-center md:justify-start">
-                                     <button onClick={() => fileInputRef.current?.click()} className="w-full md:w-auto px-5 py-2.5 bg-white border border-slate-300 rounded-xl text-xs font-bold text-slate-700 hover:border-indigo-400 hover:text-indigo-600 transition-all shadow-sm hover:shadow-md flex items-center justify-center gap-2 transform active:scale-95">
-                                             <Upload size={16} /> Choose File
+                                     <button onClick={() => fileInputRef.current?.click()} className="cursor-pointer w-full md:w-auto px-5 py-2.5 bg-white border border-slate-400 rounded-xl text-xs font-bold text-slate-700 hover:border-indigo-600 hover:text-indigo-600 transition-all shadow-sm hover:shadow-md flex items-center justify-center gap-2 transform active:scale-95">
+                                               <Upload size={16} /> Choose File
                                      </button>
                                      <input ref={fileInputRef} type="file" hidden accept="image/*" onChange={handleImageChange} />
                                   </div>
                                </div>
                             </div>
 
-                            {/* Inputs Grid */}
                             <div className="grid grid-cols-1 md:grid-cols-2 gap-x-6 gap-y-6 md:gap-y-8">
                                <div className="md:col-span-2">
-                                  <InputComponent label="Full Legal Name" value={formData.fullName} onChange={(e: any) => setFormData({...formData, fullName: e.target.value})} placeholder="e.g. Jonathan Davis" icon={User} />
+                                  <InputComponent 
+                                    label="Full Legal Name" 
+                                    value={formData.fullName} 
+                                    onChange={(e: any) => setFormData({...formData, fullName: e.target.value})} 
+                                    placeholder="Puneet Shukla" 
+                                    icon={User} 
+                                  />
                                </div>
-                               <InputComponent label="Job Designation" value={formData.designation} onChange={(e: any) => setFormData({...formData, designation: e.target.value})} placeholder="e.g. Senior Engineer" icon={Briefcase} />
-                               <InputComponent label="ID Number" value={formData.idCardNo} onChange={(e: any) => setFormData({...formData, idCardNo: e.target.value})} placeholder="e.g. 8492" icon={CreditCard} />
-                               <SelectComponent label="Blood Group" value={formData.bloodGroup} options={["A-", "A+", "AB-", "AB+", "B-", "B+", "O-", "O+"]} onChange={(e: any) => setFormData({...formData, bloodGroup: e.target.value})} icon={Droplet} />
+                               <InputComponent 
+                                 label="Job Designation" 
+                                 value={formData.designation} 
+                                 onChange={(e: any) => setFormData({...formData, designation: e.target.value})} 
+                                 placeholder="Software Engineer" 
+                                 icon={Briefcase} 
+                               />
+                               
+                               <InputComponent 
+                                 label="ID Number" 
+                                 value={formData.idCardNo} 
+                                 onChange={(e: any) => setFormData({...formData, idCardNo: e.target.value})} 
+                                 placeholder="EMP-001" 
+                                 icon={Hash} // Removed Phone Input, kept ID
+                               />
+
+                               <SelectComponent 
+                                 label="Blood Group" 
+                                 value={formData.bloodGroup} 
+                                 options={["A-", "A+", "AB-", "AB+", "B-", "B+", "O-", "O+"]} 
+                                 onChange={(e: any) => setFormData({...formData, bloodGroup: e.target.value})} 
+                                 icon={getBloodGroupImage(formData.bloodGroup) || Droplet} 
+                               />
                             </div>
                           </div>
                       </div>
                   </div>
 
-                  {/* Persistent Preview */}
                   <div className="hidden 2xl:flex w-[480px] bg-slate-50/50 border-l border-slate-300 p-10 flex-col items-center justify-center relative flex-shrink-0">
                       <div className="absolute inset-0 overflow-hidden pointer-events-none">
                          <div className="absolute w-[500px] h-[500px] bg-indigo-300/10 rounded-full blur-[100px] -top-20 -right-20"></div>
@@ -594,13 +626,12 @@ export default function IdCardsPage() {
         </div>
       </div>
 
-      {/* --- Mobile/Tablet Preview Modal --- */}
       {showPreviewModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm animate-in fade-in duration-200">
             <div className="bg-white rounded-3xl shadow-2xl w-full max-w-lg max-h-[90vh] flex flex-col overflow-hidden animate-in zoom-in-95 duration-200">
                 <div className="flex justify-between items-center p-4 border-b border-slate-200">
                     <h3 className="text-sm font-bold text-slate-800">Card Preview</h3>
-                    <button onClick={() => setShowPreviewModal(false)} className="p-2 hover:bg-slate-100 rounded-full transition-colors text-slate-500">
+                    <button onClick={() => setShowPreviewModal(false)} className="cursor-pointer p-2 hover:bg-slate-100 rounded-full transition-colors text-slate-500">
                         <X size={20} />
                     </button>
                 </div>
@@ -616,8 +647,8 @@ export default function IdCardsPage() {
                     )}
                 </div>
                 <div className="p-4 border-t border-slate-200 flex gap-3">
-                    <button onClick={() => setShowPreviewModal(false)} className="flex-1 py-3 text-sm font-bold text-slate-600 hover:bg-slate-50 rounded-xl transition-colors">Close</button>
-                    <button onClick={handleDownload} className="flex-1 py-3 text-sm font-bold bg-indigo-600 text-white rounded-xl shadow-lg shadow-indigo-200 hover:bg-indigo-700 transition-colors">Download PDF</button>
+                    <button onClick={() => setShowPreviewModal(false)} className="cursor-pointer flex-1 py-3 text-sm font-bold text-slate-600 hover:bg-slate-50 rounded-xl transition-colors">Close</button>
+                    <button onClick={handleDownload} className="cursor-pointer flex-1 py-3 text-sm font-bold bg-indigo-600 text-white rounded-xl shadow-lg shadow-indigo-200 hover:bg-indigo-700 transition-colors">Download PDF</button>
                 </div>
             </div>
         </div>
