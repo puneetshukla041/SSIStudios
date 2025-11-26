@@ -63,7 +63,7 @@ const menu: MenuItem[] = [
   },
   {
     name: 'VisitingCards',
-    icon: FileImage,
+    icon: Layout,
     path: "/visitingcards",
     requiredAccess: 'bgRemover',
   },
