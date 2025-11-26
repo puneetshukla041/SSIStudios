@@ -34,58 +34,20 @@ const AnalysisPage = () => {
 
   // --- CONFIGURATION ---
   // SET THIS TO FALSE TO USE YOUR REAL API
-  const DEMO_MODE = true; 
-
-  // --- MOCK DATA GENERATOR (For Preview Purposes) ---
-  const generateMockData = () => {
-    return {
-      totalCertificates: 12450,
-      byHospital: [
-        { hospital: "City General Hospital", count: 3200 },
-        { hospital: "St. Mary's Medical Center", count: 2800 },
-        { hospital: "Memorial Sloan", count: 1500 },
-        { hospital: "Northwest Community", count: 1200 },
-        { hospital: "Children's Hope", count: 900 },
-        { hospital: "Veterans Affairs", count: 850 },
-        { hospital: "Mount Sinai", count: 600 },
-        { hospital: "Mayo Clinic", count: 550 },
-        { hospital: "Cleveland Clinic", count: 450 },
-        { hospital: "Johns Hopkins", count: 400 },
-      ],
-      byTime: [
-        { label: "2023-08", count: 120 },
-        { label: "2023-09", count: 240 },
-        { label: "2023-10", count: 180 },
-        { label: "2023-11", count: 450 },
-        { label: "2023-12", count: 600 },
-        { label: "2024-01", count: 320 },
-        { label: "2024-02", count: 480 },
-        { label: "2024-03", count: 890 },
-        { label: "2024-04", count: 1100 },
-        { label: "2024-05", count: 950 },
-      ],
-      byInitial: Array.from({ length: 26 }, (_, i) => ({
-        initial: String.fromCharCode(65 + i),
-        count: Math.floor(Math.random() * 500) + 50
-      })).sort((a, b) => b.count - a.count).slice(0, 15)
-    };
-  };
+  const DEMO_MODE = false; 
 
   const fetchData = async () => {
     setLoading(true);
     setError(null);
     try {
-      let result;
+      // Real API Call
+      const response = await fetch('/api/analysis');
       
-      if (DEMO_MODE) {
-        // Simulate API delay
-        await new Promise(resolve => setTimeout(resolve, 1000));
-        result = { success: true, data: generateMockData() };
-      } else {
-        // Real API Call
-        const response = await fetch('/api/analysis');
-        result = await response.json();
+      if (!response.ok) {
+        throw new Error(`HTTP error! Status: ${response.status}`);
       }
+
+      const result = await response.json();
 
       if (result.success) {
         setData(result.data);
@@ -95,6 +57,7 @@ const AnalysisPage = () => {
       }
     } catch (err: any) {
       setError(err.message || 'An error occurred');
+      console.error("Fetch error:", err);
     } finally {
       setLoading(false);
     }
@@ -108,12 +71,14 @@ const AnalysisPage = () => {
   const kpiData = useMemo(() => {
     if (!data) return null;
 
-    const topHospital = data.byHospital.length > 0 ? data.byHospital[0] : { hospital: 'N/A', count: 0 };
+    const topHospital = data.byHospital && data.byHospital.length > 0 
+      ? data.byHospital[0] 
+      : { hospital: 'N/A', count: 0 };
     
     // Find peak month
-    const peakMonth = data.byTime.reduce((max: any, current: any) => 
-      (current.count > max.count) ? current : max
-    , { count: 0, label: 'N/A' });
+    const peakMonth = data.byTime && data.byTime.length > 0
+      ? data.byTime.reduce((max: any, current: any) => (current.count > max.count) ? current : max, { count: 0, label: 'N/A' })
+      : { count: 0, label: 'N/A' };
 
     return {
       topHospital,
@@ -151,6 +116,9 @@ const AnalysisPage = () => {
     );
   }
 
+  // If data is null after loading (shouldn't happen with success check, but for safety)
+  if (!data) return null;
+
   return (
     <div className="min-h-screen bg-white text-gray-800 font-sans selection:bg-indigo-100">
       {/* Header */}
@@ -163,7 +131,7 @@ const AnalysisPage = () => {
             <div>
               <h1 className="text-xl font-bold text-gray-900">Certificate Analytics</h1>
               <p className="text-xs text-gray-500">
-                Live MongoDB Analysis • {DEMO_MODE ? <span className="text-amber-600 font-medium">Preview Mode</span> : 'Connected'}
+                Live MongoDB Analysis • <span className="text-green-600 font-medium">Connected</span>
               </p>
             </div>
           </div>
@@ -198,7 +166,7 @@ const AnalysisPage = () => {
             </div>
             <p className="text-gray-500 text-sm font-medium">Total Certificates</p>
             <h3 className="text-3xl font-bold text-gray-900 mt-1">
-              {data.totalCertificates.toLocaleString()}
+              {data.totalCertificates?.toLocaleString() || 0}
             </h3>
           </div>
 
@@ -246,7 +214,7 @@ const AnalysisPage = () => {
             </div>
             <div className="h-80 w-full">
               <ResponsiveContainer width="100%" height="100%">
-                <AreaChart data={data.byTime} margin={{ top: 10, right: 30, left: 0, bottom: 0 }}>
+                <AreaChart data={data.byTime || []} margin={{ top: 10, right: 30, left: 0, bottom: 0 }}>
                   <defs>
                     <linearGradient id="colorCount" x1="0" y1="0" x2="0" y2="1">
                       <stop offset="5%" stopColor="#4f46e5" stopOpacity={0.2}/>
@@ -291,7 +259,7 @@ const AnalysisPage = () => {
             </div>
              <div className="h-80 w-full">
               <ResponsiveContainer width="100%" height="100%">
-                <BarChart data={data.byInitial} layout="vertical" margin={{ top: 0, right: 30, left: 0, bottom: 0 }}>
+                <BarChart data={data.byInitial || []} layout="vertical" margin={{ top: 0, right: 30, left: 0, bottom: 0 }}>
                   <XAxis type="number" hide />
                   <YAxis 
                     dataKey="initial" 
@@ -306,7 +274,7 @@ const AnalysisPage = () => {
                      contentStyle={{ borderRadius: '8px', border: 'none', boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1)' }}
                   />
                   <Bar dataKey="count" barSize={12} radius={[0, 4, 4, 0]}>
-                    {data.byInitial.map((entry: any, index: number) => (
+                    {data.byInitial?.map((entry: any, index: number) => (
                       <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
                     ))}
                   </Bar>
@@ -330,7 +298,7 @@ const AnalysisPage = () => {
           </div>
           <div className="h-96 w-full">
             <ResponsiveContainer width="100%" height="100%">
-              <BarChart data={data.byHospital} margin={{ top: 20, right: 30, left: 20, bottom: 5 }}>
+              <BarChart data={data.byHospital || []} margin={{ top: 20, right: 30, left: 20, bottom: 5 }}>
                 <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f3f4f6" />
                 <XAxis 
                   dataKey="hospital" 
