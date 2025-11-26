@@ -61,14 +61,11 @@ const menu: MenuItem[] = [
     path: "/bgremover",
     requiredAccess: 'bgRemover',
   },
-    {
-    name: 'Visiting Cards',
-    icon: FileText,
-    requiredAccess: 'visitingCard',
-    children: [
-      { name: 'Dark Theme', path: '/selector/visitingcard/dark' },
-      { name: 'Light Theme', path: '/selector/visitingcard/light' },
-    ],
+  {
+    name: 'VisitingCards',
+    icon: FileImage,
+    path: "/visitingcards",
+    requiredAccess: 'bgRemover',
   },
 
   {
