@@ -3,62 +3,62 @@ import React, { useEffect, useState, useRef } from "react";
 import {
   Upload,
   XCircle,
-  CloudUpload,
   Download,
   Trash2,
   Edit,
   Plus,
   Save,
   Search,
-  Eye,
   ArrowLeft,
-  ChevronRight,
-  User,
   CreditCard,
+  User,
+  Briefcase,
   Droplet,
-  Briefcase
+  Layout,
+  Maximize2,
+  X
 } from "lucide-react";
 import { generateIdCardPDF, IIdCardData } from "@/components/Certificates/utils/idCardGenerator";
 
-// --- Premium UI Components ---
+// --- Responsive UI Components ---
 
 const InputComponent = ({ label, value, onChange, placeholder, type = "text", icon: Icon }: any) => (
-  <div className="group relative">
-    <div className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 group-focus-within:text-indigo-600 transition-colors duration-300">
+  <div className="group relative w-full">
+    <div className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 group-focus-within:text-indigo-600 transition-colors duration-300 pointer-events-none">
       {Icon && <Icon size={18} />}
     </div>
     <input
       type={type}
       value={value}
       onChange={onChange}
-      placeholder=" " // Important for peer-placeholder-shown
-      className={`peer w-full bg-white border border-slate-200 rounded-xl py-3.5 ${Icon ? 'pl-10' : 'pl-4'} pr-4 text-sm text-slate-800 font-medium outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 transition-all duration-200 shadow-sm hover:border-slate-300`}
+      placeholder=" " 
+      className={`peer w-full bg-slate-50/50 border border-slate-300 rounded-2xl py-3.5 sm:py-4 ${Icon ? 'pl-11' : 'pl-5'} pr-4 text-sm text-slate-800 font-medium outline-none focus:ring-4 focus:ring-indigo-500/10 focus:border-indigo-500 transition-all duration-300 shadow-sm hover:border-slate-400`}
     />
-    <label className={`absolute left-3 ${Icon ? 'pl-7' : 'pl-1'} -top-2.5 bg-white px-1 text-[10px] font-bold uppercase tracking-wider text-slate-400 transition-all peer-placeholder-shown:top-3.5 peer-placeholder-shown:text-sm peer-placeholder-shown:font-normal peer-placeholder-shown:text-slate-400 peer-focus:-top-2.5 peer-focus:text-[10px] peer-focus:font-bold peer-focus:text-indigo-600`}>
+    <label className={`absolute left-4 ${Icon ? 'pl-8' : 'pl-2'} -top-2.5 bg-white px-2 text-[10px] font-bold uppercase tracking-wider text-slate-500 transition-all peer-placeholder-shown:top-3.5 sm:peer-placeholder-shown:top-4 peer-placeholder-shown:text-sm peer-placeholder-shown:font-medium peer-placeholder-shown:text-slate-500 peer-focus:-top-2.5 peer-focus:text-[10px] peer-focus:font-bold peer-focus:text-indigo-600 rounded-full pointer-events-none`}>
       {label}
     </label>
   </div>
 );
 
 const SelectComponent = ({ label, value, onChange, options, icon: Icon }: any) => (
-  <div className="group relative">
-    <div className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 group-focus-within:text-indigo-600 transition-colors duration-300">
+  <div className="group relative w-full">
+    <div className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 group-focus-within:text-indigo-600 transition-colors duration-300 pointer-events-none">
       {Icon && <Icon size={18} />}
     </div>
     <select
       value={value}
       onChange={onChange}
-      className={`peer w-full bg-white border border-slate-200 rounded-xl py-3.5 ${Icon ? 'pl-10' : 'pl-4'} pr-10 text-sm text-slate-800 font-medium outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 transition-all duration-200 shadow-sm hover:border-slate-300 appearance-none cursor-pointer`}
+      className={`peer w-full bg-slate-50/50 border border-slate-300 rounded-2xl py-3.5 sm:py-4 ${Icon ? 'pl-11' : 'pl-5'} pr-10 text-sm text-slate-800 font-medium outline-none focus:ring-4 focus:ring-indigo-500/10 focus:border-indigo-500 transition-all duration-300 shadow-sm hover:border-slate-400 appearance-none cursor-pointer`}
     >
       <option value="" disabled hidden></option>
       {options.map((opt: string) => (
         <option key={opt} value={opt}>{opt}</option>
       ))}
     </select>
-    <label className={`absolute left-3 ${Icon ? 'pl-7' : 'pl-1'} -top-2.5 bg-white px-1 text-[10px] font-bold uppercase tracking-wider text-slate-400 transition-all peer-placeholder-shown:top-3.5 peer-placeholder-shown:text-sm peer-placeholder-shown:font-normal peer-placeholder-shown:text-slate-400 peer-focus:-top-2.5 peer-focus:text-[10px] peer-focus:font-bold peer-focus:text-indigo-600`}>
+    <label className={`absolute left-4 ${Icon ? 'pl-8' : 'pl-2'} -top-2.5 bg-white px-2 text-[10px] font-bold uppercase tracking-wider text-slate-500 transition-all peer-placeholder-shown:top-3.5 sm:peer-placeholder-shown:top-4 peer-placeholder-shown:text-sm peer-placeholder-shown:font-medium peer-placeholder-shown:text-slate-500 peer-focus:-top-2.5 peer-focus:text-[10px] peer-focus:font-bold peer-focus:text-indigo-600 rounded-full pointer-events-none`}>
       {label}
     </label>
-    <div className="absolute inset-y-0 right-0 flex items-center pr-3 pointer-events-none text-slate-400">
+    <div className="absolute inset-y-0 right-0 flex items-center pr-4 pointer-events-none text-slate-400">
       <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 9l-7 7-7-7"></path></svg>
     </div>
   </div>
@@ -70,6 +70,7 @@ export default function IdCardsPage() {
   const [viewMode, setViewMode] = useState<'table' | 'editor'>('table');
   const [cards, setCards] = useState<IIdCardData[]>([]);
   const [selectedCardId, setSelectedCardId] = useState<string | null>(null);
+  const [showPreviewModal, setShowPreviewModal] = useState(false);
   
   // Form State
   const initialFormState: IIdCardData = {
@@ -80,7 +81,6 @@ export default function IdCardsPage() {
     userImage: null,
     imageXOffset: 0,
     imageYOffset: 0,
-   
   };
 
   const [formData, setFormData] = useState<IIdCardData>(initialFormState);
@@ -108,15 +108,15 @@ export default function IdCardsPage() {
       if (Array.isArray(data)) setCards(data);
     } catch (err) {
       console.error(err);
+      setCards([]); 
     } finally {
       setLoading(false);
     }
   };
 
-  // 2. Generate Preview Effect (Only in Editor Mode)
+  // 2. Generate Preview Effect
   useEffect(() => {
     if (viewMode !== 'editor') return;
-
     const timer = setTimeout(async () => {
       const result = await generateIdCardPDF(formData);
       if (result) {
@@ -125,7 +125,6 @@ export default function IdCardsPage() {
         setPreviewUrl(url);
       }
     }, 500);
-
     return () => clearTimeout(timer);
   }, [formData, viewMode]);
 
@@ -134,6 +133,7 @@ export default function IdCardsPage() {
     setSelectedCardId(card._id || null);
     setFormData(card);
     setViewMode('editor');
+    window.scrollTo({ top: 0, behavior: 'smooth' });
   };
 
   const handleCreateNew = () => {
@@ -141,16 +141,18 @@ export default function IdCardsPage() {
     setFormData(initialFormState);
     if(fileInputRef.current) fileInputRef.current.value = "";
     setViewMode('editor');
+    window.scrollTo({ top: 0, behavior: 'smooth' });
   };
 
   const handleBackToTable = () => {
-    fetchCards(); // Refresh data
+    fetchCards();
     setViewMode('table');
   };
 
   const handleSave = async () => {
     if (!formData.fullName || !formData.idCardNo) {
-      setFeedback({ msg: "Name and ID No are required", type: "error" });
+      setFeedback({ msg: "Name & ID Missing", type: "error" });
+      setTimeout(() => setFeedback(null), 2000);
       return;
     }
 
@@ -168,7 +170,7 @@ export default function IdCardsPage() {
       if (!res.ok) throw new Error("Failed to save");
       
       const savedCard = await res.json();
-      setFeedback({ msg: "Saved Successfully", type: "success" });
+      setFeedback({ msg: "Saved!", type: "success" });
       
       if (selectedCardId) {
         setCards(prev => prev.map(c => c._id === savedCard._id ? savedCard : c));
@@ -177,9 +179,8 @@ export default function IdCardsPage() {
         setSelectedCardId(savedCard._id);
         setFormData(savedCard);
       }
-
     } catch (err) {
-      setFeedback({ msg: "Error Saving", type: "error" });
+      setFeedback({ msg: "Save Failed", type: "error" });
     } finally {
       setIsSaving(false);
       setTimeout(() => setFeedback(null), 3000);
@@ -193,8 +194,8 @@ export default function IdCardsPage() {
     try {
       const res = await fetch(`/api/idcards/${id}`, { method: "DELETE" });
       if(res.ok) {
-         setCards(prev => prev.filter(c => c._id !== id));
-         if (selectedCardId === id && viewMode === 'editor') handleCreateNew();
+          setCards(prev => prev.filter(c => c._id !== id));
+          if (selectedCardId === id && viewMode === 'editor') handleCreateNew();
       }
     } catch(err) {
       alert("Failed to delete");
@@ -229,7 +230,7 @@ export default function IdCardsPage() {
     }
   };
 
-  // Image Dragging Logic
+  // Dragging Logic
   const onDragStart = (e: React.MouseEvent) => {
     setIsDragging(true);
     dragStart.current = {
@@ -242,7 +243,7 @@ export default function IdCardsPage() {
     if (!isDragging) return;
     const newX = e.clientX - dragStart.current.x;
     const newY = e.clientY - dragStart.current.y;
-    // Constrain drag limits for the specific ID card template
+    // Constrain drag
     const constrainedX = Math.max(-15, Math.min(15, newX));
     const constrainedY = Math.max(-20, Math.min(20, newY));
 
@@ -258,79 +259,95 @@ export default function IdCardsPage() {
   );
 
   return (
-    <div className="h-screen w-full bg-slate-50/50 text-slate-800 font-sans flex flex-col overflow-hidden selection:bg-indigo-100 selection:text-indigo-700"
+    <div className="min-h-screen w-full bg-slate-100 text-slate-800 font-sans flex flex-col overflow-x-hidden selection:bg-indigo-100 selection:text-indigo-700"
          onMouseMove={onDrag} onMouseUp={onDragEnd} onMouseLeave={onDragEnd}>
       
-      {/* --- Global Styles for Scrollbar & Clip --- */}
       <style>{`
         .clip-image { clip-path: polygon(0% 0%, 100% 0%, 100% 85%, 0% 100%); touch-action: none; }
-        /* Sleek Scrollbar */
         ::-webkit-scrollbar { width: 6px; height: 6px; }
         ::-webkit-scrollbar-track { background: transparent; }
-        ::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 3px; }
-        ::-webkit-scrollbar-thumb:hover { background: #94a3b8; }
+        ::-webkit-scrollbar-thumb { background: #94a3b8; border-radius: 10px; }
+        ::-webkit-scrollbar-thumb:hover { background: #64748b; }
       `}</style>
 
-      {/* --- Navbar (Sticky & Glassmorphic) --- */}
-      <div className="flex-shrink-0 h-16 bg-white/80 backdrop-blur-md border-b border-slate-200/60 z-20 sticky top-0">
-         <div className="max-w-[1600px] mx-auto px-4 sm:px-6 lg:px-8 h-full flex items-center justify-between">
-            <div className="flex items-center gap-4">
-                {viewMode === 'editor' ? (
-                  <button onClick={handleBackToTable} className="p-2 -ml-2 rounded-full hover:bg-slate-100 text-slate-500 transition-colors group">
-                    <ArrowLeft size={20} className="group-hover:-translate-x-0.5 transition-transform" />
-                  </button>
-                ) : (
-                  <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-indigo-600 to-violet-600 flex items-center justify-center text-white shadow-lg shadow-indigo-500/20">
-                      <CreditCard size={20} />
-                  </div>
-                )}
-                
-                <div className="flex flex-col justify-center">
-                  <h1 className="text-lg font-bold text-slate-800 leading-tight">
-                      {viewMode === 'editor' ? (selectedCardId ? 'Edit ID Card' : 'Create New Card') : 'ID Card Database'}
-                  </h1>
-                  <p className="text-[10px] font-semibold text-slate-400 uppercase tracking-wider">
-                      SSI Studios Admin
-                  </p>
+      {/* --- Responsive Floating Header --- */}
+      <div className="flex-shrink-0 z-30 pt-4 px-4 sm:px-8 md:px-12 lg:px-16 xl:px-24 sticky top-0 pointer-events-none w-full max-w-[1400px] mx-auto">
+         <div className="pointer-events-auto w-full min-h-[5rem] bg-white border border-slate-300 shadow-2xl shadow-slate-300/50 rounded-[2rem] flex flex-col md:flex-row items-center justify-between px-4 sm:px-8 py-3 md:py-0 transition-all duration-300 gap-4 md:gap-0">
+            
+            {/* Left Side */}
+            <div className="flex items-center gap-3 sm:gap-5 w-full md:w-auto justify-between md:justify-start">
+                <div className="flex items-center gap-3 sm:gap-5">
+                    {viewMode === 'editor' ? (
+                      <button onClick={handleBackToTable} className="p-2.5 rounded-full bg-slate-50 border border-slate-300 hover:bg-slate-100 text-slate-600 hover:text-slate-900 transition-all group shadow-sm active:scale-95 flex-shrink-0">
+                        <ArrowLeft size={18} className="group-hover:-translate-x-0.5 transition-transform" />
+                      </button>
+                    ) : (
+                      <div className="w-9 h-9 sm:w-10 sm:h-10 rounded-full bg-gradient-to-br from-indigo-600 to-violet-700 flex items-center justify-center text-white shadow-lg shadow-indigo-500/30 ring-2 sm:ring-4 ring-indigo-50 flex-shrink-0">
+                          <CreditCard size={18} strokeWidth={2.5} />
+                      </div>
+                    )}
+                    
+                    <div className="flex flex-col justify-center">
+                      <h1 className="text-base sm:text-lg font-extrabold text-slate-900 leading-tight tracking-tight">
+                          {viewMode === 'editor' ? (selectedCardId ? 'Edit Card' : 'New Card') : 'ID Database'}
+                      </h1>
+                      <p className="text-[9px] sm:text-[10px] font-bold text-slate-500 uppercase tracking-widest mt-0.5">
+                          SSI Studios
+                      </p>
+                    </div>
                 </div>
+
+                {/* Mobile: Action Button */}
+                 <div className="md:hidden">
+                    {viewMode === 'table' && (
+                        <button 
+                            onClick={handleCreateNew}
+                            className="bg-slate-900 hover:bg-indigo-600 text-white p-2.5 rounded-full transition-all shadow-lg active:scale-95"
+                        >
+                            <Plus size={18} />
+                        </button>
+                    )}
+                 </div>
             </div>
 
-            <div className="flex items-center gap-3">
+            {/* Right Side - Actions */}
+            <div className="flex flex-col sm:flex-row items-center gap-3 w-full md:w-auto">
                 {viewMode === 'table' && (
-                  <div className="relative group hidden md:block">
-                    <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 group-focus-within:text-indigo-500 transition-colors" size={16} />
+                  <div className="relative group w-full md:w-auto">
+                    <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 group-focus-within:text-indigo-600 transition-colors" size={16} />
                     <input 
                       value={searchTerm}
                       onChange={(e) => setSearchTerm(e.target.value)}
-                      placeholder="Search employees..." 
-                      className="w-64 bg-slate-100/50 hover:bg-white focus:bg-white border border-transparent focus:border-indigo-200 rounded-xl pl-10 pr-4 py-2 text-sm outline-none transition-all shadow-sm"
+                      placeholder="Search..." 
+                      className="w-full md:w-64 bg-slate-50 border border-slate-300 focus:border-indigo-500 rounded-full pl-11 pr-4 py-2 text-sm font-medium outline-none transition-all shadow-inner focus:ring-2 focus:ring-indigo-500/10 focus:bg-white text-slate-700"
                     />
                   </div>
                 )}
                 
+                {/* Desktop "Add" Button */}
                 {viewMode === 'table' && (
                   <button 
                     onClick={handleCreateNew}
-                    className="bg-slate-900 hover:bg-indigo-600 text-white px-5 py-2 rounded-xl text-sm font-medium flex items-center gap-2 transition-all shadow-lg shadow-slate-900/10 active:scale-95"
+                    className="hidden md:flex bg-slate-900 hover:bg-indigo-600 text-white px-5 py-2.5 rounded-full text-sm font-bold items-center gap-2 transition-all shadow-xl shadow-slate-900/10 hover:shadow-indigo-600/20 active:scale-95 transform hover:-translate-y-0.5 whitespace-nowrap"
                   >
-                    <Plus size={18} /> <span className="hidden sm:inline">New Card</span>
+                    <Plus size={18} /> <span className="hidden lg:inline">Add Card</span>
                   </button>
                 )}
 
                 {viewMode === 'editor' && (
-                  <div className="flex items-center gap-3">
+                  <div className="flex items-center gap-2 sm:gap-3 w-full sm:w-auto justify-end">
                       {feedback && (
-                        <div className={`hidden sm:flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-semibold animate-in fade-in slide-in-from-top-2 ${feedback.type === 'success' ? 'bg-green-50 text-green-700 border border-green-100' : 'bg-red-50 text-red-700 border border-red-100'}`}>
-                          <div className={`w-1.5 h-1.5 rounded-full ${feedback.type === 'success' ? 'bg-green-500' : 'bg-red-500'}`}></div>
+                        <div className={`hidden lg:flex items-center gap-2 px-4 py-2 rounded-full text-xs font-bold animate-in fade-in slide-in-from-top-4 ${feedback.type === 'success' ? 'bg-emerald-50 text-emerald-700 border border-emerald-100' : 'bg-rose-50 text-rose-700 border border-rose-100'}`}>
+                          <div className={`w-2 h-2 rounded-full ${feedback.type === 'success' ? 'bg-emerald-500' : 'bg-rose-500'}`}></div>
                           {feedback.msg}
                         </div>
                       )}
-                      <div className="h-6 w-px bg-slate-200 mx-1 hidden sm:block"></div>
-                      <button onClick={handleSave} disabled={isSaving} className="text-slate-600 hover:text-indigo-600 font-semibold text-sm px-4 py-2 rounded-xl hover:bg-indigo-50 transition-colors disabled:opacity-50">
-                        {isSaving ? 'Saving...' : 'Save Changes'}
+                      
+                      <button onClick={handleSave} disabled={isSaving} className="flex-1 sm:flex-none justify-center text-slate-700 hover:text-indigo-700 font-bold text-xs sm:text-sm px-4 sm:px-5 py-2.5 rounded-full bg-slate-50 border border-slate-300 hover:bg-white transition-all disabled:opacity-50 flex items-center gap-2">
+                        <Save size={16} /> <span className="inline">{isSaving ? '...' : 'Save'}</span>
                       </button>
-                      <button onClick={handleDownload} className="bg-indigo-600 hover:bg-indigo-700 text-white px-5 py-2 rounded-xl text-sm font-medium shadow-lg shadow-indigo-500/20 transition-all active:scale-95 flex items-center gap-2">
-                        <Download size={18} /> <span className="hidden sm:inline">Export PDF</span>
+                      <button onClick={handleDownload} className="flex-1 sm:flex-none justify-center bg-indigo-600 hover:bg-indigo-700 text-white px-4 sm:px-6 py-2.5 rounded-full text-xs sm:text-sm font-bold shadow-xl shadow-indigo-500/20 transition-all active:scale-95 flex items-center gap-2 hover:-translate-y-0.5">
+                        <Download size={16} /> <span className="inline">Export</span>
                       </button>
                   </div>
                 )}
@@ -338,222 +355,274 @@ export default function IdCardsPage() {
          </div>
       </div>
 
-      {/* --- Workspace Content (Centered & Padded) --- */}
-      <div className="flex-1 overflow-hidden relative">
-        <div className="h-full w-full max-w-[1600px] mx-auto px-4 sm:px-6 lg:px-8 py-6">
+      {/* --- Main Workspace --- */}
+      <div className="flex-1 relative w-full flex flex-col">
+        <div className="flex-1 w-full max-w-[1400px] mx-auto px-4 sm:px-8 md:px-12 lg:px-16 xl:px-24 py-6">
             
             {viewMode === 'table' ? (
               /* ================= TABLE VIEW ================= */
-              <div className="h-full bg-white rounded-2xl border border-slate-200 shadow-xl shadow-slate-200/40 overflow-hidden flex flex-col animate-in fade-in duration-500">
-                 {/* Header Row */}
-                 <div className="grid grid-cols-12 gap-4 px-6 py-4 border-b border-slate-100 bg-slate-50/80 text-[11px] font-bold text-slate-400 uppercase tracking-wider sticky top-0 z-10 backdrop-blur-md">
+              <div className="h-full min-h-[60vh] bg-white/40 backdrop-blur-md rounded-[1.5rem] sm:rounded-[2.5rem] border border-slate-200/50 shadow-none flex flex-col animate-in fade-in slide-in-from-bottom-4 duration-500">
+                 
+                 {/* Desktop Header Row (Hidden on Mobile) */}
+                 <div className="hidden md:grid grid-cols-12 gap-6 px-8 py-5 border-b border-slate-300 bg-slate-200/50 text-[11px] font-bold text-slate-600 uppercase tracking-wider rounded-t-[2.5rem] mb-2">
                       <div className="col-span-5 pl-2">Employee Profile</div>
                       <div className="col-span-3">Designation</div>
                       <div className="col-span-2">ID Number</div>
-                      <div className="col-span-2 text-right pr-2">Actions</div>
+                      <div className="col-span-2 text-right pr-4">Actions</div>
                  </div>
 
-                 {/* Data Rows */}
-                 <div className="flex-1 overflow-y-auto divide-y divide-slate-50">
+                 {/* Content Area */}
+                 <div className="flex-1 p-3 sm:p-2">
                     {loading ? (
-                        <div className="flex flex-col items-center justify-center h-full text-slate-400 pb-20">
-                           <div className="animate-spin rounded-full h-8 w-8 border-2 border-slate-200 border-b-indigo-600 mb-4"></div>
-                           <span className="text-sm font-medium">Loading records...</span>
+                        <div className="flex flex-col items-center justify-center h-64 text-slate-500">
+                           <div className="animate-spin rounded-full h-8 w-8 border-2 border-slate-300 border-b-indigo-600 mb-4"></div>
+                           <span className="text-sm font-medium">Loading...</span>
                         </div>
                     ) : filteredCards.length === 0 ? (
-                        <div className="flex flex-col items-center justify-center h-full text-slate-400 gap-4 pb-20">
-                           <div className="w-20 h-20 rounded-3xl bg-slate-50 flex items-center justify-center border border-slate-100">
-                              <Search size={32} className="opacity-20 text-slate-500" />
+                        <div className="flex flex-col items-center justify-center h-64 text-slate-500 gap-4">
+                           <div className="w-20 h-20 rounded-[1.5rem] bg-white flex items-center justify-center border border-slate-300 shadow-sm">
+                              <Search size={28} className="opacity-30 text-slate-600" />
                            </div>
                            <p className="text-sm font-medium">No records found.</p>
                         </div>
                     ) : (
-                      filteredCards.map((card) => (
-                        <div key={card._id} className="grid grid-cols-12 gap-4 px-6 py-4 hover:bg-indigo-50/30 transition-colors items-center group cursor-default">
+                      <div className="space-y-3">
+                      {filteredCards.map((card) => (
+                        <React.Fragment key={card._id}>
+                        {/* Desktop Row */}
+                        <div className="hidden md:grid grid-cols-12 gap-6 px-6 py-4 rounded-[1.5rem] bg-white border border-slate-300 shadow-sm items-center group cursor-default transition-all duration-200 hover:shadow-md hover:border-slate-800">
                             {/* Profile */}
-                            <div className="col-span-5 flex items-center gap-4 pl-2">
-                              <div className="relative w-11 h-11 rounded-xl bg-slate-100 border border-slate-200 overflow-hidden shadow-sm group-hover:shadow-md group-hover:border-indigo-100 transition-all">
+                            <div className="col-span-5 flex items-center gap-5 pl-2">
+                              <div className="relative w-12 h-12 rounded-2xl bg-slate-100 border border-slate-300 overflow-hidden shadow-sm flex-shrink-0">
                                   {card.userImage ? (
                                     <img src={card.userImage} className="w-full h-full object-cover" />
                                   ) : (
-                                    <div className="w-full h-full flex items-center justify-center text-slate-300 bg-slate-50">
+                                    <div className="w-full h-full flex items-center justify-center text-slate-400 bg-slate-100">
                                       <User size={20} />
                                     </div>
                                   )}
                               </div>
                               <div className="min-w-0">
-                                  <h3 className="text-sm font-semibold text-slate-800 truncate group-hover:text-indigo-700 transition-colors">{card.fullName}</h3>
-                                  <p className="text-xs text-slate-400 truncate font-medium">{card.bloodGroup ? `Blood Group: ${card.bloodGroup}` : "No Blood Group"}</p>
+                                  <h3 className="text-sm font-bold text-slate-900 truncate">{card.fullName}</h3>
+                                  <div className="flex items-center gap-2 mt-0.5">
+                                    <span className={`w-2 h-2 rounded-full border border-white shadow-sm ${card.bloodGroup ? 'bg-emerald-500' : 'bg-slate-300'}`}></span>
+                                    <p className="text-[11px] text-slate-500 truncate font-semibold">{card.bloodGroup ? `${card.bloodGroup}` : "N/A"}</p>
+                                  </div>
                               </div>
                             </div>
 
                             {/* Role */}
                             <div className="col-span-3">
-                               <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-lg bg-slate-50 border border-slate-100 text-xs font-medium text-slate-600 group-hover:bg-white group-hover:border-indigo-100 transition-colors">
-                                  <Briefcase size={14} className="text-slate-400" />
-                                  <span className="truncate max-w-[120px]">{card.designation}</span>
+                               <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-lg bg-slate-100 border border-slate-200 text-xs font-semibold text-slate-700">
+                                  <Briefcase size={14} className="opacity-60" />
+                                  <span className="truncate max-w-[140px]">{card.designation}</span>
                                </div>
                             </div>
 
                             {/* ID */}
                             <div className="col-span-2">
-                                <span className="font-mono text-xs font-bold text-indigo-600 bg-indigo-50 px-2.5 py-1 rounded-md border border-indigo-100/50">
-                                  #{card.idCardNo}
+                                <span className="font-mono text-xs font-bold text-slate-600 bg-slate-100 px-3 py-1.5 rounded-md border border-slate-300">
+                                  {card.idCardNo}
                                 </span>
                             </div>
 
-                            {/* Actions */}
-                            <div className="col-span-2 flex justify-end gap-2 pr-2 opacity-0 group-hover:opacity-100 transition-opacity duration-200">
-                               <button onClick={() => handleEdit(card)} className="p-2 rounded-lg hover:bg-white hover:shadow-md border border-transparent hover:border-slate-100 text-slate-400 hover:text-indigo-600 transition-all transform hover:scale-105">
-                                  <Eye size={18} />
+                            {/* Actions (Always Visible Now) */}
+                            <div className="col-span-2 flex justify-end gap-2 pr-4">
+                               <button onClick={() => handleEdit(card)} className="p-2 rounded-xl bg-slate-50 hover:bg-indigo-600 hover:text-white border border-slate-300 hover:border-indigo-600 text-slate-500 transition-all shadow-sm">
+                                  <Edit size={16} />
                                </button>
-                               <button onClick={(e) => handleDelete(e, card._id!)} className="p-2 rounded-lg hover:bg-white hover:shadow-md border border-transparent hover:border-slate-100 text-slate-400 hover:text-red-600 transition-all transform hover:scale-105">
-                                  <Trash2 size={18} />
+                               <button onClick={(e) => handleDelete(e, card._id!)} className="p-2 rounded-xl bg-slate-50 hover:bg-red-500 hover:text-white border border-slate-300 hover:border-red-500 text-slate-500 transition-all shadow-sm">
+                                  <Trash2 size={16} />
                                </button>
                             </div>
                         </div>
-                      ))
+
+                        {/* Mobile Card Layout */}
+                        <div className="md:hidden bg-white rounded-2xl p-4 shadow-sm border border-slate-300 flex items-center justify-between mb-3">
+                            <div className="flex items-center gap-3">
+                                <div className="w-12 h-12 rounded-xl bg-slate-100 border border-slate-300 overflow-hidden flex-shrink-0">
+                                   {card.userImage ? <img src={card.userImage} className="w-full h-full object-cover" /> : <div className="w-full h-full flex items-center justify-center text-slate-400"><User size={20} /></div>}
+                                </div>
+                                <div>
+                                    <h3 className="text-sm font-bold text-slate-900">{card.fullName}</h3>
+                                    <p className="text-xs text-slate-600 font-medium">{card.designation}</p>
+                                    <div className="flex items-center gap-2 mt-1">
+                                       <span className="text-[10px] font-mono bg-slate-100 px-1.5 py-0.5 rounded text-slate-700 border border-slate-200">#{card.idCardNo}</span>
+                                    </div>
+                                </div>
+                            </div>
+                            <div className="flex flex-col gap-2 pl-3 border-l border-slate-200">
+                                <button onClick={() => handleEdit(card)} className="p-2 text-indigo-600 bg-indigo-50 rounded-lg border border-indigo-100"><Edit size={16} /></button>
+                                <button onClick={(e) => handleDelete(e, card._id!)} className="p-2 text-red-500 bg-red-50 rounded-lg border border-red-100"><Trash2 size={16} /></button>
+                            </div>
+                        </div>
+                        </React.Fragment>
+                      ))}
+                      </div>
                     )}
                  </div>
               </div>
             ) : (
               /* ================= EDITOR VIEW ================= */
-              <div className="h-full bg-white rounded-2xl border border-slate-200 shadow-xl shadow-slate-200/40 flex overflow-hidden animate-in zoom-in-95 duration-300">
-                 
-                 {/* Sidebar (Quick Switch) - Responsive Hide */}
-                 <div className="w-72 border-r border-slate-200 bg-slate-50/30 flex-col z-10 hidden lg:flex">
-                    <div className="p-5 bg-white border-b border-slate-100 flex items-center justify-between">
-                       <h3 className="text-[11px] font-bold uppercase tracking-wider text-slate-400">Recent Employees</h3>
-                       <div className="text-[10px] bg-slate-100 px-2 py-0.5 rounded-full text-slate-500 font-bold">{filteredCards.length}</div>
-                    </div>
-                    <div className="flex-1 overflow-y-auto p-3 space-y-1.5">
-                       {filteredCards.map(card => (
-                          <button 
-                            key={card._id}
-                            onClick={() => handleEdit(card)}
-                            className={`w-full text-left p-2.5 rounded-xl flex items-center gap-3 transition-all group ${selectedCardId === card._id ? 'bg-white border border-indigo-200 shadow-md shadow-indigo-100 relative z-10' : 'hover:bg-white hover:shadow-sm border border-transparent'}`}
-                          >
-                             <div className={`w-9 h-9 rounded-lg flex items-center justify-center text-xs font-bold transition-colors ${selectedCardId === card._id ? 'bg-indigo-600 text-white' : 'bg-slate-200 text-slate-500 group-hover:bg-slate-100'}`}>
-                                {card.fullName.charAt(0)}
-                             </div>
-                             <div className="min-w-0">
-                                <p className={`text-xs font-semibold truncate transition-colors ${selectedCardId === card._id ? 'text-indigo-900' : 'text-slate-700'}`}>{card.fullName}</p>
-                                <p className="text-[10px] text-slate-400 truncate font-medium">{card.designation}</p>
-                             </div>
-                             {selectedCardId === card._id && <div className="ml-auto w-1.5 h-1.5 rounded-full bg-indigo-500"></div>}
-                          </button>
-                       ))}
-                    </div>
-                 </div>
+              <div className="h-full bg-white rounded-[1.5rem] sm:rounded-[2.5rem] border border-slate-300 shadow-2xl shadow-slate-300/40 flex overflow-hidden animate-in zoom-in-95 duration-300 relative min-h-[70vh]">
+                  
+                  {/* Sidebar */}
+                  <div className="hidden xl:flex w-72 border-r border-slate-300 bg-slate-50/50 flex-col z-10">
+                      <div className="p-6 bg-white/50 backdrop-blur border-b border-slate-200 flex items-center justify-between">
+                         <h3 className="text-[11px] font-bold uppercase tracking-wider text-slate-500">Directory</h3>
+                         <div className="text-[10px] bg-indigo-50 px-2 py-0.5 rounded-md text-indigo-600 font-bold border border-indigo-100">{filteredCards.length}</div>
+                      </div>
+                      <div className="flex-1 overflow-y-auto p-4 space-y-2 custom-scrollbar">
+                         {filteredCards.map(card => (
+                            <button 
+                              key={card._id}
+                              onClick={() => handleEdit(card)}
+                              className={`w-full text-left p-3 rounded-2xl flex items-center gap-3 transition-all group border ${selectedCardId === card._id ? 'bg-white border-indigo-300 shadow-md shadow-indigo-100/50 relative z-10 ring-1 ring-indigo-500/20' : 'hover:bg-white hover:border-slate-300 border-transparent'}`}
+                            >
+                              <div className={`w-9 h-9 rounded-full flex items-center justify-center text-xs font-bold transition-colors flex-shrink-0 ${selectedCardId === card._id ? 'bg-indigo-600 text-white' : 'bg-slate-200 text-slate-600 group-hover:bg-slate-300'}`}>
+                                  {card.fullName.charAt(0)}
+                              </div>
+                              <div className="min-w-0">
+                                  <p className={`text-xs font-bold truncate transition-colors ${selectedCardId === card._id ? 'text-indigo-900' : 'text-slate-800'}`}>{card.fullName}</p>
+                                  <p className="text-[10px] text-slate-500 truncate font-medium">{card.designation}</p>
+                              </div>
+                            </button>
+                         ))}
+                      </div>
+                  </div>
 
-                 {/* Form Area */}
-                 <div className="flex-1 bg-white overflow-y-auto relative">
-                    <div className="max-w-3xl mx-auto p-8 lg:p-12 pb-32">
-                        <div className="mb-10">
-                           <h2 className="text-2xl font-bold text-slate-800">Employee Details</h2>
-                           <p className="text-sm text-slate-500 mt-1">Ensure the information matches the official records.</p>
-                        </div>
+                  {/* Form Area */}
+                  <div className="flex-1 bg-white overflow-y-auto relative scroll-smooth custom-scrollbar">
+                      <div className="max-w-3xl mx-auto p-6 md:p-10 lg:p-12 pb-32">
+                          <div className="mb-6 md:mb-8 flex flex-col md:flex-row md:items-end justify-between gap-4">
+                            <div>
+                              <h2 className="text-xl md:text-2xl font-bold text-slate-800 tracking-tight">Employee Details</h2>
+                              <p className="text-xs md:text-sm text-slate-500 mt-1 font-medium">Please verify all information before saving.</p>
+                            </div>
+                            
+                            <button 
+                              onClick={() => setShowPreviewModal(true)}
+                              className="2xl:hidden w-full md:w-auto flex items-center justify-center gap-2 text-xs font-bold text-indigo-600 bg-indigo-50 px-4 py-2.5 rounded-xl border border-indigo-100 hover:bg-indigo-100 transition-colors"
+                            >
+                                <Maximize2 size={16} /> Check Preview
+                            </button>
+                          </div>
 
-                        <div className="space-y-8">
-                           {/* Image Section */}
-                           <div className="bg-slate-50 rounded-2xl border-2 border-dashed border-slate-200 p-8 flex flex-col sm:flex-row items-center gap-8 group hover:border-indigo-300 hover:bg-indigo-50/30 transition-all">
-                              <div className="relative flex-shrink-0">
-                                 <div className="w-32 aspect-[3/4] bg-white rounded-xl shadow-lg ring-4 ring-white overflow-hidden relative cursor-grab active:cursor-grabbing transition-transform hover:scale-[1.02]" onMouseDown={onDragStart}>
+                          <div className="space-y-6 md:space-y-8">
+                            {/* Image Section */}
+                            <div className="bg-slate-50/80 rounded-[1.5rem] md:rounded-[2rem] border-2 border-dashed border-slate-300 p-6 md:p-8 flex flex-col md:flex-row items-center gap-6 md:gap-8 group hover:border-indigo-400 hover:bg-indigo-50/10 transition-all">
+                               <div className="relative flex-shrink-0">
+                                  <div className="w-28 h-[149px] md:w-32 md:h-[170px] bg-white rounded-2xl shadow-xl ring-4 ring-white border border-slate-200 overflow-hidden relative cursor-grab active:cursor-grabbing transition-transform hover:scale-[1.02]" onMouseDown={onDragStart}>
                                     {formData.userImage ? (
-                                       <>
-                                         <img 
-                                           src={formData.userImage} 
-                                           className="w-full h-full object-contain pointer-events-none clip-image bg-slate-100"
-                                           style={{ transform: `translate(${formData.imageXOffset}px, ${formData.imageYOffset}px)` }} 
-                                         />
-                                         <button 
-                                           onClick={(e) => { e.stopPropagation(); setFormData(prev => ({ ...prev, userImage: null })); }}
-                                           className="absolute top-1 right-1 bg-slate-900/60 backdrop-blur text-white p-1.5 rounded-full hover:bg-red-500 transition-all opacity-0 group-hover:opacity-100"
-                                         >
-                                            <XCircle size={14} />
-                                         </button>
-                                       </>
+                                        <>
+                                          <img 
+                                            src={formData.userImage} 
+                                            className="w-full h-full object-contain pointer-events-none clip-image bg-slate-100"
+                                            style={{ transform: `translate(${formData.imageXOffset}px, ${formData.imageYOffset}px)` }} 
+                                          />
+                                          <button 
+                                            onClick={(e) => { e.stopPropagation(); setFormData(prev => ({ ...prev, userImage: null })); }}
+                                            className="absolute top-2 right-2 bg-white/90 backdrop-blur text-slate-800 p-1.5 rounded-full hover:bg-red-500 hover:text-white transition-all shadow-sm opacity-100 md:opacity-0 group-hover:opacity-100"
+                                          >
+                                              <XCircle size={14} />
+                                          </button>
+                                        </>
                                     ) : (
-                                       <div className="w-full h-full flex flex-col items-center justify-center text-slate-300 bg-slate-50">
-                                          <User size={40} strokeWidth={1.5} />
-                                       </div>
+                                        <div className="w-full h-full flex flex-col items-center justify-center text-slate-300 bg-slate-50">
+                                           <User size={40} strokeWidth={1.5} />
+                                        </div>
                                     )}
-                                 </div>
-                                 {formData.userImage && <div className="absolute -bottom-7 left-0 w-full text-center text-[10px] font-bold text-indigo-500 uppercase tracking-wide animate-pulse">Adjust Photo</div>}
-                              </div>
+                                  </div>
+                                  {formData.userImage && <div className="absolute -bottom-6 left-0 w-full text-center text-[10px] font-bold text-indigo-500 uppercase tracking-wide animate-pulse">Drag to Adjust</div>}
+                               </div>
 
-                              <div className="flex-1 text-center sm:text-left">
-                                 <h4 className="text-sm font-bold text-slate-800 mb-1">Profile Photo</h4>
-                                 <p className="text-xs text-slate-500 mb-5 leading-relaxed max-w-xs mx-auto sm:mx-0">
-                                    Upload a high-quality professional headshot with a plain background. <br/> Supports PNG & JPG formats.
-                                 </p>
-                                 <div className="flex gap-3 justify-center sm:justify-start">
-                                    <button onClick={() => fileInputRef.current?.click()} className="px-5 py-2.5 bg-white border border-slate-200 rounded-xl text-xs font-bold text-slate-700 hover:border-indigo-300 hover:text-indigo-600 transition-all shadow-sm hover:shadow flex items-center gap-2">
-                                       <Upload size={16} /> Upload Photo
-                                    </button>
-                                    <input ref={fileInputRef} type="file" hidden accept="image/*" onChange={handleImageChange} />
-                                 </div>
-                              </div>
-                           </div>
+                               <div className="flex-1 text-center md:text-left w-full">
+                                  <h4 className="text-sm font-bold text-slate-800 mb-1">Profile Photo</h4>
+                                  <p className="text-xs text-slate-500 mb-4 leading-relaxed max-w-xs mx-auto md:mx-0 font-medium">
+                                    Upload a professional headshot. <br className="hidden md:block"/> Plain background recommended.
+                                  </p>
+                                  <div className="flex gap-3 justify-center md:justify-start">
+                                     <button onClick={() => fileInputRef.current?.click()} className="w-full md:w-auto px-5 py-2.5 bg-white border border-slate-300 rounded-xl text-xs font-bold text-slate-700 hover:border-indigo-400 hover:text-indigo-600 transition-all shadow-sm hover:shadow-md flex items-center justify-center gap-2 transform active:scale-95">
+                                             <Upload size={16} /> Choose File
+                                     </button>
+                                     <input ref={fileInputRef} type="file" hidden accept="image/*" onChange={handleImageChange} />
+                                  </div>
+                               </div>
+                            </div>
 
-                           {/* Inputs Grid */}
-                           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                              <div className="md:col-span-2">
-                                 <InputComponent label="Full Legal Name" value={formData.fullName} onChange={(e: any) => setFormData({...formData, fullName: e.target.value})} placeholder="e.g. Jonathan Davis" icon={User} />
-                              </div>
-                              <InputComponent label="Job Designation" value={formData.designation} onChange={(e: any) => setFormData({...formData, designation: e.target.value})} placeholder="e.g. Senior Engineer" icon={Briefcase} />
-                              <InputComponent label="ID Number" value={formData.idCardNo} onChange={(e: any) => setFormData({...formData, idCardNo: e.target.value})} placeholder="e.g. 8492" icon={CreditCard} />
-                              <SelectComponent label="Blood Group" value={formData.bloodGroup} options={["A-", "A+", "AB-", "AB+", "B-", "B+", "O-", "O+"]} onChange={(e: any) => setFormData({...formData, bloodGroup: e.target.value})} icon={Droplet} />
-                           </div>
-                        </div>
-                    </div>
-                 </div>
-
-                 {/* Preview Area - Responsive Hide */}
-                 <div className="w-[420px] bg-slate-50/50 border-l border-slate-200 p-8 flex-col hidden xl:flex items-center justify-center relative">
-                    {/* Background Decor */}
-                    <div className="absolute inset-0 overflow-hidden pointer-events-none">
-                       <div className="absolute w-96 h-96 bg-indigo-300/10 rounded-full blur-3xl -top-20 -right-20"></div>
-                       <div className="absolute w-80 h-80 bg-blue-300/10 rounded-full blur-3xl bottom-0 left-0"></div>
-                    </div>
-
-                    <div className="w-full flex items-center justify-between mb-8 z-10">
-                       <h3 className="text-[11px] font-bold text-slate-400 uppercase tracking-wider">Live Preview</h3>
-                       <span className="flex h-2 w-2 rounded-full bg-green-500 shadow-[0_0_8px_rgba(34,197,94,0.6)]"></span>
-                    </div>
-                    
-                    <div className="flex-1 flex items-center justify-center w-full z-10">
-                       {previewUrl ? (
-                          <div className="relative w-full aspect-[1/1.4] bg-white rounded-2xl shadow-2xl shadow-slate-300/50 ring-1 ring-slate-900/5 overflow-hidden transform transition-transform hover:scale-[1.02] duration-500 group">
-                             <iframe src={`${previewUrl}#toolbar=0&navpanes=0`} className="w-full h-full border-none" />
-                             <div className="absolute inset-0 pointer-events-none ring-1 ring-inset ring-black/5 rounded-2xl"></div>
+                            {/* Inputs Grid */}
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-x-6 gap-y-6 md:gap-y-8">
+                               <div className="md:col-span-2">
+                                  <InputComponent label="Full Legal Name" value={formData.fullName} onChange={(e: any) => setFormData({...formData, fullName: e.target.value})} placeholder="e.g. Jonathan Davis" icon={User} />
+                               </div>
+                               <InputComponent label="Job Designation" value={formData.designation} onChange={(e: any) => setFormData({...formData, designation: e.target.value})} placeholder="e.g. Senior Engineer" icon={Briefcase} />
+                               <InputComponent label="ID Number" value={formData.idCardNo} onChange={(e: any) => setFormData({...formData, idCardNo: e.target.value})} placeholder="e.g. 8492" icon={CreditCard} />
+                               <SelectComponent label="Blood Group" value={formData.bloodGroup} options={["A-", "A+", "AB-", "AB+", "B-", "B+", "O-", "O+"]} onChange={(e: any) => setFormData({...formData, bloodGroup: e.target.value})} icon={Droplet} />
+                            </div>
                           </div>
-                       ) : (
-                          <div className="w-full aspect-[1/1.4] bg-white rounded-2xl shadow-sm border border-slate-200 flex flex-col items-center justify-center text-slate-300 gap-4">
-                             <div className="animate-pulse bg-slate-100 w-24 h-24 rounded-full flex items-center justify-center">
-                                <CreditCard size={32} className="opacity-50" />
-                             </div>
-                             <p className="text-xs font-medium">Generating preview...</p>
-                          </div>
-                       )}
-                    </div>
-                    
-                    <div className="mt-8 w-full p-4 bg-white/80 backdrop-blur rounded-xl border border-slate-200 shadow-sm z-10">
-                       <div className="flex justify-between items-center text-[10px] text-slate-500 mb-2 uppercase font-bold tracking-wide">
-                          <span>Render Status</span>
-                          <span className="text-green-600">Ready to Print</span>
-                       </div>
-                       <div className="w-full bg-slate-100 h-1.5 rounded-full overflow-hidden">
-                          <div className="bg-gradient-to-r from-indigo-500 to-blue-500 w-full h-full rounded-full"></div>
-                       </div>
-                    </div>
-                 </div>
+                      </div>
+                  </div>
 
+                  {/* Persistent Preview */}
+                  <div className="hidden 2xl:flex w-[480px] bg-slate-50/50 border-l border-slate-300 p-10 flex-col items-center justify-center relative flex-shrink-0">
+                      <div className="absolute inset-0 overflow-hidden pointer-events-none">
+                         <div className="absolute w-[500px] h-[500px] bg-indigo-300/10 rounded-full blur-[100px] -top-20 -right-20"></div>
+                      </div>
+
+                      <div className="w-full flex items-center justify-between mb-8 z-10">
+                         <h3 className="text-[11px] font-bold text-slate-500 uppercase tracking-wider">Live Preview</h3>
+                         <span className="text-[10px] font-bold text-green-600 bg-green-50 px-2 py-0.5 rounded border border-green-100">Auto-Update</span>
+                      </div>
+                      
+                      <div className="flex-1 flex items-center justify-center w-full z-10">
+                         {previewUrl ? (
+                            <div className="relative w-full aspect-[1/1.4] bg-white rounded-2xl shadow-2xl shadow-slate-300/50 ring-1 ring-slate-900/5 overflow-hidden transform transition-transform hover:scale-[1.02] duration-500 group">
+                               <iframe src={`${previewUrl}#toolbar=0&navpanes=0`} className="w-full h-full border-none" />
+                            </div>
+                         ) : (
+                            <div className="w-full aspect-[1/1.4] bg-white rounded-2xl shadow-sm border border-slate-300 flex flex-col items-center justify-center text-slate-300 gap-4">
+                               <div className="animate-pulse bg-slate-50 w-24 h-24 rounded-full flex items-center justify-center border border-slate-200">
+                                  <Layout size={32} className="opacity-30" />
+                               </div>
+                               <p className="text-xs font-medium text-slate-400">Waiting for input...</p>
+                            </div>
+                         )}
+                      </div>
+                  </div>
               </div>
             )}
-
         </div>
       </div>
+
+      {/* --- Mobile/Tablet Preview Modal --- */}
+      {showPreviewModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm animate-in fade-in duration-200">
+            <div className="bg-white rounded-3xl shadow-2xl w-full max-w-lg max-h-[90vh] flex flex-col overflow-hidden animate-in zoom-in-95 duration-200">
+                <div className="flex justify-between items-center p-4 border-b border-slate-200">
+                    <h3 className="text-sm font-bold text-slate-800">Card Preview</h3>
+                    <button onClick={() => setShowPreviewModal(false)} className="p-2 hover:bg-slate-100 rounded-full transition-colors text-slate-500">
+                        <X size={20} />
+                    </button>
+                </div>
+                <div className="p-6 bg-slate-50 flex-1 overflow-auto flex items-center justify-center">
+                    {previewUrl ? (
+                        <div className="relative w-full aspect-[1/1.4] shadow-xl rounded-xl overflow-hidden ring-1 ring-black/5">
+                            <iframe src={`${previewUrl}#toolbar=0&navpanes=0`} className="w-full h-full border-none" />
+                        </div>
+                    ) : (
+                        <div className="text-center text-slate-400 py-10">
+                            <p>Fill in details to generate preview</p>
+                        </div>
+                    )}
+                </div>
+                <div className="p-4 border-t border-slate-200 flex gap-3">
+                    <button onClick={() => setShowPreviewModal(false)} className="flex-1 py-3 text-sm font-bold text-slate-600 hover:bg-slate-50 rounded-xl transition-colors">Close</button>
+                    <button onClick={handleDownload} className="flex-1 py-3 text-sm font-bold bg-indigo-600 text-white rounded-xl shadow-lg shadow-indigo-200 hover:bg-indigo-700 transition-colors">Download PDF</button>
+                </div>
+            </div>
+        </div>
+      )}
+
     </div>
   );
 }

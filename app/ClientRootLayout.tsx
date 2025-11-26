@@ -6,7 +6,7 @@ import { AuthProvider, useAuth } from "@/contexts/AuthContext";
 import { ThemeProvider, useTheme, CherryBlossomBackground } from "@/contexts/ThemeContext";
 import { ReactNode, useState, useEffect } from "react";
 import { motion } from "framer-motion";
-import { UsageProvider } from "@/contexts/UsageContext"; // ✅ SSI-only usage
+import { UsageProvider } from "@/contexts/UsageContext"; 
 
 // --- Animated Hamburger Icon ---
 type MotionLineProps = React.ComponentPropsWithoutRef<"line"> & { variants?: any; [key: string]: any };
@@ -69,11 +69,12 @@ function AppLayout({ children }: { children: ReactNode }) {
     };
   }, [isSidebarOpen]);
 
-  // ✅ Only change: add black background for /bgremover
+  // ✅ Updated Logic: Added specific background for /idcard to match the component
   const themeBg =
     pathname === "/bgremover"
       ? "bg-black text-gray-900"
-
+      : pathname === "/idcard"
+      ? "bg-slate-100 text-slate-900" // Matches your ID Card component background
       : theme === "light"
       ? "bg-white text-gray-900"
       : "relative overflow-hidden text-gray-900"; // Blossom
@@ -99,6 +100,8 @@ function AppLayout({ children }: { children: ReactNode }) {
                   ? "Templates"
                   : pathname.startsWith("/settings")
                   ? "Settings"
+                  : pathname === "/idcard"
+                  ? "ID Cards" 
                   : ""}
               </h1>
               <button
@@ -123,7 +126,7 @@ export default function ClientRootLayout({ children }: { children: ReactNode }) 
   return (
     <AuthProvider>
       <ThemeProvider>
-       
+        
         <UsageProvider>
           <AppLayout>{children}</AppLayout>
         </UsageProvider>

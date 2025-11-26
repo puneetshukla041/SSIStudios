@@ -21,32 +21,66 @@ import {
   RefreshCcw, 
   AlertCircle,
   FileText,
-  TrendingUp
+  TrendingUp,
+  BarChart3,
+  PieChart
 } from 'lucide-react';
 
+// --- COMPONENTS ---
+
+const CustomTooltip = ({ active, payload, label }: any) => {
+  if (active && payload && payload.length) {
+    return (
+      <div className="bg-white/95 backdrop-blur-sm p-3 border border-gray-100 shadow-[0_8px_30px_rgb(0,0,0,0.12)] rounded-xl min-w-[150px]">
+        <p className="text-xs font-medium text-gray-400 mb-1 uppercase tracking-wider">{label}</p>
+        <div className="flex items-center gap-2">
+            <span className="w-2 h-8 rounded-full bg-indigo-500" />
+            <div>
+              <p className="text-sm text-gray-500 font-medium">Count</p>
+              <p className="text-xl font-bold text-gray-900">{payload[0].value.toLocaleString()}</p>
+            </div>
+        </div>
+      </div>
+    );
+  }
+  return null;
+};
+
+const SkeletonCard = ({ className }: { className?: string }) => (
+  <div className={`bg-gray-50 rounded-2xl animate-pulse ${className}`}>
+    <div className="h-full w-full bg-gray-200/50 rounded-2xl" />
+  </div>
+);
+
+const DashboardSkeleton = () => (
+  <div className="max-w-7xl mx-auto px-4 sm:px-6 py-8 space-y-8 min-h-screen bg-white">
+    <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+      <SkeletonCard className="h-40" />
+      <SkeletonCard className="h-40" />
+      <SkeletonCard className="h-40" />
+    </div>
+    <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+      <SkeletonCard className="h-96 lg:col-span-2" />
+      <SkeletonCard className="h-96" />
+    </div>
+    <SkeletonCard className="h-96" />
+  </div>
+);
+
+// --- MAIN PAGE ---
+
 const AnalysisPage = () => {
-  // State for data, loading, and errors
-  // Fix: Explicitly type the state to allow null or the expected data type
   const [data, setData] = useState<any>(null); 
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [lastUpdated, setLastUpdated] = useState<Date | null>(null);
 
-  // --- CONFIGURATION ---
-  // SET THIS TO FALSE TO USE YOUR REAL API
-  const DEMO_MODE = false; 
-
   const fetchData = async () => {
     setLoading(true);
     setError(null);
     try {
-      // Real API Call
       const response = await fetch('/api/analysis');
-      
-      if (!response.ok) {
-        throw new Error(`HTTP error! Status: ${response.status}`);
-      }
-
+      if (!response.ok) throw new Error(`HTTP error! Status: ${response.status}`);
       const result = await response.json();
 
       if (result.success) {
@@ -59,7 +93,8 @@ const AnalysisPage = () => {
       setError(err.message || 'An error occurred');
       console.error("Fetch error:", err);
     } finally {
-      setLoading(false);
+      // Small artificial delay to prevent UI flashing if data loads too fast
+      setTimeout(() => setLoading(false), 500);
     }
   };
 
@@ -67,7 +102,6 @@ const AnalysisPage = () => {
     fetchData();
   }, []);
 
-  // --- DERIVED METRICS ---
   const kpiData = useMemo(() => {
     if (!data) return null;
 
@@ -75,73 +109,66 @@ const AnalysisPage = () => {
       ? data.byHospital[0] 
       : { hospital: 'N/A', count: 0 };
     
-    // Find peak month
     const peakMonth = data.byTime && data.byTime.length > 0
       ? data.byTime.reduce((max: any, current: any) => (current.count > max.count) ? current : max, { count: 0, label: 'N/A' })
       : { count: 0, label: 'N/A' };
 
-    return {
-      topHospital,
-      peakMonth
-    };
+    return { topHospital, peakMonth };
   }, [data]);
 
-  // --- RENDER HELPERS ---
-  const COLORS = ['#4f46e5', '#0ea5e9', '#8b5cf6', '#10b981', '#f59e0b', '#ef4444'];
+  const COLORS = ['#6366f1', '#8b5cf6', '#ec4899', '#f43f5e', '#f59e0b', '#10b981', '#06b6d4', '#3b82f6'];
 
-  if (loading) {
-    return (
-      <div className="min-h-screen bg-white flex flex-col items-center justify-center space-y-4">
-        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-indigo-600"></div>
-        <p className="text-gray-500 font-medium">Analyzing Certificate Data...</p>
-      </div>
-    );
-  }
+  if (loading) return <DashboardSkeleton />;
 
   if (error) {
     return (
       <div className="min-h-screen bg-white flex flex-col items-center justify-center p-4">
-        <div className="bg-red-50 p-6 rounded-lg max-w-md w-full text-center">
-          <AlertCircle className="w-12 h-12 text-red-500 mx-auto mb-4" />
-          <h2 className="text-xl font-bold text-gray-800 mb-2">Analysis Failed</h2>
+        <div className="bg-red-50 p-8 rounded-2xl max-w-md w-full text-center border border-red-100 shadow-lg">
+          <div className="w-16 h-16 bg-red-100 rounded-full flex items-center justify-center mx-auto mb-4">
+            <AlertCircle className="w-8 h-8 text-red-500" />
+          </div>
+          <h2 className="text-xl font-bold text-gray-900 mb-2">Analysis Unavailable</h2>
           <p className="text-gray-600 mb-6">{error}</p>
           <button 
             onClick={fetchData}
-            className="bg-indigo-600 text-white px-6 py-2 rounded-lg hover:bg-indigo-700 transition-colors"
+            className="bg-red-600 text-white px-6 py-2.5 rounded-xl font-medium hover:bg-red-700 transition-all shadow-md hover:shadow-lg active:scale-95"
           >
-            Try Again
+            Retry Connection
           </button>
         </div>
       </div>
     );
   }
 
-  // If data is null after loading (shouldn't happen with success check, but for safety)
   if (!data) return null;
 
   return (
-    <div className="min-h-screen bg-white text-gray-800 font-sans selection:bg-indigo-100">
+    <div className="min-h-screen bg-gray-50/50 text-gray-800 font-sans selection:bg-indigo-100 pb-12">
       {/* Header */}
-      <header className="border-b border-gray-100 sticky top-0 bg-white/80 backdrop-blur-md z-10">
+      <header className="bg-white border-b border-gray-200 sticky top-0 z-20 shadow-sm backdrop-blur-md bg-white/80">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 py-4 flex flex-col sm:flex-row justify-between items-center gap-4">
           <div className="flex items-center space-x-3">
-            <div className="p-2 bg-indigo-50 rounded-lg">
-              <Activity className="w-6 h-6 text-indigo-600" />
+            <div className="p-2.5 bg-gradient-to-br from-indigo-500 to-purple-600 rounded-xl shadow-lg shadow-indigo-200">
+              <Activity className="w-6 h-6 text-white" />
             </div>
             <div>
-              <h1 className="text-xl font-bold text-gray-900">Certificate Analytics</h1>
-              <p className="text-xs text-gray-500">
-                Live MongoDB Analysis • <span className="text-green-600 font-medium">Connected</span>
+              <h1 className="text-xl font-bold text-gray-900 tracking-tight">Analytics Dashboard</h1>
+              <p className="text-xs font-medium text-gray-500 flex items-center mt-0.5">
+                <span className="w-2 h-2 rounded-full bg-green-500 mr-2 animate-pulse"></span>
+                System Operational
               </p>
             </div>
           </div>
-          <div className="flex items-center space-x-4">
-            <span className="text-xs text-gray-400 hidden sm:inline">
-              Last updated: {lastUpdated?.toLocaleTimeString()}
-            </span>
+          <div className="flex items-center space-x-3">
+            <div className="hidden sm:flex flex-col items-end mr-2">
+              <span className="text-[10px] uppercase font-bold text-gray-400 tracking-wider">Last Sync</span>
+              <span className="text-xs font-medium text-gray-700 font-mono">
+                {lastUpdated?.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+              </span>
+            </div>
             <button 
               onClick={fetchData}
-              className="p-2 text-gray-500 hover:text-indigo-600 hover:bg-indigo-50 rounded-full transition-all"
+              className="p-2.5 text-gray-500 bg-white border border-gray-200 hover:border-indigo-300 hover:text-indigo-600 rounded-xl transition-all shadow-sm hover:shadow active:scale-95"
               title="Refresh Data"
             >
               <RefreshCcw className="w-5 h-5" />
@@ -150,178 +177,222 @@ const AnalysisPage = () => {
         </div>
       </header>
 
-      <main className="max-w-7xl mx-auto px-4 sm:px-6 py-8 space-y-8">
+      <main className="max-w-7xl mx-auto px-4 sm:px-6 py-8 space-y-6">
         
         {/* KPI Grid */}
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
           {/* Total Card */}
-          <div className="bg-white rounded-2xl p-6 border border-gray-100 shadow-sm hover:shadow-md transition-shadow">
-            <div className="flex justify-between items-start mb-4">
-              <div className="p-2 bg-blue-50 rounded-lg">
-                <FileText className="w-6 h-6 text-blue-600" />
+          <div className="group bg-white rounded-2xl p-6 border border-gray-100 shadow-[0_2px_10px_-3px_rgba(6,81,237,0.1)] hover:shadow-xl transition-all duration-300 relative overflow-hidden">
+            <div className="absolute top-0 right-0 w-32 h-32 bg-blue-50 rounded-full blur-3xl -mr-16 -mt-16 transition-opacity opacity-50 group-hover:opacity-100"></div>
+            <div className="relative">
+              <div className="flex justify-between items-start mb-6">
+                <div className="p-3 bg-blue-50/80 rounded-xl border border-blue-100">
+                  <FileText className="w-6 h-6 text-blue-600" />
+                </div>
+                <div className="px-2.5 py-1 bg-green-50 rounded-lg border border-green-100 flex items-center">
+                  <TrendingUp className="w-3 h-3 text-green-600 mr-1.5" />
+                  <span className="text-xs font-bold text-green-700">Total</span>
+                </div>
               </div>
-              <span className="text-xs font-semibold text-green-600 bg-green-50 px-2 py-1 rounded-full flex items-center">
-                <TrendingUp className="w-3 h-3 mr-1" /> Live
-              </span>
+              <p className="text-gray-500 text-sm font-medium tracking-wide">Issued Certificates</p>
+              <h3 className="text-3xl font-bold text-gray-900 mt-1 tracking-tight">
+                {data.totalCertificates?.toLocaleString() || 0}
+              </h3>
             </div>
-            <p className="text-gray-500 text-sm font-medium">Total Certificates</p>
-            <h3 className="text-3xl font-bold text-gray-900 mt-1">
-              {data.totalCertificates?.toLocaleString() || 0}
-            </h3>
           </div>
 
           {/* Top Hospital Card */}
-          <div className="bg-white rounded-2xl p-6 border border-gray-100 shadow-sm hover:shadow-md transition-shadow">
-            <div className="flex justify-between items-start mb-4">
-              <div className="p-2 bg-purple-50 rounded-lg">
-                <Building2 className="w-6 h-6 text-purple-600" />
+          <div className="group bg-white rounded-2xl p-6 border border-gray-100 shadow-[0_2px_10px_-3px_rgba(6,81,237,0.1)] hover:shadow-xl transition-all duration-300 relative overflow-hidden">
+             <div className="absolute top-0 right-0 w-32 h-32 bg-purple-50 rounded-full blur-3xl -mr-16 -mt-16 transition-opacity opacity-50 group-hover:opacity-100"></div>
+             <div className="relative">
+              <div className="flex justify-between items-start mb-6">
+                <div className="p-3 bg-purple-50/80 rounded-xl border border-purple-100">
+                  <Building2 className="w-6 h-6 text-purple-600" />
+                </div>
+              </div>
+              <p className="text-gray-500 text-sm font-medium tracking-wide">Top Issuer</p>
+              <h3 className="text-xl font-bold text-gray-900 mt-1 truncate pr-2" title={kpiData?.topHospital.hospital}>
+                {kpiData?.topHospital.hospital}
+              </h3>
+              <div className="flex items-center mt-2">
+                <div className="h-1.5 w-full bg-gray-100 rounded-full overflow-hidden max-w-[100px]">
+                  <div className="h-full bg-purple-500 rounded-full w-3/4"></div>
+                </div>
+                <p className="text-xs text-gray-400 ml-2 font-medium">
+                  {kpiData?.topHospital.count.toLocaleString()} issued
+                </p>
               </div>
             </div>
-            <p className="text-gray-500 text-sm font-medium">Leading Hospital</p>
-            <h3 className="text-xl font-bold text-gray-900 mt-1 truncate" title={kpiData?.topHospital.hospital}>
-              {kpiData?.topHospital.hospital}
-            </h3>
-            <p className="text-xs text-gray-400 mt-1">
-              {kpiData?.topHospital.count.toLocaleString()} certificates issued
-            </p>
           </div>
 
           {/* Peak Time Card */}
-          <div className="bg-white rounded-2xl p-6 border border-gray-100 shadow-sm hover:shadow-md transition-shadow">
-            <div className="flex justify-between items-start mb-4">
-              <div className="p-2 bg-amber-50 rounded-lg">
-                <Calendar className="w-6 h-6 text-amber-600" />
+          <div className="group bg-white rounded-2xl p-6 border border-gray-100 shadow-[0_2px_10px_-3px_rgba(6,81,237,0.1)] hover:shadow-xl transition-all duration-300 relative overflow-hidden">
+            <div className="absolute top-0 right-0 w-32 h-32 bg-amber-50 rounded-full blur-3xl -mr-16 -mt-16 transition-opacity opacity-50 group-hover:opacity-100"></div>
+            <div className="relative">
+              <div className="flex justify-between items-start mb-6">
+                <div className="p-3 bg-amber-50/80 rounded-xl border border-amber-100">
+                  <Calendar className="w-6 h-6 text-amber-600" />
+                </div>
               </div>
+              <p className="text-gray-500 text-sm font-medium tracking-wide">Peak Month</p>
+              <h3 className="text-3xl font-bold text-gray-900 mt-1 tracking-tight">
+                {kpiData?.peakMonth.label}
+              </h3>
+               <p className="text-xs text-gray-400 mt-2 font-medium">
+                  {kpiData?.peakMonth.count.toLocaleString()} issued in 30 days
+                </p>
             </div>
-            <p className="text-gray-500 text-sm font-medium">Peak Activity</p>
-            <h3 className="text-3xl font-bold text-gray-900 mt-1">
-              {kpiData?.peakMonth.label}
-            </h3>
-            <p className="text-xs text-gray-400 mt-1">
-              {kpiData?.peakMonth.count.toLocaleString()} issued in one month
-            </p>
           </div>
         </div>
 
-        {/* Charts Section 1: Timeline & Hospitals */}
+        {/* Charts Section 1 */}
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
           
-          {/* Timeline Chart (Takes up 2 columns) */}
-          <div className="lg:col-span-2 bg-white rounded-2xl border border-gray-100 shadow-sm p-6">
-            <div className="mb-6">
-              <h2 className="text-lg font-bold text-gray-900">Issuance Timeline</h2>
-              <p className="text-sm text-gray-500">Volume of certificates processed over time</p>
+          {/* Timeline Chart */}
+          <div className="lg:col-span-2 bg-white rounded-2xl border border-gray-100 shadow-sm p-6 relative overflow-hidden">
+            <div className="flex items-center justify-between mb-8">
+              <div>
+                <h2 className="text-lg font-bold text-gray-900 flex items-center gap-2">
+                  <BarChart3 className="w-5 h-5 text-indigo-500" />
+                  Issuance Trends
+                </h2>
+                <p className="text-sm text-gray-500 mt-1">Monthly certificate volume over time</p>
+              </div>
             </div>
-            <div className="h-80 w-full">
-              <ResponsiveContainer width="100%" height="100%">
-                <AreaChart data={data.byTime || []} margin={{ top: 10, right: 30, left: 0, bottom: 0 }}>
-                  <defs>
-                    <linearGradient id="colorCount" x1="0" y1="0" x2="0" y2="1">
-                      <stop offset="5%" stopColor="#4f46e5" stopOpacity={0.2}/>
-                      <stop offset="95%" stopColor="#4f46e5" stopOpacity={0}/>
-                    </linearGradient>
-                  </defs>
-                  <XAxis 
-                    dataKey="label" 
-                    axisLine={false} 
-                    tickLine={false} 
-                    tick={{ fill: '#9ca3af', fontSize: 12 }}
-                    dy={10}
-                  />
-                  <YAxis 
-                    axisLine={false} 
-                    tickLine={false} 
-                    tick={{ fill: '#9ca3af', fontSize: 12 }}
-                  />
-                  <CartesianGrid vertical={false} stroke="#f3f4f6" />
-                  <Tooltip 
-                    contentStyle={{ borderRadius: '8px', border: 'none', boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1)' }}
-                    itemStyle={{ color: '#4f46e5', fontWeight: 600 }}
-                  />
-                  <Area 
-                    type="monotone" 
-                    dataKey="count" 
-                    stroke="#4f46e5" 
-                    strokeWidth={3}
-                    fillOpacity={1} 
-                    fill="url(#colorCount)" 
-                  />
-                </AreaChart>
-              </ResponsiveContainer>
+            
+            <div className="h-80 w-full relative z-10">
+              {data.byTime && data.byTime.length > 0 ? (
+                <ResponsiveContainer width="100%" height="100%">
+                  <AreaChart data={data.byTime} margin={{ top: 10, right: 10, left: 0, bottom: 0 }}>
+                    <defs>
+                      <linearGradient id="colorCount" x1="0" y1="0" x2="0" y2="1">
+                        <stop offset="5%" stopColor="#6366f1" stopOpacity={0.3}/>
+                        <stop offset="95%" stopColor="#6366f1" stopOpacity={0}/>
+                      </linearGradient>
+                    </defs>
+                    <XAxis 
+                      dataKey="label" 
+                      axisLine={false} 
+                      tickLine={false} 
+                      tick={{ fill: '#94a3b8', fontSize: 12, fontWeight: 500 }}
+                      dy={10}
+                      padding={{ left: 10, right: 10 }}
+                    />
+                    <YAxis 
+                      axisLine={false} 
+                      tickLine={false} 
+                      tick={{ fill: '#94a3b8', fontSize: 12, fontWeight: 500 }}
+                      dx={-10}
+                    />
+                    <CartesianGrid vertical={false} stroke="#f1f5f9" strokeDasharray="4 4" />
+                    <Tooltip content={<CustomTooltip />} cursor={{ stroke: '#6366f1', strokeWidth: 1, strokeDasharray: '5 5' }} />
+                    <Area 
+                      type="monotone" 
+                      dataKey="count" 
+                      stroke="#6366f1" 
+                      strokeWidth={3}
+                      fillOpacity={1} 
+                      fill="url(#colorCount)" 
+                      animationDuration={1500}
+                    />
+                  </AreaChart>
+                </ResponsiveContainer>
+              ) : (
+                <div className="h-full flex flex-col items-center justify-center text-gray-400">
+                  <BarChart3 className="w-12 h-12 mb-2 opacity-20" />
+                  <p>No timeline data available</p>
+                </div>
+              )}
             </div>
           </div>
 
-          {/* Name Distribution (Initial) */}
-          <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-6">
-             <div className="mb-6">
-              <h2 className="text-lg font-bold text-gray-900">Name Demographics</h2>
-              <p className="text-sm text-gray-500">Distribution by first letter of name</p>
+          {/* Demographics Chart */}
+          <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-6 relative">
+             <div className="mb-8">
+              <h2 className="text-lg font-bold text-gray-900 flex items-center gap-2">
+                <PieChart className="w-5 h-5 text-pink-500" />
+                Demographics
+              </h2>
+              <p className="text-sm text-gray-500 mt-1">Distribution by name initial</p>
             </div>
-             <div className="h-80 w-full">
+             <div className="h-80 w-full relative z-10">
+               {data.byInitial && data.byInitial.length > 0 ? (
+                <ResponsiveContainer width="100%" height="100%">
+                  <BarChart data={data.byInitial} layout="vertical" margin={{ top: 0, right: 20, left: 0, bottom: 0 }}>
+                    <XAxis type="number" hide />
+                    <YAxis 
+                      dataKey="initial" 
+                      type="category" 
+                      axisLine={false} 
+                      tickLine={false}
+                      tick={{ fill: '#64748b', fontWeight: 700, fontSize: 14 }}
+                      width={30}
+                    />
+                    <Tooltip cursor={{ fill: '#f8fafc' }} content={<CustomTooltip />} />
+                    <Bar dataKey="count" barSize={16} radius={[0, 4, 4, 0]} animationDuration={1500}>
+                      {data.byInitial?.map((entry: any, index: number) => (
+                        <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
+                      ))}
+                    </Bar>
+                  </BarChart>
+                </ResponsiveContainer>
+               ) : (
+                <div className="h-full flex flex-col items-center justify-center text-gray-400">
+                   <p>No demographic data</p>
+                </div>
+               )}
+            </div>
+          </div>
+        </div>
+
+        {/* Top Hospitals Chart */}
+        <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-6 relative">
+          <div className="mb-8 flex flex-col sm:flex-row justify-between sm:items-end gap-2">
+            <div>
+              <h2 className="text-lg font-bold text-gray-900 flex items-center gap-2">
+                <Building2 className="w-5 h-5 text-blue-500" />
+                Hospital Leaderboard
+              </h2>
+              <p className="text-sm text-gray-500 mt-1">Top 10 institutions by volume</p>
+            </div>
+            <div className="hidden sm:flex items-center text-xs font-medium text-gray-400 bg-gray-50 px-3 py-1 rounded-full">
+               <Users className="w-3 h-3 mr-1.5" />
+               Live Data
+            </div>
+          </div>
+          <div className="h-80 w-full relative z-10">
+            {data.byHospital && data.byHospital.length > 0 ? (
               <ResponsiveContainer width="100%" height="100%">
-                <BarChart data={data.byInitial || []} layout="vertical" margin={{ top: 0, right: 30, left: 0, bottom: 0 }}>
-                  <XAxis type="number" hide />
-                  <YAxis 
-                    dataKey="initial" 
-                    type="category" 
+                <BarChart data={data.byHospital} margin={{ top: 10, right: 10, left: 10, bottom: 0 }}>
+                  <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f1f5f9" />
+                  <XAxis 
+                    dataKey="hospital" 
                     axisLine={false} 
                     tickLine={false}
-                    tick={{ fill: '#6b7280', fontWeight: 'bold' }}
-                    width={20}
+                    tick={{ fill: '#64748b', fontSize: 11, fontWeight: 500 }}
+                    interval={0}
+                    tickFormatter={(value) => value.length > 15 ? value.substring(0, 15) + '...' : value}
+                    dy={12}
                   />
-                  <Tooltip 
-                     cursor={{fill: 'transparent'}}
-                     contentStyle={{ borderRadius: '8px', border: 'none', boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1)' }}
+                  <YAxis 
+                    axisLine={false} 
+                    tickLine={false}
+                    tick={{ fill: '#94a3b8', fontSize: 12 }}
+                    dx={-10}
                   />
-                  <Bar dataKey="count" barSize={12} radius={[0, 4, 4, 0]}>
-                    {data.byInitial?.map((entry: any, index: number) => (
-                      <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
+                  <Tooltip cursor={{ fill: '#f8fafc' }} content={<CustomTooltip />} />
+                  <Bar dataKey="count" fill="#3b82f6" radius={[6, 6, 0, 0]} barSize={40} animationDuration={1500}>
+                    {data.byHospital.map((entry: any, index: number) => (
+                      <Cell key={`cell-${index}`} fill={index === 0 ? '#4f46e5' : '#3b82f6'} fillOpacity={index === 0 ? 1 : 0.7} />
                     ))}
                   </Bar>
                 </BarChart>
               </ResponsiveContainer>
-            </div>
-          </div>
-        </div>
-
-        {/* Charts Section 2: Top Hospitals Detail */}
-        <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-6">
-          <div className="mb-6 flex flex-col sm:flex-row justify-between sm:items-end gap-2">
-            <div>
-              <h2 className="text-lg font-bold text-gray-900">Top 10 Hospitals</h2>
-              <p className="text-sm text-gray-500">Institutions with the highest certificate volume</p>
-            </div>
-            <div className="flex items-center text-xs text-gray-400">
-               <Users className="w-4 h-4 mr-1" />
-               Sorted by total issued
-            </div>
-          </div>
-          <div className="h-96 w-full">
-            <ResponsiveContainer width="100%" height="100%">
-              <BarChart data={data.byHospital || []} margin={{ top: 20, right: 30, left: 20, bottom: 5 }}>
-                <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f3f4f6" />
-                <XAxis 
-                  dataKey="hospital" 
-                  axisLine={false} 
-                  tickLine={false}
-                  tick={{ fill: '#6b7280', fontSize: 11 }}
-                  interval={0}
-                  // Truncate long names on mobile
-                  tickFormatter={(value) => value.length > 15 ? value.substring(0, 15) + '...' : value}
-                  dy={10}
-                />
-                <YAxis 
-                  axisLine={false} 
-                  tickLine={false}
-                  tick={{ fill: '#9ca3af', fontSize: 12 }}
-                />
-                <Tooltip 
-                  cursor={{ fill: '#f9fafb' }}
-                  contentStyle={{ borderRadius: '8px', border: 'none', boxShadow: '0 10px 15px -3px rgb(0 0 0 / 0.1)' }}
-                />
-                <Bar dataKey="count" fill="#3b82f6" radius={[4, 4, 0, 0]} barSize={50} />
-              </BarChart>
-            </ResponsiveContainer>
+            ) : (
+               <div className="h-full flex flex-col items-center justify-center text-gray-400">
+                  <p>No hospital data available</p>
+               </div>
+            )}
           </div>
         </div>
 
