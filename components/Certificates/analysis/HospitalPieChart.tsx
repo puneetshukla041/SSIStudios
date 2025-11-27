@@ -2,42 +2,36 @@ import React, { useMemo } from 'react';
 import { PieChart, Pie, Cell, Tooltip, ResponsiveContainer } from 'recharts';
 import { PieChart as PieChartIcon, Activity } from 'lucide-react';
 import { ICertificateClient } from '../utils/constants';
-import clsx from 'clsx';
 
 // --- Types ---
 interface HospitalData {
     name: string;
     value: number;
     color: string;
-    // 💡 FIX: Added index signature to satisfy Recharts type requirements
     [key: string]: any;
 }
 
 interface HospitalPieChartProps {
     uniqueHospitals: string[];
-    totalRecords: number;
+    totalRecords: number; // This contains the true total from your DB
     certificates: ICertificateClient[];
 }
 
 // --- Constants ---
-// A professional, balanced palette for data visualization
 const CHART_COLORS = [
-    '#6366f1', // Indigo 500
-    '#10b981', // Emerald 500
-    '#f59e0b', // Amber 500
-    '#f43f5e', // Rose 500
-    '#06b6d4', // Cyan 500
-    '#8b5cf6', // Violet 500
-    '#ec4899', // Pink 500
-    '#84cc16', // Lime 500
+    '#6366f1', '#10b981', '#f59e0b', '#f43f5e', 
+    '#06b6d4', '#8b5cf6', '#ec4899', '#84cc16',
 ];
 
 // --- Custom Components ---
 
-const CustomTooltip = ({ active, payload, chartTotal }: any) => {
-    if (active && payload && payload.length && chartTotal > 0) {
+const CustomTooltip = ({ active, payload, totalRecords }: any) => {
+    if (active && payload && payload.length) {
         const data = payload[0].payload;
-        const percentage = ((payload[0].value / chartTotal) * 100).toFixed(1);
+        // Calculate percentage based on the TRUE total records, not just the visible page
+        const percentage = totalRecords > 0 
+            ? ((data.value / totalRecords) * 100).toFixed(1) 
+            : 0;
 
         return (
             <div className="bg-slate-900/95 backdrop-blur-md border border-slate-700/50 p-3 rounded-xl shadow-2xl text-xs">
@@ -67,11 +61,12 @@ const EmptyState = () => (
     </div>
 );
 
-const HospitalPieChart: React.FC<HospitalPieChartProps> = ({ uniqueHospitals, certificates }) => {
+// ✅ Added totalRecords to destructuring
+const HospitalPieChart: React.FC<HospitalPieChartProps> = ({ uniqueHospitals, certificates, totalRecords }) => {
 
     // 1. Calculate Data
-    const { pieData, chartTotal } = useMemo(() => {
-        // Count certificates per hospital
+    const { pieData, visibleTotal } = useMemo(() => {
+        // Count certificates per hospital (from current view)
         const counts: { [key: string]: number } = {};
         certificates.forEach(cert => {
             counts[cert.hospital] = (counts[cert.hospital] || 0) + 1;
@@ -82,16 +77,19 @@ const HospitalPieChart: React.FC<HospitalPieChartProps> = ({ uniqueHospitals, ce
             .map((hospital, index) => ({
                 name: hospital,
                 value: counts[hospital] || 0,
-                // Assign color cyclically based on index
                 color: CHART_COLORS[index % CHART_COLORS.length],
             }))
             .filter(data => data.value > 0)
-            .sort((a, b) => b.value - a.value); // Sort descending for better visual flow
+            .sort((a, b) => b.value - a.value);
 
+        // This is the sum of just the visible slice (e.g., the 10 items on page)
         const total = data.reduce((sum, item) => sum + item.value, 0);
 
-        return { pieData: data, chartTotal: total };
+        return { pieData: data, visibleTotal: total };
     }, [uniqueHospitals, certificates]);
+
+    // ✅ If totalRecords is passed as 0 (e.g. while loading), fallback to visible total
+    const displayTotal = totalRecords || visibleTotal;
 
     return (
         <div className="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden flex flex-col h-full animate-in fade-in duration-700">
@@ -139,7 +137,8 @@ const HospitalPieChart: React.FC<HospitalPieChartProps> = ({ uniqueHospitals, ce
                                         ))}
                                     </Pie>
                                     <Tooltip 
-                                        content={<CustomTooltip chartTotal={chartTotal} />} 
+                                        // ✅ Use displayTotal for accurate percentage calculation
+                                        content={<CustomTooltip totalRecords={displayTotal} />} 
                                         cursor={{ fill: 'transparent' }}
                                     />
                                 </PieChart>
@@ -148,7 +147,8 @@ const HospitalPieChart: React.FC<HospitalPieChartProps> = ({ uniqueHospitals, ce
                             {/* Central Label for Donut */}
                             <div className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none">
                                 <span className="text-3xl font-bold text-slate-800 tracking-tight">
-                                    {chartTotal}
+                                    {/* ✅ SHOWING TOTAL RECORDS (DB COUNT), NOT PAGE COUNT */}
+                                    {displayTotal}
                                 </span>
                                 <span className="text-[10px] uppercase font-bold text-slate-400 tracking-wider">
                                     Total
@@ -158,8 +158,9 @@ const HospitalPieChart: React.FC<HospitalPieChartProps> = ({ uniqueHospitals, ce
 
                         {/* LEGEND / STATS SECTION */}
                         <div className="w-full md:w-1/2 flex flex-col gap-4 max-h-72 overflow-y-auto custom-scrollbar pr-2">
-                            {pieData.map((item, index) => {
-                                const percent = ((item.value / chartTotal) * 100).toFixed(1);
+                            {pieData.map((item) => {
+                                // Calculate percentage based on displayTotal (DB Count)
+                                const percent = ((item.value / displayTotal) * 100).toFixed(1);
                                 return (
                                     <div key={item.name} className="group flex flex-col gap-1.5">
                                         <div className="flex items-center justify-between text-sm">

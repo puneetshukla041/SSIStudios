@@ -1,8 +1,8 @@
 'use client';
 
 import React, { useState, useCallback, useEffect } from 'react';
-import Image from 'next/image'; // Added for the logo
-import { FiRefreshCw, FiSearch, FiHelpCircle } from 'react-icons/fi';
+import Image from 'next/image'; 
+import { FiRefreshCw, FiSearch, FiHelpCircle, FiGrid, FiUserCheck, FiUsers } from 'react-icons/fi';
 import { AnimatePresence, motion } from 'framer-motion';
 
 // --- IMPORTS ---
@@ -25,6 +25,10 @@ const CertificateDatabasePage: React.FC = () => {
   // State for unique hospitals
   const [uniqueHospitals, setUniqueHospitals] = useState<string[]>([]);
 
+  // State for Doctors & Staff counts
+  const [doctorsCount, setDoctorsCount] = useState(0);
+  const [staffCount, setStaffCount] = useState(0);
+
   // --- State for Search and Filter ---
   const [inputQuery, setInputQuery] = useState('');
   const [searchQuery, setSearchQuery] = useState('');
@@ -34,8 +38,11 @@ const CertificateDatabasePage: React.FC = () => {
   // State for the help card visibility
   const [isHelpCardVisible, setIsHelpCardVisible] = useState(false); 
 
-  // --- State for Animated Count ---
+  // --- State for Animated Counts ---
   const [animatedTotalRecords, setAnimatedTotalRecords] = useState(0);
+  const [animatedHospitalCount, setAnimatedHospitalCount] = useState(0);
+  const [animatedDoctors, setAnimatedDoctors] = useState(0);
+  const [animatedStaff, setAnimatedStaff] = useState(0);
 
   // --- Debounce Logic ---
   useEffect(() => {
@@ -45,31 +52,58 @@ const CertificateDatabasePage: React.FC = () => {
     return () => clearTimeout(delayDebounceFn);
   }, [inputQuery]);
 
-  // --- Animation Effect for Total Records ---
+  // --- LOGIC: Calculate Doctors vs Staff ---
   useEffect(() => {
-    if (totalRecords === animatedTotalRecords) return;
+    if (!certificateData) return;
 
-    let start = animatedTotalRecords;
-    const end = totalRecords;
-    const duration = 2000;
-    const steps = 50;
-    const stepTime = duration / steps;
-    const increment = (end - start) / steps; 
+    // Filter logic: Check if name starts with "Dr" (case insensitive)
+    const docCount = certificateData.filter(cert => 
+      cert.name.trim().toLowerCase().startsWith('dr') || 
+      cert.name.trim().toLowerCase().startsWith('dr.')
+    ).length;
 
-    let currentStep = 0;
-    const timer = setInterval(() => {
-      currentStep++;
-      if (currentStep <= steps) {
-        start += increment;
-        setAnimatedTotalRecords(Math.round(start));
-      } else {
-        setAnimatedTotalRecords(end);
-        clearInterval(timer);
-      }
-    }, stepTime);
+    const stfCount = certificateData.length - docCount;
 
-    return () => clearInterval(timer);
-  }, [totalRecords]); 
+    setDoctorsCount(docCount);
+    setStaffCount(stfCount);
+
+  }, [certificateData]);
+
+
+  // --- Helper: Number Animation Hook ---
+  const useCounterAnimation = (targetValue: number, setter: React.Dispatch<React.SetStateAction<number>>, duration = 2000) => {
+    useEffect(() => {
+      let start = 0; 
+      // We start from 0 for simplicity, or could track previous value. 
+      // For this implementation, refreshing triggers re-animation which looks nice.
+      const end = targetValue;
+      if (start === end) return;
+
+      const steps = 50;
+      const stepTime = duration / steps;
+      const increment = (end - start) / steps; 
+
+      let currentStep = 0;
+      const timer = setInterval(() => {
+        currentStep++;
+        if (currentStep <= steps) {
+          start += increment;
+          setter(Math.round(start));
+        } else {
+          setter(end);
+          clearInterval(timer);
+        }
+      }, stepTime);
+      return () => clearInterval(timer);
+    }, [targetValue, duration, setter]);
+  };
+
+  // Apply animations
+  useCounterAnimation(totalRecords, setAnimatedTotalRecords);
+  useCounterAnimation(uniqueHospitals.length, setAnimatedHospitalCount);
+  useCounterAnimation(doctorsCount, setAnimatedDoctors, 1500);
+  useCounterAnimation(staffCount, setAnimatedStaff, 1500);
+
 
   // --- Alerts ---
   const handleAlert = useCallback(
@@ -158,54 +192,133 @@ const CertificateDatabasePage: React.FC = () => {
           </div>
         </header>
 
-        {/* --- DASHBOARD CONTROLS & STATS --- */}
-        <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
+        {/* --- DASHBOARD STATS GRID (4 Cards) --- */}
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
           
-          {/* LEFT: Total Records Widget (Updated with Logo) */}
-          <div className="lg:col-span-4 xl:col-span-3">
-            <motion.div 
-              initial={{ opacity: 0, y: 5 }}
-              animate={{ opacity: 1, y: 0 }}
-              className="
-                relative h-full flex items-center justify-between p-5
-                bg-white rounded-xl shadow-sm border border-slate-200
-                hover:border-slate-300 transition-colors duration-300
-              "
-            >
-              <div className="flex flex-col justify-center">
-                <div className="flex items-center gap-2 mb-1">
-                  <p className="text-xs font-semibold text-slate-500 uppercase tracking-wide">
-                    Total Certificates
-                  </p>
-                  <span className="flex h-2 w-2 relative">
-                    <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
-                    <span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-500"></span>
-                  </span>
-                </div>
-                <div className="flex items-baseline gap-1">
-                  <span className="text-3xl font-bold text-slate-900 tracking-tight">
-                    {animatedTotalRecords.toLocaleString()}
-                  </span>
-                  <span className="text-sm font-medium text-slate-400">entries</span>
-                </div>
+          {/* 1. TOTAL CERTIFICATES (Emerald) */}
+          <motion.div 
+            initial={{ opacity: 0, y: 5 }}
+            animate={{ opacity: 1, y: 0 }}
+            className="relative flex items-center justify-between p-5 bg-white rounded-xl shadow-sm border border-slate-200 hover:border-emerald-200 transition-colors duration-300 group"
+          >
+            <div className="flex flex-col justify-center">
+              <div className="flex items-center gap-2 mb-1">
+                <p className="text-xs font-semibold text-slate-500 uppercase tracking-wide">
+                  Total Certificates
+                </p>
+                <span className="flex h-2 w-2 relative">
+                  <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
+                  <span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-500"></span>
+                </span>
               </div>
-              
-              {/* Logo Implementation */}
-              <div className="relative h-14 w-14 shrink-0 overflow-hidden rounded-lg bg-slate-50 border border-slate-100 p-1">
-                <Image
-                  src="/logos/ssilogo.png"
-                  alt="SSI Logo"
-                  fill
-                  className="object-contain p-0.5 opacity-90 grayscale-[0.2] hover:grayscale-0 transition-all duration-300"
-                />
+              <div className="flex items-baseline gap-1">
+                <span className="text-3xl font-bold text-slate-900 tracking-tight">
+                  {animatedTotalRecords.toLocaleString()}
+                </span>
+                <span className="text-sm font-medium text-slate-400">entries</span>
               </div>
-            </motion.div>
-          </div>
+            </div>
+            <div className="relative h-12 w-12 shrink-0 overflow-hidden rounded-lg bg-emerald-50 border border-emerald-100 p-1">
+              <Image
+                src="/logos/ssilogo.png"
+                alt="SSI Logo"
+                fill
+                className="object-contain p-0.5 opacity-90 grayscale-[0.2] group-hover:grayscale-0 transition-all duration-300"
+              />
+            </div>
+          </motion.div>
 
-          {/* RIGHT: Action Toolbar */}
-          <div className="lg:col-span-8 xl:col-span-9 flex flex-col sm:flex-row items-center justify-end gap-3">
-              
-            {/* 1. Upload Button */}
+          {/* 2. TOTAL HOSPITALS (Blue) */}
+          <motion.div 
+            initial={{ opacity: 0, y: 5 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.1 }}
+            className="relative flex items-center justify-between p-5 bg-white rounded-xl shadow-sm border border-slate-200 hover:border-blue-200 transition-colors duration-300"
+          >
+            <div className="flex flex-col justify-center">
+              <div className="flex items-center gap-2 mb-1">
+                <p className="text-xs font-semibold text-slate-500 uppercase tracking-wide">
+                  Total Hospitals
+                </p>
+                <span className="flex h-2 w-2 relative">
+                  <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-blue-400 opacity-75"></span>
+                  <span className="relative inline-flex rounded-full h-2 w-2 bg-blue-500"></span>
+                </span>
+              </div>
+              <div className="flex items-baseline gap-1">
+                <span className="text-3xl font-bold text-slate-900 tracking-tight">
+                  {animatedHospitalCount.toLocaleString()}
+                </span>
+                <span className="text-sm font-medium text-slate-400">active</span>
+              </div>
+            </div>
+            <div className="relative h-12 w-12 shrink-0 flex items-center justify-center rounded-lg bg-blue-50 border border-blue-100 p-1">
+                <FiGrid className="w-6 h-6 text-blue-500" />
+            </div>
+          </motion.div>
+
+          {/* 3. TOTAL DOCTORS (Violet) */}
+          <motion.div 
+            initial={{ opacity: 0, y: 5 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.2 }}
+            className="relative flex items-center justify-between p-5 bg-white rounded-xl shadow-sm border border-slate-200 hover:border-violet-200 transition-colors duration-300"
+          >
+            <div className="flex flex-col justify-center">
+              <div className="flex items-center gap-2 mb-1">
+                <p className="text-xs font-semibold text-slate-500 uppercase tracking-wide">
+                  Doctors
+                </p>
+                <span className="flex h-2 w-2 relative">
+                  <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-violet-400 opacity-75"></span>
+                  <span className="relative inline-flex rounded-full h-2 w-2 bg-violet-500"></span>
+                </span>
+              </div>
+              <div className="flex items-baseline gap-1">
+                <span className="text-3xl font-bold text-slate-900 tracking-tight">
+                  {animatedDoctors.toLocaleString()}
+                </span>
+                <span className="text-sm font-medium text-slate-400">identified</span>
+              </div>
+            </div>
+            <div className="relative h-12 w-12 shrink-0 flex items-center justify-center rounded-lg bg-violet-50 border border-violet-100 p-1">
+                <FiUserCheck className="w-6 h-6 text-violet-500" />
+            </div>
+          </motion.div>
+
+          {/* 4. TOTAL STAFF (Amber) */}
+          <motion.div 
+            initial={{ opacity: 0, y: 5 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.3 }}
+            className="relative flex items-center justify-between p-5 bg-white rounded-xl shadow-sm border border-slate-200 hover:border-amber-200 transition-colors duration-300"
+          >
+            <div className="flex flex-col justify-center">
+              <div className="flex items-center gap-2 mb-1">
+                <p className="text-xs font-semibold text-slate-500 uppercase tracking-wide">
+                  Staff Members
+                </p>
+                <span className="flex h-2 w-2 relative">
+                  <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-amber-400 opacity-75"></span>
+                  <span className="relative inline-flex rounded-full h-2 w-2 bg-amber-500"></span>
+                </span>
+              </div>
+              <div className="flex items-baseline gap-1">
+                <span className="text-3xl font-bold text-slate-900 tracking-tight">
+                  {animatedStaff.toLocaleString()}
+                </span>
+                <span className="text-sm font-medium text-slate-400">others</span>
+              </div>
+            </div>
+            <div className="relative h-12 w-12 shrink-0 flex items-center justify-center rounded-lg bg-amber-50 border border-amber-100 p-1">
+                <FiUsers className="w-6 h-6 text-amber-500" />
+            </div>
+          </motion.div>
+
+        </div>
+
+        {/* --- ACTION TOOLBAR (Moved below cards) --- */}
+        <div className="flex flex-col sm:flex-row items-center justify-end gap-3 pb-2">
             <div className="w-full sm:w-auto">
               <UploadButton
                 onUploadSuccess={handleUploadSuccess}
@@ -213,7 +326,6 @@ const CertificateDatabasePage: React.FC = () => {
               />
             </div>
 
-            {/* 2. Refresh Button */}
             <button
               onClick={handleRefresh}
               disabled={isRefreshing}
@@ -232,7 +344,6 @@ const CertificateDatabasePage: React.FC = () => {
               <span>Sync</span>
             </button>
 
-            {/* 3. Help Button */}
             <button
               onClick={() => setIsHelpCardVisible(true)}
               className="
@@ -245,7 +356,6 @@ const CertificateDatabasePage: React.FC = () => {
               <FiHelpCircle className="w-4 h-4" />
               <span>Guide</span>
             </button>
-          </div>
         </div>
 
         {/* --- CONTENT AREA: Charts & Table --- */}
@@ -253,7 +363,6 @@ const CertificateDatabasePage: React.FC = () => {
           
           {/* Analytics Section */}
           <div className="rounded-xl border border-slate-200 bg-white shadow-sm overflow-hidden">
-             {/* Header for the section could go here if needed */}
             <HospitalPieChart
               uniqueHospitals={uniqueHospitals}
               totalRecords={totalRecords}
@@ -273,10 +382,10 @@ const CertificateDatabasePage: React.FC = () => {
               setHospitalFilter={setHospitalFilter}
               isAddFormVisible={isAddFormVisible}
               setIsAddFormVisible={setIsAddFormVisible}
+              uniqueHospitals={uniqueHospitals} 
             />
           </div>
         </div>
-
       </main>
     </div>
   );

@@ -10,13 +10,14 @@ import {
     Save,
     Loader2,
     Sparkles,
-    Check
+    Check,
+    ChevronDown
 } from 'lucide-react';
 
 interface AddCertificateFormProps {
     newCertificateData: Omit<ICertificateClient, '_id'>;
     isAdding: boolean;
-    uniqueHospitals?: string[]; // Received from parent for autocomplete
+    uniqueHospitals?: string[]; 
     handleNewCertChange: (field: keyof Omit<ICertificateClient, '_id'>, value: string) => void;
     handleAddCertificate: () => Promise<void>;
     setIsAddFormVisible: React.Dispatch<React.SetStateAction<boolean>>;
@@ -107,19 +108,24 @@ const AddCertificateForm: React.FC<AddCertificateFormProps> = ({
     // Handle Hospital Input Change (Auto-Capitalization + Search)
     const handleHospitalChange = (e: React.ChangeEvent<HTMLInputElement>) => {
         const rawValue = e.target.value;
-        // Logic: Capitalize the first letter of every word
         const capitalizedValue = rawValue.replace(/\b\w/g, (char) => char.toUpperCase());
         
         handleNewCertChange('hospital', capitalizedValue);
         setShowSuggestions(true);
     };
 
-    // Filter suggestions based on input (case insensitive)
-    const filteredHospitals = uniqueHospitals.filter(hospital => 
-        hospital && newCertificateData.hospital &&
-        hospital.toLowerCase().includes(newCertificateData.hospital.toLowerCase()) &&
-        hospital !== newCertificateData.hospital // Don't show exact match if already selected
-    ).slice(0, 5); // Limit to top 5 suggestions
+    // ✅ FIXED FILTER LOGIC:
+    // 1. If input is empty -> Show ALL uniqueHospitals
+    // 2. If input exists -> Filter based on text
+    const filteredHospitals = uniqueHospitals.filter(hospital => {
+        if (!hospital) return false;
+        const searchTerm = newCertificateData.hospital || '';
+        
+        // If search term is empty, return everything
+        if (searchTerm.trim() === '') return true;
+
+        return hospital.toLowerCase().includes(searchTerm.toLowerCase());
+    });
 
     const selectHospital = (hospital: string) => {
         handleNewCertChange('hospital', hospital);
@@ -154,7 +160,7 @@ const AddCertificateForm: React.FC<AddCertificateFormProps> = ({
                         <InputField
                             label="Certificate ID"
                             icon={Tag}
-                            placeholder="e.g. CERT-2024-001"
+                            placeholder="e.g. CERT-2115500116"
                             value={newCertificateData.certificateNo}
                             onChange={(e) => handleNewCertChange('certificateNo', e.target.value)}
                         />
@@ -162,7 +168,7 @@ const AddCertificateForm: React.FC<AddCertificateFormProps> = ({
                         <InputField
                             label="Patient / Holder Name"
                             icon={User}
-                            placeholder="e.g. John Doe"
+                            placeholder="e.g. Puneet Shukla"
                             value={newCertificateData.name}
                             onChange={(e) => handleNewCertChange('name', e.target.value)}
                         />
@@ -172,28 +178,48 @@ const AddCertificateForm: React.FC<AddCertificateFormProps> = ({
                             <InputField
                                 label="Medical Institution"
                                 icon={Hospital}
-                                placeholder="Start typing to search..."
+                                placeholder="Start typing or select..."
                                 value={newCertificateData.hospital}
                                 onChange={handleHospitalChange}
                                 onFocus={() => setShowSuggestions(true)}
                                 autoComplete="off"
                             />
                             
+                            {/* Little indicator arrow to show it's a dropdown */}
+                            <div className="absolute right-3 top-[28px] pointer-events-none text-slate-400">
+                                <ChevronDown className="w-4 h-4" />
+                            </div>
+
                             {/* Suggestions Dropdown */}
-                            {showSuggestions && newCertificateData.hospital && filteredHospitals.length > 0 && (
+                            {/* ✅ FIXED RENDER CONDITION: removed '&& newCertificateData.hospital' */}
+                            {showSuggestions && filteredHospitals.length > 0 && (
                                 <div className="absolute top-[calc(100%+4px)] left-0 right-0 bg-white rounded-xl shadow-xl border border-slate-100 z-[100] overflow-hidden animate-in fade-in zoom-in-95 duration-150 origin-top">
-                                    <div className="px-3 py-2 bg-slate-50/50 border-b border-slate-100 text-[10px] font-semibold text-slate-400 uppercase tracking-wider">
-                                        Suggested Hospitals
+                                    <div className="px-3 py-2 bg-slate-50/50 border-b border-slate-100 flex justify-between items-center">
+                                        <span className="text-[10px] font-semibold text-slate-400 uppercase tracking-wider">
+                                            {newCertificateData.hospital ? 'Matching Results' : 'All Hospitals'}
+                                        </span>
+                                        <span className="text-[10px] font-medium text-slate-400 bg-slate-100 px-1.5 py-0.5 rounded">
+                                            {filteredHospitals.length}
+                                        </span>
                                     </div>
-                                    <div className="max-h-48 overflow-y-auto custom-scrollbar p-1">
+                                    
+                                    <div className="max-h-60 overflow-y-auto custom-scrollbar p-1">
                                         {filteredHospitals.map((hospital, idx) => (
                                             <button
                                                 key={idx}
                                                 onClick={() => selectHospital(hospital)}
-                                                className="w-full text-left px-3 py-2.5 rounded-lg text-sm text-slate-600 hover:bg-sky-50 hover:text-sky-700 transition-colors flex items-center justify-between group"
+                                                className={`
+                                                    w-full text-left px-3 py-2.5 rounded-lg text-sm transition-colors flex items-center justify-between group
+                                                    ${newCertificateData.hospital === hospital 
+                                                        ? 'bg-sky-50 text-sky-700 font-medium' 
+                                                        : 'text-slate-600 hover:bg-slate-50 hover:text-slate-900'
+                                                    }
+                                                `}
                                             >
                                                 <span className="truncate">{hospital}</span>
-                                                <Check className="w-3.5 h-3.5 opacity-0 group-hover:opacity-100 transition-opacity text-sky-500" />
+                                                {newCertificateData.hospital === hospital && (
+                                                    <Check className="w-3.5 h-3.5 text-sky-500" />
+                                                )}
                                             </button>
                                         ))}
                                     </div>

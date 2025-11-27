@@ -60,6 +60,9 @@ interface CertificateTableExtendedProps extends CertificateTableProps {
     setHospitalFilter: React.Dispatch<React.SetStateAction<string>>;
     isAddFormVisible: boolean;
     setIsAddFormVisible: React.Dispatch<React.SetStateAction<boolean>>;
+    
+    // ✅ FIX 1: Added uniqueHospitals to interface to prevent build error
+    uniqueHospitals?: string[];
 }
 
 const CertificateTable: React.FC<CertificateTableExtendedProps> = ({ 
@@ -71,6 +74,8 @@ const CertificateTable: React.FC<CertificateTableExtendedProps> = ({
     setHospitalFilter,
     isAddFormVisible,
     setIsAddFormVisible,
+    // ✅ FIX 2: Destructure but alias it (or ignore it) because we get the real data from the hook below
+    uniqueHospitals: _propUniqueHospitals 
 }) => {
     
     // --- Notification State Management ---
@@ -106,7 +111,7 @@ const CertificateTable: React.FC<CertificateTableExtendedProps> = ({
         totalItems,
         currentPage,
         totalPages,
-        uniqueHospitals,
+        uniqueHospitals, // 👈 We use this one from the hook as the source of truth
         sortConfig,
         selectedIds,
         fetchCertificates,
@@ -240,6 +245,8 @@ const CertificateTable: React.FC<CertificateTableExtendedProps> = ({
                         <AddCertificateForm
                             newCertificateData={newCertificateData}
                             isAdding={isAdding}
+                            // ✅ FIX 3: Pass uniqueHospitals to the form for autocomplete
+                            uniqueHospitals={uniqueHospitals}
                             handleNewCertChange={handleNewCertChange}
                             handleAddCertificate={handleAddCertificate}
                             setIsAddFormVisible={setIsAddFormVisible}
