@@ -429,18 +429,20 @@ export default function Sidebar({ forceActive, isOpen, toggleSidebar }: SidebarP
 
         {/* Divider */}
         <div className="h-px w-full bg-white/5" />
+<div className="flex justify-center">
+  <button
+    onClick={handleLogout}
+    className="group flex items-center gap-3 px-1 py-1 text-xs font-medium text-gray-400 hover:text-red-400 transition-colors cursor-pointer"
+    type="button"
+  >
+    <div className="flex items-center justify-center h-7 w-7 rounded-md bg-white/5 group-hover:bg-red-500/10 transition-colors text-inherit ">
+      <TbLogout size={14} />
+    </div>
+    <span>Sign Out</span>
+  </button>
+</div>
 
-        {/* Minimal Sign Out */}
-        <button
-          onClick={handleLogout}
-          className="group flex w-full items-center gap-3 px-1 py-1 text-xs font-medium text-gray-400 hover:text-red-400 transition-colors"
-          type="button"
-        >
-          <div className="flex items-center justify-center h-7 w-7 rounded-md bg-white/5 group-hover:bg-red-500/10 transition-colors text-inherit">
-             <TbLogout size={14} />
-          </div>
-          <span>Sign Out</span>
-        </button>
+        
       </motion.div>
     </aside>
   )

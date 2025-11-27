@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import { initialNewCertificateState, ICertificateClient } from '../utils/constants';
 import { doiToDateInput, dateInputToDoi } from '../utils/helpers';
 import {
@@ -7,38 +7,45 @@ import {
     User,
     Hospital,
     Calendar,
-    X,
     Save,
     Loader2,
-    Sparkles
+    Sparkles,
+    Check
 } from 'lucide-react';
 
 interface AddCertificateFormProps {
     newCertificateData: Omit<ICertificateClient, '_id'>;
     isAdding: boolean;
+    uniqueHospitals?: string[]; // Received from parent for autocomplete
     handleNewCertChange: (field: keyof Omit<ICertificateClient, '_id'>, value: string) => void;
     handleAddCertificate: () => Promise<void>;
     setIsAddFormVisible: React.Dispatch<React.SetStateAction<boolean>>;
     setNewCertificateData: React.Dispatch<React.SetStateAction<Omit<ICertificateClient, '_id'>>>;
 }
 
-// Helper component with modern styling and label support
+// Helper component
 const InputField = ({ 
     label,
     icon: Icon, 
     placeholder, 
     value, 
     onChange, 
-    type = 'text' 
+    type = 'text',
+    onFocus,
+    onBlur,
+    autoComplete
 }: {
     label: string,
     icon: React.ElementType,
     placeholder: string,
     value: string,
     onChange: (e: React.ChangeEvent<HTMLInputElement>) => void,
-    type?: string
+    type?: string,
+    onFocus?: () => void,
+    onBlur?: () => void,
+    autoComplete?: string
 }) => (
-    <div className="space-y-1.5 group">
+    <div className="space-y-1.5 group w-full">
         <label className="text-xs font-semibold text-slate-500 uppercase tracking-wider ml-1 group-focus-within:text-sky-600 transition-colors duration-200">
             {label}
         </label>
@@ -51,6 +58,9 @@ const InputField = ({
                 placeholder={placeholder}
                 value={value}
                 onChange={onChange}
+                onFocus={onFocus}
+                onBlur={onBlur}
+                autoComplete={autoComplete}
                 className="
                     w-full py-2.5 pl-10 pr-4
                     bg-slate-50 border border-slate-200
@@ -70,17 +80,58 @@ const InputField = ({
 const AddCertificateForm: React.FC<AddCertificateFormProps> = ({
     newCertificateData,
     isAdding,
+    uniqueHospitals = [], 
     handleNewCertChange,
     handleAddCertificate,
     setIsAddFormVisible,
     setNewCertificateData,
 }) => {
+    
+    // --- State for Hospital Autocomplete ---
+    const [showSuggestions, setShowSuggestions] = useState(false);
+    const wrapperRef = useRef<HTMLDivElement>(null);
+
+    // Handle click outside to close suggestions
+    useEffect(() => {
+        function handleClickOutside(event: MouseEvent) {
+            if (wrapperRef.current && !wrapperRef.current.contains(event.target as Node)) {
+                setShowSuggestions(false);
+            }
+        }
+        document.addEventListener("mousedown", handleClickOutside);
+        return () => {
+            document.removeEventListener("mousedown", handleClickOutside);
+        };
+    }, [wrapperRef]);
+
+    // Handle Hospital Input Change (Auto-Capitalization + Search)
+    const handleHospitalChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+        const rawValue = e.target.value;
+        // Logic: Capitalize the first letter of every word
+        const capitalizedValue = rawValue.replace(/\b\w/g, (char) => char.toUpperCase());
+        
+        handleNewCertChange('hospital', capitalizedValue);
+        setShowSuggestions(true);
+    };
+
+    // Filter suggestions based on input (case insensitive)
+    const filteredHospitals = uniqueHospitals.filter(hospital => 
+        hospital && newCertificateData.hospital &&
+        hospital.toLowerCase().includes(newCertificateData.hospital.toLowerCase()) &&
+        hospital !== newCertificateData.hospital // Don't show exact match if already selected
+    ).slice(0, 5); // Limit to top 5 suggestions
+
+    const selectHospital = (hospital: string) => {
+        handleNewCertChange('hospital', hospital);
+        setShowSuggestions(false);
+    };
+
     return (
-        <div className="mb-8 animate-in fade-in slide-in-from-top-4 duration-500">
+        <div className="mb-8 animate-in fade-in slide-in-from-top-4 duration-500 relative z-50">
             {/* Main Card */}
-            <div className="bg-white rounded-2xl shadow-xl shadow-slate-200/60 border border-slate-100 overflow-hidden">
+            <div className="bg-white rounded-2xl shadow-xl shadow-slate-200/60 border border-slate-100 overflow-visible relative">
                 
-                {/* Header Section with subtle gradient background */}
+                {/* Header Section */}
                 <div className="px-6 py-5 border-b border-slate-100 bg-gradient-to-r from-slate-50/50 to-white flex justify-between items-center">
                     <div>
                         <h3 className="text-lg font-bold text-slate-800 flex items-center gap-2">
@@ -93,7 +144,6 @@ const AddCertificateForm: React.FC<AddCertificateFormProps> = ({
                             Enter the details below to digitally archive a new medical certificate.
                         </p>
                     </div>
-                    {/* Visual decoration */}
                     <Sparkles className="w-12 h-12 text-sky-100 opacity-50 hidden sm:block" />
                 </div>
 
@@ -117,13 +167,39 @@ const AddCertificateForm: React.FC<AddCertificateFormProps> = ({
                             onChange={(e) => handleNewCertChange('name', e.target.value)}
                         />
 
-                        <InputField
-                            label="Medical Institution"
-                            icon={Hospital}
-                            placeholder="e.g. General Hospital"
-                            value={newCertificateData.hospital}
-                            onChange={(e) => handleNewCertChange('hospital', e.target.value)}
-                        />
+                        {/* --- Hospital Input with Smart Dropdown --- */}
+                        <div className="relative" ref={wrapperRef}>
+                            <InputField
+                                label="Medical Institution"
+                                icon={Hospital}
+                                placeholder="Start typing to search..."
+                                value={newCertificateData.hospital}
+                                onChange={handleHospitalChange}
+                                onFocus={() => setShowSuggestions(true)}
+                                autoComplete="off"
+                            />
+                            
+                            {/* Suggestions Dropdown */}
+                            {showSuggestions && newCertificateData.hospital && filteredHospitals.length > 0 && (
+                                <div className="absolute top-[calc(100%+4px)] left-0 right-0 bg-white rounded-xl shadow-xl border border-slate-100 z-[100] overflow-hidden animate-in fade-in zoom-in-95 duration-150 origin-top">
+                                    <div className="px-3 py-2 bg-slate-50/50 border-b border-slate-100 text-[10px] font-semibold text-slate-400 uppercase tracking-wider">
+                                        Suggested Hospitals
+                                    </div>
+                                    <div className="max-h-48 overflow-y-auto custom-scrollbar p-1">
+                                        {filteredHospitals.map((hospital, idx) => (
+                                            <button
+                                                key={idx}
+                                                onClick={() => selectHospital(hospital)}
+                                                className="w-full text-left px-3 py-2.5 rounded-lg text-sm text-slate-600 hover:bg-sky-50 hover:text-sky-700 transition-colors flex items-center justify-between group"
+                                            >
+                                                <span className="truncate">{hospital}</span>
+                                                <Check className="w-3.5 h-3.5 opacity-0 group-hover:opacity-100 transition-opacity text-sky-500" />
+                                            </button>
+                                        ))}
+                                    </div>
+                                </div>
+                            )}
+                        </div>
 
                         <InputField
                             label="Date of Issue"
@@ -136,7 +212,7 @@ const AddCertificateForm: React.FC<AddCertificateFormProps> = ({
                     </div>
                 </div>
 
-                {/* Footer / Actions - Distinct section */}
+                {/* Footer / Actions */}
                 <div className="px-6 py-4 bg-slate-50 border-t border-slate-100 flex flex-col-reverse sm:flex-row justify-end gap-3">
                     <button
                         onClick={() => {
