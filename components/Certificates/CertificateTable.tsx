@@ -29,10 +29,7 @@ import FloatingNotification from './ui/FloatingNotification';
 // 1. Modern Skeleton Loader with Shimmer Effect
 const SkeletonLoader = () => (
     <div className="w-full space-y-6">
-        {/* Action Bar Skeleton */}
         <div className="h-16 bg-slate-100/50 rounded-2xl border border-slate-200/60 animate-pulse" />
-        
-        {/* Table Skeleton */}
         <div className="bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden">
             <div className="h-12 bg-slate-50 border-b border-slate-100" />
             <div className="divide-y divide-slate-50">
@@ -60,8 +57,6 @@ interface CertificateTableExtendedProps extends CertificateTableProps {
     setHospitalFilter: React.Dispatch<React.SetStateAction<string>>;
     isAddFormVisible: boolean;
     setIsAddFormVisible: React.Dispatch<React.SetStateAction<boolean>>;
-    
-    // ✅ FIX 1: Added uniqueHospitals to interface to prevent build error
     uniqueHospitals?: string[];
 }
 
@@ -74,7 +69,6 @@ const CertificateTable: React.FC<CertificateTableExtendedProps> = ({
     setHospitalFilter,
     isAddFormVisible,
     setIsAddFormVisible,
-    // ✅ FIX 2: Destructure but alias it (or ignore it) because we get the real data from the hook below
     uniqueHospitals: _propUniqueHospitals 
 }) => {
     
@@ -83,13 +77,9 @@ const CertificateTable: React.FC<CertificateTableExtendedProps> = ({
 
     const showNotification = useCallback((message: string, type: NotificationType) => {
         setNotification({ message, type, active: true });
-        
-        // Auto dismiss logic
         setTimeout(() => {
             setNotification(prev => prev ? { ...prev, active: false } : null);
         }, 3000);
-        
-        // Cleanup logic
         setTimeout(() => {
             setNotification(null);
         }, 3500);
@@ -111,7 +101,7 @@ const CertificateTable: React.FC<CertificateTableExtendedProps> = ({
         totalItems,
         currentPage,
         totalPages,
-        uniqueHospitals, // 👈 We use this one from the hook as the source of truth
+        uniqueHospitals, 
         sortConfig,
         selectedIds,
         fetchCertificates,
@@ -184,7 +174,6 @@ const CertificateTable: React.FC<CertificateTableExtendedProps> = ({
 
     const isAnyActionLoading = isMailComposerOpen || isSending || isBulkGeneratingV1 || isBulkGeneratingV2;
 
-    // Flash Animation Effect
     useEffect(() => {
         if (flashId) {
             const timer = setTimeout(() => setFlashId(null), 1000); 
@@ -202,7 +191,6 @@ const CertificateTable: React.FC<CertificateTableExtendedProps> = ({
     return (
         <div className="relative flex flex-col gap-6 font-sans">
             
-            {/* Global Floating Notification */}
             <FloatingNotification 
                 message={notification?.message || ''}
                 type={notification?.type || 'info'}
@@ -232,7 +220,7 @@ const CertificateTable: React.FC<CertificateTableExtendedProps> = ({
                 />
             </motion.div>
 
-            {/* Form Section (Animated Collapse/Expand) */}
+            {/* Form Section */}
             <AnimatePresence>
                 {isAddFormVisible && (
                     <motion.div
@@ -245,7 +233,6 @@ const CertificateTable: React.FC<CertificateTableExtendedProps> = ({
                         <AddCertificateForm
                             newCertificateData={newCertificateData}
                             isAdding={isAdding}
-                            // ✅ FIX 3: Pass uniqueHospitals to the form for autocomplete
                             uniqueHospitals={uniqueHospitals}
                             handleNewCertChange={handleNewCertChange}
                             handleAddCertificate={handleAddCertificate}
@@ -263,7 +250,6 @@ const CertificateTable: React.FC<CertificateTableExtendedProps> = ({
                 animate={{ opacity: 1, scale: 1 }}
                 transition={{ duration: 0.3, delay: 0.1 }}
             >
-                {/* Optional Loading Overlay for Batch Actions */}
                 {isAnyActionLoading && (
                     <div className="absolute inset-0 bg-white/60 backdrop-blur-[1px] z-50 flex items-center justify-center">
                         <div className="bg-white p-4 rounded-xl shadow-xl border border-slate-100 flex items-center gap-3">
@@ -274,7 +260,6 @@ const CertificateTable: React.FC<CertificateTableExtendedProps> = ({
                 )}
 
                 {sortedCertificates.length === 0 ? (
-                    // --- Aesthetic Empty State ---
                     <motion.div 
                         initial={{ opacity: 0, y: 20 }}
                         animate={{ opacity: 1, y: 0 }}
@@ -289,13 +274,12 @@ const CertificateTable: React.FC<CertificateTableExtendedProps> = ({
                         </p>
                         <button 
                             onClick={() => setIsAddFormVisible(true)}
-                            className="group relative inline-flex items-center justify-center px-6 py-2.5 text-sm font-medium text-white transition-all duration-200 bg-indigo-600 rounded-lg hover:bg-indigo-700 hover:shadow-md hover:shadow-indigo-200 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 cursor-pointer"
+                            className="group relative inline-flex items-center justify-center px-6 py-2.5 text-sm font-medium text-white transition-all duration-200 bg-indigo-600 rounded-lg hover:bg-indigo-700 hover:shadow-md hover:shadow-indigo-200 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 cursor-pointer active:scale-95"
                         >
                             <span>Add New Certificate</span>
                         </button>
                     </motion.div>
                 ) : (
-                    // --- Data Table ---
                     <>
                         <div className="overflow-x-auto custom-scrollbar">
                             <table className="w-full text-left border-collapse">
@@ -346,7 +330,7 @@ const CertificateTable: React.FC<CertificateTableExtendedProps> = ({
                                 <button
                                     onClick={() => setCurrentPage(prev => Math.max(1, prev - 1))}
                                     disabled={currentPage === 1}
-                                    className="p-2 rounded-lg text-slate-500 hover:text-indigo-600 hover:bg-indigo-50 disabled:opacity-30 disabled:hover:bg-transparent disabled:hover:text-slate-500 transition-all cursor-pointer"
+                                    className="p-2 rounded-lg text-slate-500 hover:text-indigo-600 hover:bg-indigo-50 disabled:opacity-30 disabled:hover:bg-transparent disabled:hover:text-slate-500 transition-all cursor-pointer active:scale-95"
                                 >
                                     <ChevronLeft className="w-4 h-4" />
                                 </button>
@@ -362,7 +346,7 @@ const CertificateTable: React.FC<CertificateTableExtendedProps> = ({
                                                 <button
                                                     onClick={() => setCurrentPage(page)}
                                                     className={clsx(
-                                                        "w-8 h-8 flex items-center justify-center rounded-lg text-xs font-semibold transition-all duration-200 cursor-pointer",
+                                                        "w-8 h-8 flex items-center justify-center rounded-lg text-xs font-semibold transition-all duration-200 cursor-pointer active:scale-95",
                                                         page === currentPage
                                                             ? "bg-indigo-600 text-white shadow-md shadow-indigo-200 scale-105"
                                                             : "text-slate-600 hover:bg-slate-100 hover:text-slate-900"
@@ -371,13 +355,13 @@ const CertificateTable: React.FC<CertificateTableExtendedProps> = ({
                                                     {page}
                                                 </button>
                                             </React.Fragment>
-                                    ))}
+                                        ))}
                                 </div>
 
                                 <button
                                     onClick={() => setCurrentPage(prev => Math.min(totalPages, prev + 1))}
                                     disabled={currentPage === totalPages || totalPages === 0}
-                                    className="p-2 rounded-lg text-slate-500 hover:text-indigo-600 hover:bg-indigo-50 disabled:opacity-30 disabled:hover:bg-transparent disabled:hover:text-slate-500 transition-all cursor-pointer"
+                                    className="p-2 rounded-lg text-slate-500 hover:text-indigo-600 hover:bg-indigo-50 disabled:opacity-30 disabled:hover:bg-transparent disabled:hover:text-slate-500 transition-all cursor-pointer active:scale-95"
                                 >
                                     <ChevronRight className="w-4 h-4" />
                                 </button>

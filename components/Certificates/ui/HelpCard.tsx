@@ -159,7 +159,12 @@ const HelpCard: React.FC<HelpCardProps> = ({ onClose }) => {
                                         <FiPackage className="h-4 w-4" /> Export Options
                                     </h3>
                                     <ul className="space-y-4">
-                                        <ListItem icon={<FiFileText className="text-emerald-500" />} title="Certificate PDF" desc="Generate V1/V2 standard formats." />
+                                        {/* UPDATED: Removed V1/V2 labels */}
+                                        <ListItem 
+                                            icon={<FiFileText className="text-emerald-500" />} 
+                                            title="Certificate PDF" 
+                                            desc="Proctorship & Training formats." 
+                                        />
                                         <ListItem icon={<FiPackage className="text-emerald-500" />} title="Bulk ZIP Download" desc="Download complete sets at once." />
                                         <ListItem icon={<FiDownload className="text-teal-500" />} title="CSV Export" desc="Raw data export for Excel analysis." />
                                         <ListItem icon={<FiGlobe className="text-sky-500" />} title="Public Verification" desc="QR code compatible links." />
