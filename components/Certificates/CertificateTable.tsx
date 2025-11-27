@@ -1,112 +1,105 @@
 'use client';
 
 import React, { useEffect, useState, useCallback } from 'react';
-import { BadgeCheck, Loader2, Square, ChevronLeft, ChevronRight, Check, Info, AlertCircle } from 'lucide-react'; 
+import { 
+    ChevronLeft, 
+    ChevronRight, 
+    Inbox,
+    Loader2
+} from 'lucide-react';
+import clsx from 'clsx';
+import { motion, AnimatePresence } from 'framer-motion';
 
 // Import Hooks and Utils
 import { useCertificateData } from './hooks/useCertificateData';
 import { useCertificateActions } from './hooks/useCertificateActions';
 import { useMailCertificate } from './hooks/useMailCertificate'; 
-import { ICertificateClient, CertificateTableProps, PAGE_LIMIT, NotificationState, NotificationType } from './utils/constants';
+import { CertificateTableProps, PAGE_LIMIT, NotificationState, NotificationType } from './utils/constants';
 
 // Import UI Components
 import AddCertificateForm from './ui/AddCertificateForm';
-import QuickActionBar from './ui/QuickActionBar'; // Still imported for use in JSX
+import QuickActionBar from './ui/QuickActionBar';
 import TableHeader from './ui/TableHeader';
 import TableRow from './ui/TableRow';
-import MailComposer from './ui/MailComposer'; 
+import MailComposer from './ui/MailComposer';
+import FloatingNotification from './ui/FloatingNotification';
 
+// --- Components ---
 
-// --- Skeleton Loader Component (UNCHANGED) ---
+// 1. Modern Skeleton Loader with Shimmer Effect
 const SkeletonLoader = () => (
-    <div className="animate-pulse space-y-4 p-6 rounded-xl shadow-lg border border-gray-200 bg-white">
-        <div className="flex justify-between items-center space-x-4">
-            <div className="h-10 bg-gray-200 rounded-lg w-1/3"></div>
-            <div className="h-10 bg-gray-200 rounded-lg w-1/4"></div>
-            <div className="flex space-x-2">
-                <div className="h-10 bg-gray-200 rounded-lg w-24"></div>
-                <div className="h-10 bg-gray-200 rounded-lg w-24"></div>
-            </div>
-        </div>
-
-        <div className="h-10 bg-gray-100 rounded-lg"></div>
-
-        {Array(PAGE_LIMIT).fill(0).map((_, index) => (
-            <div key={index} className="grid grid-cols-5 gap-4 py-3 border-b border-gray-100 last:border-b-0">
-                <div className="h-4 bg-gray-200 rounded col-span-1"></div>
-                <div className="h-4 bg-gray-200 rounded col-span-1"></div>
-                <div className="h-4 bg-gray-200 rounded col-span-1"></div>
-                <div className="h-4 bg-gray-200 rounded col-span-1"></div>
-                <div className="h-4 bg-gray-200 rounded col-span-1"></div>
-            </div>
-        ))}
-        <div className="flex justify-between items-center pt-4">
-            <div className="h-4 bg-gray-200 rounded w-48"></div>
-            <div className="flex space-x-2">
-                <div className="h-8 w-16 bg-gray-200 rounded-md"></div>
-                <div className="h-8 w-10 bg-slate-700 rounded-md"></div>
-                <div className="h-8 w-16 bg-gray-200 rounded-md"></div>
+    <div className="w-full space-y-6">
+        {/* Action Bar Skeleton */}
+        <div className="h-16 bg-slate-100/50 rounded-2xl border border-slate-200/60 animate-pulse" />
+        
+        {/* Table Skeleton */}
+        <div className="bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden">
+            <div className="h-12 bg-slate-50 border-b border-slate-100" />
+            <div className="divide-y divide-slate-50">
+                {Array(6).fill(0).map((_, i) => (
+                    <div key={i} className="h-20 flex items-center px-6 gap-6 animate-pulse">
+                        <div className="w-5 h-5 rounded bg-slate-200" />
+                        <div className="w-10 h-10 rounded-full bg-slate-200" />
+                        <div className="space-y-2 flex-1">
+                            <div className="w-1/4 h-4 rounded bg-slate-200" />
+                            <div className="w-1/6 h-3 rounded bg-slate-100" />
+                        </div>
+                        <div className="w-24 h-8 rounded-lg bg-slate-100" />
+                    </div>
+                ))}
             </div>
         </div>
     </div>
 );
 
-
-// 💡 FIXED PROPS INTERFACE: Restoring setSearchQuery as hook requires 7 args
+// --- Extended Props Interface ---
 interface CertificateTableExtendedProps extends CertificateTableProps {
     searchQuery: string;
-    setSearchQuery: React.Dispatch<React.SetStateAction<string>>; // <-- RESTORED
+    setSearchQuery: React.Dispatch<React.SetStateAction<string>>;
     hospitalFilter: string;
     setHospitalFilter: React.Dispatch<React.SetStateAction<string>>;
     isAddFormVisible: boolean;
     setIsAddFormVisible: React.Dispatch<React.SetStateAction<boolean>>;
 }
 
-
 const CertificateTable: React.FC<CertificateTableExtendedProps> = ({ 
     refreshKey, 
     onRefresh, 
-    onAlert: legacyOnAlert,
-    // Destructure new props from parent
     searchQuery,
-    setSearchQuery, // <-- RESTORED FOR HOOK
+    setSearchQuery,
     hospitalFilter,
     setHospitalFilter,
     isAddFormVisible,
     setIsAddFormVisible,
 }) => {
     
-    // 💡 NEW: Notification State
+    // --- Notification State Management ---
     const [notification, setNotification] = useState<NotificationState | null>(null);
 
-    // 💡 NEW: showNotification function (as requested)
     const showNotification = useCallback((message: string, type: NotificationType) => {
         setNotification({ message, type, active: true });
         
-        // Hide animation: 3000ms duration + 300ms transition time
+        // Auto dismiss logic
         setTimeout(() => {
             setNotification(prev => prev ? { ...prev, active: false } : null);
         }, 3000);
         
-        // Remove from DOM after transition
+        // Cleanup logic
         setTimeout(() => {
             setNotification(null);
-        }, 3300);
+        }, 3500);
     }, []);
 
-    // 💡 FIX: Proxy function to intercept and SILENCE successful legacy alerts, 
+    // Notification Proxy for hooks
     const pdfOnAlert = useCallback((message: string, isError: boolean) => {
-        
         if (!isError && (message.includes('synchronized') || message.includes('loaded'))) {
             return;
         }
-
-        const type: NotificationType = isError ? 'error' : 'info';
-        showNotification(message, type);
+        showNotification(message, isError ? 'error' : 'info');
     }, [showNotification]);
 
 
-    // 1. Data and State Management (Fetching, Pagination, Sorting)
+    // --- 1. Data Hooks ---
     const {
         certificates,
         isLoading,
@@ -123,14 +116,20 @@ const CertificateTable: React.FC<CertificateTableExtendedProps> = ({
         requestSort,
         sortedCertificates,
         setIsLoading,
-    // 💡 FIXED: Passing 7 arguments to satisfy the hook's required signature.
-    } = useCertificateData(refreshKey, onRefresh, showNotification, searchQuery, hospitalFilter, setSearchQuery, setHospitalFilter); 
+    } = useCertificateData(
+        refreshKey, 
+        onRefresh, 
+        showNotification, 
+        searchQuery, 
+        hospitalFilter, 
+        setSearchQuery, 
+        setHospitalFilter
+    ); 
 
-    // 2. Action Management (CRUD, Bulk Actions, PDF, Download)
+    // --- 2. Action Hooks ---
     const {
         editingId,
         editFormData,
-        // isAddFormVisible is now passed via props
         newCertificateData,
         isAdding,
         flashId,
@@ -140,8 +139,6 @@ const CertificateTable: React.FC<CertificateTableExtendedProps> = ({
         isBulkGeneratingV1, 
         isBulkGeneratingV2, 
         setEditingId,
-        setEditFormData,
-        // setIsAddFormVisible is now passed via props
         setNewCertificateData,
         setFlashId,
         handleSelectOne,
@@ -169,7 +166,7 @@ const CertificateTable: React.FC<CertificateTableExtendedProps> = ({
         setIsLoading,
     });
     
-    // 3. Mail Action Management
+    // --- 3. Mail Hooks ---
     const {
         isMailComposerOpen,
         mailComposerCert,
@@ -180,102 +177,40 @@ const CertificateTable: React.FC<CertificateTableExtendedProps> = ({
         handleCloseMailComposer,
     } = useMailCertificate(pdfOnAlert); 
 
-    // Combined loading state: Disable individual row buttons when any action is running
     const isAnyActionLoading = isMailComposerOpen || isSending || isBulkGeneratingV1 || isBulkGeneratingV2;
 
-    // Effect to handle the flash animation duration 
+    // Flash Animation Effect
     useEffect(() => {
         if (flashId) {
-            const timer = setTimeout(() => {
-                setFlashId(null);
-            }, 1000); 
+            const timer = setTimeout(() => setFlashId(null), 1000); 
             return () => clearTimeout(timer);
         }
     }, [flashId, setFlashId]);
 
 
-    // --- Pagination Component (UNCHANGED) ---
-    const Pagination = () => (
-        <div className="flex flex-col sm:flex-row justify-end items-center mt-4 p-2 w-full">
-            <div className="flex space-x-1 border border-gray-200 rounded-full p-1 shadow-inner bg-white/70 backdrop-blur-sm">
-                <button
-                    onClick={() => setCurrentPage(prev => Math.max(1, prev - 1))}
-                    disabled={currentPage === 1}
-                    className="px-3 py-1 text-sm font-medium rounded-full bg-white/80 text-slate-700 hover:bg-slate-200 disabled:text-gray-400 disabled:hover:bg-white transition duration-300 flex items-center shadow-md hover:shadow-lg"
-                    aria-label="Previous Page"
-                >
-                    <ChevronLeft className="w-4 h-4 mr-1" />
-                    Previous
-                </button>
-                {/* Render page numbers */}
-                {Array.from({ length: totalPages }, (_, i) => i + 1)
-                    .filter(page => page === 1 || page === totalPages || (page >= currentPage - 1 && page <= currentPage + 1))
-                    .map(page => (
-                        <button
-                            key={page}
-                            onClick={() => setCurrentPage(page)}
-                            className={`px-3 py-1 text-sm font-medium rounded-full transition duration-300 shadow-md ${
-                                page === currentPage
-                                    ? 'bg-sky-600 text-white shadow-lg'
-                                    : 'bg-white/80 text-gray-700 hover:bg-slate-200'
-                            }`}
-                        >
-                            {page}
-                        </button>
-                    ))
-                }
-                {totalPages > 3 && currentPage < totalPages - 1 && (
-                    <span className="px-3 py-1 text-sm text-gray-500">...</span>
-                )}
-                <button
-                    onClick={() => setCurrentPage(prev => Math.min(totalPages, prev + 1))}
-                    disabled={currentPage === totalPages || totalPages === 0}
-                    className="px-3 py-1 text-sm font-medium rounded-full bg-white/80 text-slate-700 hover:bg-slate-200 disabled:text-gray-400 disabled:hover:bg-white transition duration-300 flex items-center shadow-md hover:shadow-lg"
-                    aria-label="Next Page"
-                >
-                    Next
-                    <ChevronRight className="w-4 h-4 ml-1" />
-                </button>
-            </div>
-        </div>
-    );
-
-    // --- Main Render ---
+    // --- Render Logic ---
 
     if (isLoading) {
         return <SkeletonLoader />;
     }
 
     return (
-        <>
-            {/* 💡 DYNAMIC ISLAND STYLE TOAST NOTIFICATION (UNCHANGED) */}
-            {notification && (
-                <div
-                    className={`
-                        fixed top-4 left-1/2 transform -translate-x-1/2 z-[1000] h-12 px-5 py-3
-                        rounded-full shadow-2xl flex items-center gap-3 bg-white border
-                        text-base font-medium whitespace-nowrap overflow-hidden w-max min-w-[36px] md:max-w-[360px]
-                        transition-transform duration-300 ease-out 
-                        ${notification.active ? 'translate-y-0 opacity-100' : '-translate-y-20 opacity-0'}
-                        ${notification.type === "success" ? "border-green-300" : ""}
-                        ${notification.type === "info" ? "border-sky-300" : ""}
-                        ${notification.type === "error" ? "border-red-300" : ""}
-                    `}
-                >
-                    <div className={`flex-shrink-0 text-xl`}>
-                        {notification.type === "success" && <Check className="w-5 h-5 text-green-600" />}
-                        {notification.type === "info" && <Info className="w-5 h-5 text-sky-600" />}
-                        {notification.type === "error" && <AlertCircle className="w-5 h-5 text-red-600" />}
-                    </div>
-                    <span className={`flex-grow text-center truncate text-gray-700 text-sm`}>
-                        {notification.message}
-                    </span>
-                </div>
-            )}
+        <div className="relative flex flex-col gap-6 font-sans">
             
-            <div className="space-y-6 w-full p-3 md:p-0">
-
-                {/* 💡 Quick Action Bar: Only receives filter props, not search input props */}
+            {/* Global Floating Notification */}
+            <FloatingNotification 
+                message={notification?.message || ''}
+                type={notification?.type || 'info'}
+                isVisible={!!notification?.active}
+                onClose={() => setNotification(prev => prev ? { ...prev, active: false } : null)}
+            />
+            
+            {/* Action Bar */}
+            <motion.div 
+                initial={{ opacity: 0, y: -10 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ duration: 0.3 }}
+            >
                 <QuickActionBar
                     isAddFormVisible={isAddFormVisible}
                     selectedIds={selectedIds}
@@ -290,37 +225,73 @@ const CertificateTable: React.FC<CertificateTableExtendedProps> = ({
                     handleBulkGeneratePDF_V1={handleBulkGeneratePDF_V1}
                     handleBulkGeneratePDF_V2={handleBulkGeneratePDF_V2}
                 />
+            </motion.div>
 
-                {/* Conditional Add Certificate Form (UNCHANGED) */}
+            {/* Form Section (Animated Collapse/Expand) */}
+            <AnimatePresence>
                 {isAddFormVisible && (
-                    <AddCertificateForm
-                        newCertificateData={newCertificateData}
-                        isAdding={isAdding}
-                        handleNewCertChange={handleNewCertChange}
-                        handleAddCertificate={handleAddCertificate}
-                        setIsAddFormVisible={setIsAddFormVisible}
-                        setNewCertificateData={setNewCertificateData}
-                    />
+                    <motion.div
+                        initial={{ height: 0, opacity: 0, marginBottom: 0 }}
+                        animate={{ height: 'auto', opacity: 1, marginBottom: 24 }}
+                        exit={{ height: 0, opacity: 0, marginBottom: 0 }}
+                        transition={{ duration: 0.4, ease: [0.04, 0.62, 0.23, 0.98] }}
+                        className="overflow-hidden"
+                    >
+                        <AddCertificateForm
+                            newCertificateData={newCertificateData}
+                            isAdding={isAdding}
+                            handleNewCertChange={handleNewCertChange}
+                            handleAddCertificate={handleAddCertificate}
+                            setIsAddFormVisible={setIsAddFormVisible}
+                            setNewCertificateData={setNewCertificateData}
+                        />
+                    </motion.div>
+                )}
+            </AnimatePresence>
+
+            {/* Main Content Area */}
+            <motion.div 
+                className="bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden flex flex-col flex-grow relative"
+                initial={{ opacity: 0, scale: 0.99 }}
+                animate={{ opacity: 1, scale: 1 }}
+                transition={{ duration: 0.3, delay: 0.1 }}
+            >
+                {/* Optional Loading Overlay for Batch Actions */}
+                {isAnyActionLoading && (
+                    <div className="absolute inset-0 bg-white/60 backdrop-blur-[1px] z-50 flex items-center justify-center">
+                        <div className="bg-white p-4 rounded-xl shadow-xl border border-slate-100 flex items-center gap-3">
+                            <Loader2 className="w-5 h-5 text-indigo-600 animate-spin" />
+                            <span className="text-sm font-medium text-slate-700">Processing request...</span>
+                        </div>
+                    </div>
                 )}
 
                 {sortedCertificates.length === 0 ? (
-                    // Empty state (UNCHANGED)
-                    <div className="text-center p-12 bg-white/70 rounded-xl shadow-lg border-2 border-dashed border-gray-300 backdrop-blur-sm">
-                        <p className="text-gray-500 text-xl font-medium">
-                            No certificates found.
+                    // --- Aesthetic Empty State ---
+                    <motion.div 
+                        initial={{ opacity: 0, y: 20 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        className="flex flex-col items-center justify-center py-24 px-4 text-center"
+                    >
+                        <div className="w-24 h-24 bg-slate-50 rounded-full flex items-center justify-center mb-6 ring-[12px] ring-slate-50/50">
+                            <Inbox className="w-10 h-10 text-slate-300" strokeWidth={1.5} />
+                        </div>
+                        <h3 className="text-xl font-semibold text-slate-900 mb-2">No certificates found</h3>
+                        <p className="text-slate-500 max-w-sm mx-auto mb-8 leading-relaxed">
+                            We couldn't find any records matching your active filters. Try adjusting your search query or add a new entry.
                         </p>
-                        <p className="text-gray-400 mt-2">
-                            Try adjusting your search criteria or adding new data.
-                        </p>
-                    </div>
+                        <button 
+                            onClick={() => setIsAddFormVisible(true)}
+                            className="group relative inline-flex items-center justify-center px-6 py-2.5 text-sm font-medium text-white transition-all duration-200 bg-indigo-600 rounded-lg hover:bg-indigo-700 hover:shadow-md hover:shadow-indigo-200 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 cursor-pointer"
+                        >
+                            <span>Add New Certificate</span>
+                        </button>
+                    </motion.div>
                 ) : (
+                    // --- Data Table ---
                     <>
-                        {/* TABLE Container (UNCHANGED) */}
-                        <div className="overflow-x-auto rounded-xl shadow-lg border border-gray-300 bg-white/70 backdrop-blur-md">
-                            <table
-                                className="min-w-full divide-y divide-gray-300"
-                                style={{ borderCollapse: 'collapse' }}
-                            >
+                        <div className="overflow-x-auto custom-scrollbar">
+                            <table className="w-full text-left border-collapse">
                                 <TableHeader
                                     certificates={certificates}
                                     selectedIds={selectedIds}
@@ -328,8 +299,8 @@ const CertificateTable: React.FC<CertificateTableExtendedProps> = ({
                                     requestSort={requestSort}
                                     handleSelectAll={handleSelectAll}
                                 />
-                                <tbody className="divide-y divide-gray-200">
-                                    {sortedCertificates.map((cert: ICertificateClient, index: number) => ( 
+                                <tbody className="divide-y divide-slate-100/80 bg-white">
+                                    {sortedCertificates.map((cert, index) => ( 
                                         <TableRow
                                             key={cert._id}
                                             cert={cert}
@@ -357,23 +328,72 @@ const CertificateTable: React.FC<CertificateTableExtendedProps> = ({
                                 </tbody>
                             </table>
                         </div>
-                        <Pagination />
+
+                        {/* --- Modern Floating Pagination --- */}
+                        <div className="border-t border-slate-100 bg-slate-50/40 p-4 flex flex-col sm:flex-row justify-between items-center gap-4">
+                            <div className="text-xs text-slate-500 font-medium tracking-wide">
+                                Showing <span className="text-slate-900 font-bold">{((currentPage - 1) * PAGE_LIMIT) + 1}</span> to <span className="text-slate-900 font-bold">{Math.min(currentPage * PAGE_LIMIT, totalItems)}</span> of <span className="text-slate-900 font-bold">{totalItems}</span> results
+                            </div>
+                            
+                            <div className="flex items-center gap-1.5 p-1 bg-white rounded-xl shadow-sm border border-slate-200/80">
+                                <button
+                                    onClick={() => setCurrentPage(prev => Math.max(1, prev - 1))}
+                                    disabled={currentPage === 1}
+                                    className="p-2 rounded-lg text-slate-500 hover:text-indigo-600 hover:bg-indigo-50 disabled:opacity-30 disabled:hover:bg-transparent disabled:hover:text-slate-500 transition-all cursor-pointer"
+                                >
+                                    <ChevronLeft className="w-4 h-4" />
+                                </button>
+                                
+                                <div className="flex items-center gap-1 px-2">
+                                    {Array.from({ length: totalPages }, (_, i) => i + 1)
+                                        .filter(page => page === 1 || page === totalPages || (page >= currentPage - 1 && page <= currentPage + 1))
+                                        .map((page, index, array) => (
+                                            <React.Fragment key={page}>
+                                                {index > 0 && array[index - 1] !== page - 1 && (
+                                                    <span className="text-xs text-slate-400 px-1 select-none">...</span>
+                                                )}
+                                                <button
+                                                    onClick={() => setCurrentPage(page)}
+                                                    className={clsx(
+                                                        "w-8 h-8 flex items-center justify-center rounded-lg text-xs font-semibold transition-all duration-200 cursor-pointer",
+                                                        page === currentPage
+                                                            ? "bg-indigo-600 text-white shadow-md shadow-indigo-200 scale-105"
+                                                            : "text-slate-600 hover:bg-slate-100 hover:text-slate-900"
+                                                    )}
+                                                >
+                                                    {page}
+                                                </button>
+                                            </React.Fragment>
+                                    ))}
+                                </div>
+
+                                <button
+                                    onClick={() => setCurrentPage(prev => Math.min(totalPages, prev + 1))}
+                                    disabled={currentPage === totalPages || totalPages === 0}
+                                    className="p-2 rounded-lg text-slate-500 hover:text-indigo-600 hover:bg-indigo-50 disabled:opacity-30 disabled:hover:bg-transparent disabled:hover:text-slate-500 transition-all cursor-pointer"
+                                >
+                                    <ChevronRight className="w-4 h-4" />
+                                </button>
+                            </div>
+                        </div>
                     </>
                 )}
-            </div>
+            </motion.div>
             
-            {/* Mail Composer Modal (UNCHANGED) */}
-            {isMailComposerOpen && mailComposerCert && (
-                <MailComposer
-                    certData={mailComposerCert}
-                    pdfBlob={mailComposerPdfBlob}
-                    isSending={isSending}
-                    onClose={handleCloseMailComposer}
-                    onSend={handleSendMail}
-                    onAlert={pdfOnAlert} 
-                />
-            )}
-        </>
+            {/* Mail Composer Modal */}
+            <AnimatePresence>
+                {isMailComposerOpen && mailComposerCert && (
+                    <MailComposer
+                        certData={mailComposerCert}
+                        pdfBlob={mailComposerPdfBlob}
+                        isSending={isSending}
+                        onClose={handleCloseMailComposer}
+                        onSend={handleSendMail}
+                        onAlert={pdfOnAlert} 
+                    />
+                )}
+            </AnimatePresence>
+        </div>
     );
 };
 

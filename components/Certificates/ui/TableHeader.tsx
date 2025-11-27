@@ -1,7 +1,7 @@
-// D:\ssistudios\ssistudios\components\Certificates\ui\TableHeader.tsx (UNCHANGED)
+// components/Certificates/ui/TableHeader.tsx
 
 import React from 'react';
-import { ChevronUp, ChevronDown, Square, BadgeCheck } from 'lucide-react';
+import { ArrowUp, ArrowDown, ArrowUpDown, CheckSquare, Minus } from 'lucide-react';
 import { ICertificateClient, SortConfig, SortKey } from '../utils/constants';
 
 interface TableHeaderProps {
@@ -20,20 +20,16 @@ const TableHeader: React.FC<TableHeaderProps> = ({
     handleSelectAll,
 }) => {
     // Check if all displayed certificates are selected
-    const allSelected = certificates.length > 0 && certificates.every(cert => selectedIds.includes(cert._id));
-    
-    // Toggle state for select all/none
+    const isAllSelected = certificates.length > 0 && certificates.every(cert => selectedIds.includes(cert._id));
+    // Check if some (but not all) are selected for indeterminate state
+    const isIndeterminate = selectedIds.length > 0 && !isAllSelected;
+
     const toggleSelectAll = () => {
-        handleSelectAll(!allSelected);
+        handleSelectAll(!isAllSelected);
     };
 
-    const getSortIcon = (key: SortKey) => {
-        if (!sortConfig || sortConfig.key !== key) return null;
-        return sortConfig.direction === 'asc' ? <ChevronUp className="w-3 h-3 ml-1" /> : <ChevronDown className="w-3 h-3 ml-1" />;
-    };
-
-    const headerItems: { label: string; key: SortKey | null; sortable: boolean }[] = [
-        { label: 'S. No.', key: null, sortable: false }, // 💡 NEW: Serial No. column
+    const headerItems: { label: string; key: SortKey | null; sortable: boolean; align?: string }[] = [
+        { label: 'S. No.', key: null, sortable: false, align: 'center' },
         { label: 'Certificate No.', key: 'certificateNo', sortable: true },
         { label: 'Name', key: 'name', sortable: true },
         { label: 'Hospital', key: 'hospital', sortable: true },
@@ -41,43 +37,67 @@ const TableHeader: React.FC<TableHeaderProps> = ({
     ];
 
     return (
-        <thead className="bg-gray-50 border-b border-gray-300">
+        // FIX APPLIED HERE:
+        // Changed 'z-[5]' to 'z-[1]' (Lowest possible positive index).
+        // This ensures it sticks above the rows (z-0) but slides UNDER the sidebar.
+        <thead className="bg-gray-50/50 backdrop-blur-sm sticky top-0 z-[1]">
             <tr>
-                {/* Checkbox Header */}
-                <th scope="col" className="px-3 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider w-12 border-r border-gray-300">
-                    <label className="cursor-pointer flex items-center justify-center">
-                        <input
-                            type="checkbox"
-                            className="hidden"
-                            checked={allSelected}
-                            onChange={toggleSelectAll}
-                            aria-label="Select all certificates"
-                        />
-                        {allSelected && certificates.length > 0 ? (
-                            <BadgeCheck className="w-5 h-5 text-sky-600" />
-                        ) : (
-                            <Square className="w-5 h-5 text-gray-400" />
-                        )}
-                    </label>
+                {/* --- Select All Checkbox --- */}
+                <th scope="col" className="w-14 px-4 py-3.5 border-b border-gray-200/80">
+                    <div className="flex items-center justify-center">
+                        <button
+                            onClick={toggleSelectAll}
+                            className={`group relative flex h-5 w-5 items-center justify-center rounded-[5px] border transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-blue-500/20 ${
+                                isAllSelected || isIndeterminate
+                                    ? 'bg-blue-600 border-blue-600 shadow-sm'
+                                    : 'bg-white border-gray-300 hover:border-blue-400'
+                            }`}
+                        >
+                            {isAllSelected && <CheckSquare className="h-3.5 w-3.5 text-white" strokeWidth={3} />}
+                            {isIndeterminate && <Minus className="h-3.5 w-3.5 text-white" strokeWidth={4} />}
+                        </button>
+                    </div>
                 </th>
 
-                {/* Data Headers */}
-                {headerItems.map(item => (
-                    <th
-                        key={item.label}
-                        scope="col"
-                        className={`px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider ${item.key ? 'cursor-pointer hover:bg-gray-100 transition-colors' : ''} border-r border-gray-300 last:border-r-0`}
-                        onClick={item.sortable ? () => requestSort(item.key as SortKey) : undefined}
-                    >
-                        <div className="flex items-center">
-                            {item.label}
-                            {item.sortable && getSortIcon(item.key as SortKey)}
-                        </div>
-                    </th>
-                ))}
+                {/* --- Data Columns --- */}
+                {headerItems.map((item) => {
+                    const isSorted = sortConfig?.key === item.key;
+                    const sortDirection = sortConfig?.direction;
 
-                {/* Actions Header */}
-                <th scope="col" className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-40">
+                    return (
+                        <th
+                            key={item.label}
+                            scope="col"
+                            onClick={item.sortable ? () => requestSort(item.key as SortKey) : undefined}
+                            className={`px-4 py-3.5 text-xs font-semibold uppercase tracking-wider text-gray-500 border-b border-gray-200/80 select-none ${
+                                item.sortable ? 'cursor-pointer group hover:bg-gray-100/50 transition-colors' : 'cursor-default'
+                            }`}
+                        >
+                            <div className={`flex items-center gap-2 ${item.align === 'center' ? 'justify-center' : 'justify-start'}`}>
+                                <span className={`${isSorted ? 'text-blue-700 font-bold' : 'group-hover:text-gray-700'}`}>
+                                    {item.label}
+                                </span>
+                                
+                                {item.sortable && (
+                                    <span className="flex items-center">
+                                        {isSorted ? (
+                                            sortDirection === 'asc' ? (
+                                                <ArrowUp className="h-3.5 w-3.5 text-blue-600" strokeWidth={2.5} />
+                                            ) : (
+                                                <ArrowDown className="h-3.5 w-3.5 text-blue-600" strokeWidth={2.5} />
+                                            )
+                                        ) : (
+                                            <ArrowUpDown className="h-3.5 w-3.5 text-gray-300 opacity-0 transition-opacity group-hover:opacity-100" />
+                                        )}
+                                    </span>
+                                )}
+                            </div>
+                        </th>
+                    );
+                })}
+
+                {/* --- Actions Column --- */}
+                <th scope="col" className="px-4 py-3.5 text-right text-xs font-semibold uppercase tracking-wider text-gray-500 border-b border-gray-200/80 w-32">
                     Actions
                 </th>
             </tr>

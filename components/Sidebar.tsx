@@ -27,7 +27,6 @@ import {
   TbBrandAndroid,
   TbDeviceDesktop,
   TbVersions,
-  TbCode,
 } from 'react-icons/tb'
 
 import { useAuth } from '@/contexts/AuthContext'
@@ -194,7 +193,7 @@ export default function Sidebar({ forceActive, isOpen, toggleSidebar }: SidebarP
 
   const renderSidebarContent = (isMobile: boolean, isDesktopHovered = false) => (
     <aside
-      className={`h-screen bg-[#111214] text-white flex flex-col font-nunito border-r-2 border-white/5 shadow-xl transition-all duration-300 ease-in-out relative
+      className={`h-screen bg-[#111214] text-white flex flex-col font-fredoka border-r-2 border-white/5 shadow-xl transition-all duration-300 ease-in-out relative
         ${isMobile ? 'w-[85%] max-w-sm' : isDesktopHovered ? 'w-64' : 'w-20'}
       `}
     >
@@ -254,7 +253,7 @@ export default function Sidebar({ forceActive, isOpen, toggleSidebar }: SidebarP
           const buttonClass = `
             text-white hover:text-white transition-all duration-200
             ${isRestricted ? 'opacity-40 cursor-not-allowed' : 'opacity-100 cursor-pointer'}
-            ${active && !isRestricted ? 'font-bold bg-white/10' : 'font-normal hover:bg-white/5'}
+            ${active && !isRestricted ? 'font-medium bg-white/10' : 'font-normal hover:bg-white/5'}
             ${item.name === 'Logout' ? 'text-red-500 hover:bg-red-500/10 hover:text-red-400' : ''}
           `;
 
@@ -291,7 +290,7 @@ export default function Sidebar({ forceActive, isOpen, toggleSidebar }: SidebarP
                     className={`transition-colors flex-shrink-0 text-white ${isRestricted ? 'opacity-40' : 'opacity-100'}`}
                   />
                   <span
-                    className={`text-sm whitespace-nowrap transition-opacity duration-200 ${
+                    className={`text-[15px] whitespace-nowrap transition-opacity duration-200 ${
                       isMobile || isDesktopHovered ? 'opacity-100' : 'opacity-0'
                     }`}
                   >
@@ -319,7 +318,7 @@ export default function Sidebar({ forceActive, isOpen, toggleSidebar }: SidebarP
                   ) : null)}
               </button>
               {isRestricted && (
-                <Tooltip id={`tooltip-${item.name.replace(/\s/g, '-')}`} className="z-50" />
+                <Tooltip id={`tooltip-${item.name.replace(/\s/g, '-')}`} className="z-50 font-fredoka" />
               )}
               {item.children && (
                 <motion.div
@@ -333,7 +332,7 @@ export default function Sidebar({ forceActive, isOpen, toggleSidebar }: SidebarP
                     const childButtonClass = `
                       text-white transition-all duration-200
                       ${isRestricted ? 'opacity-40 cursor-not-allowed' : 'opacity-100 cursor-pointer'}
-                      ${childIsActive && !isRestricted ? 'font-bold' : 'font-normal hover:bg-white/5'}
+                      ${childIsActive && !isRestricted ? 'font-medium' : 'font-normal hover:bg-white/5'}
                     `;
                     return (
                       <button
@@ -402,20 +401,29 @@ export default function Sidebar({ forceActive, isOpen, toggleSidebar }: SidebarP
           </div>
         </div>
 
-        {/* System Info & Credits - Minimalist List */}
-        <div className="space-y-1.5 px-1 pt-1">
-          <div className="flex items-center justify-between text-[10px] text-gray-500">
-             <div className="flex items-center gap-2">
-                <TbVersions size={13} className="text-gray-600" />
-                <span className="font-medium tracking-wide">v.1.08.25</span>
+        {/* System Info & Credits - HIGHLIGHTED SECTION */}
+        <div className="space-y-2 px-1 pt-1">
+<div className="flex items-center justify-between text-[10px] text-gray-500">
+             <div className="flex items-center gap-2 group">
+                <TbVersions size={13} className="text-gray-600 group-hover:text-gray-400 transition-colors" />
+                
+                {/* Version: Monospaced, matte gray, no glow */}
+                <span className="font-mono text-gray-500 group-hover:text-gray-300 transition-colors">
+                  v.1.08.25
+                </span>
              </div>
-             <span className="bg-emerald-500/5 text-emerald-500 px-1.5 rounded-[4px] text-[9px] font-semibold tracking-wide border border-emerald-500/10">
+             
+             {/* BETA Tag: Flat, bordered, muted emerald (Professional style) */}
+             <span className="border border-emerald-900/30 bg-emerald-900/10 text-emerald-600 px-1.5 py-0.5 rounded-[3px] text-[9px] font-bold tracking-wider opacity-80">
                 BETA
              </span>
           </div>
-          <div className="flex items-center gap-2 text-[10px] text-gray-600">
-             <TbCode size={13} />
-             <span>Dev: <span className="text-gray-500 font-medium">Puneet Shukla</span></span>
+          
+          {/* Replaced Text with Professional Styling */}
+          <div className="flex items-center justify-center pt-2">
+             <span className="text-[10px] font-bold tracking-[0.2em] text-transparent bg-clip-text bg-gradient-to-r from-gray-500 via-gray-200 to-gray-500 uppercase hover:from-white hover:to-white transition-all duration-500">
+                A SSI MAYA APPLICATION
+             </span>
           </div>
         </div>
 
@@ -441,8 +449,9 @@ export default function Sidebar({ forceActive, isOpen, toggleSidebar }: SidebarP
     <>
       <link rel="preconnect" href="https://fonts.googleapis.com" />
       <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="anonymous" />
+      {/* Changed to Fredoka for that cute look */}
       <link
-        href="https://fonts.googleapis.com/css2?family=Nunito:wght@400;600;700&display=swap"
+        href="https://fonts.googleapis.com/css2?family=Fredoka:wght@300;400;500;600;700&display=swap"
         rel="stylesheet"
       />
 
@@ -492,8 +501,8 @@ export default function Sidebar({ forceActive, isOpen, toggleSidebar }: SidebarP
       </AnimatePresence>
 
       <style>{`
-        .font-nunito {
-          font-family: 'Nunito', sans-serif;
+        .font-fredoka {
+          font-family: 'Fredoka', sans-serif;
         }
         .shadow-glow {
           box-shadow: 0 0 10px rgba(255, 255, 255, 0.4);

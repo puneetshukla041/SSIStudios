@@ -31,6 +31,7 @@
     "class-variance-authority": "^0.7.1",
     "cloudinary": "^2.8.0",
     "clsx": "^2.1.1",
+    "date-fns": "^4.1.0",
     "file-saver": "^2.0.5",
     "form-data": "^4.0.4",
     "formidable": "^3.5.4",
@@ -58,7 +59,7 @@
     "recharts": "^3.4.1",
     "sharp": "^0.34.3",
     "swr": "^2.3.6",
-    "tailwind-merge": "^3.3.1",
+    "tailwind-merge": "^3.4.0",
     "util-deprecate": "^1.0.2",
     "xlsx": "^0.18.5",
     "zustand": "^5.0.8"

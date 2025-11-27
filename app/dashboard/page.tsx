@@ -5,9 +5,9 @@ import { motion, Variants, AnimatePresence } from "framer-motion";
 import { useRouter } from "next/navigation";
 import {
   Plus, Eraser, Settings, Layers2Icon, LayoutGrid, Palette,
-  Search, LayoutTemplate, Video, Megaphone, Briefcase,
+  Search, LayoutTemplate, Video, Megaphone, Briefcase,CreditCard,Image,StarIcon,BugIcon,PercentSquareIcon,
   ArrowRight, Sparkles, X
-} from "lucide-react";
+} from "lucide-react";  
 
 import { useAuth } from "@/contexts/AuthContext";
 import Header from "@/components/dashboard/Header";
@@ -64,6 +64,7 @@ export default function DashboardPage() {
       path: "/poster/editor",
       keywords: ["marketing", "design", "canvas"],
     },
+    
     {
       id: "manage-certs",
       label: "Certificates",
@@ -84,7 +85,7 @@ export default function DashboardPage() {
     },
     {
       id: "visiting-cards",
-      label: "Visit Cards",
+      label: "Visiting Cards",
       subLabel: "Identity",
       icon: LayoutGrid,
       gradient: "from-violet-500 to-purple-600",
@@ -92,10 +93,10 @@ export default function DashboardPage() {
       keywords: ["id", "contact", "business"],
     },
     {
-      id: "design-tools",
-      label: "Design Tools",
+      id: "id-card",
+      label: "ID Card",
       subLabel: "Utilities",
-      icon: Palette,
+      icon: CreditCard,
       gradient: "from-cyan-400 to-blue-500",
       path: "/design-tools",
       keywords: ["color", "draw", "kit"],
@@ -112,11 +113,11 @@ export default function DashboardPage() {
   ];
 
   const heroFilters = [
-    { label: "Slides", icon: <LayoutTemplate size={16} /> },
-    { label: "Social", icon: <LayoutGrid size={16} /> },
-    { label: "Video", icon: <Video size={16} /> },
-    { label: "Ads", icon: <Megaphone size={16} /> },
-    { label: "Work", icon: <Briefcase size={16} /> },
+    { label: "Assets", icon: <LayoutTemplate size={16} /> },
+    { label: "Themes", icon: <Image size={16} /> },
+    { label: "Rate Us", icon: <StarIcon size={16} /> },
+    { label: "Reprt a Bug", icon: <BugIcon size={16} /> },
+//    { label: "Developer", icon: <PercentSquareIcon size={16} /> },
   ];
 
   const filteredActions = quickActions.filter((action) => {

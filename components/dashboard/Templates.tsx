@@ -127,12 +127,16 @@ export default function Templates({ searchQuery = "" }: { searchQuery?: string }
                   </div>
 
                   {/* Hover Action (Hidden on touch devices usually, but logic remains) */}
-                  <div className="absolute inset-0 z-30 flex items-center justify-center opacity-0 transition-all duration-300 group-hover:opacity-100 group-hover:scale-100 scale-90">
-                    <button className="hidden sm:flex items-center gap-2 rounded-full bg-white/95 px-5 py-2.5 text-sm font-bold text-slate-900 shadow-xl backdrop-blur-xl hover:bg-white transition-colors">
-                      <Sparkles size={16} className="text-indigo-600" />
-                      Use this
-                    </button>
-                  </div>
+
+<div className="absolute inset-0 z-30 flex items-center justify-center opacity-0 transition-all duration-300 group-hover:opacity-100 group-hover:scale-100 scale-90 cursor-pointer">
+  <button
+    className="hidden sm:flex items-center gap-2 rounded-full bg-white/95 px-5 py-2.5 text-sm font-bold text-slate-900 shadow-xl backdrop-blur-xl hover:bg-white transition-colors cursor-pointer focus:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500 focus-visible:ring-offset-2 focus-visible:ring-offset-white"
+  >
+    <Sparkles size={16} className="text-indigo-600" />
+    Use this
+  </button>
+</div>
+
                 </div>
 
                 {/* Metadata */}
