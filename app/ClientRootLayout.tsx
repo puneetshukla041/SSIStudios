@@ -8,47 +8,6 @@ import { ReactNode, useState, useEffect } from "react";
 import { motion } from "framer-motion";
 import { UsageProvider } from "@/contexts/UsageContext"; 
 
-// --- Animated Hamburger Icon ---
-type MotionLineProps = React.ComponentPropsWithoutRef<"line"> & { variants?: any; [key: string]: any };
-const MotionLine = motion.line as React.FC<MotionLineProps>;
-
-const AnimatedHamburgerIcon = ({
-  isOpen,
-  size = 20,
-  strokeWidth = 2,
-  className = "",
-}: {
-  isOpen: boolean;
-  size?: number;
-  strokeWidth?: number;
-  className?: string;
-}) => {
-  const commonLineAttributes = {
-    vectorEffect: "non-scaling-stroke" as const,
-    stroke: "currentColor",
-    strokeWidth,
-    strokeLinecap: "round" as const,
-    strokeLinejoin: "round" as const,
-  };
-  return (
-    <motion.svg
-      width={size}
-      height={size}
-      viewBox="0 0 24 24"
-      fill="none"
-      xmlns="http://www.w3.org/2000/svg"
-      className={className}
-      animate={isOpen ? "open" : "closed"}
-      initial={false}
-      variants={{ open: {}, closed: {} }}
-    >
-      <MotionLine x1="4" y1="6" x2="20" y2="6" variants={{ closed: { rotate: 0, y: 0 }, open: { rotate: 45, y: 6 } }} {...commonLineAttributes} />
-      <MotionLine x1="4" y1="12" x2="20" y2="12" variants={{ closed: { opacity: 1 }, open: { opacity: 0 } }} {...commonLineAttributes} />
-      <MotionLine x1="4" y1="18" x2="20" y2="18" variants={{ closed: { rotate: 0, y: 0 }, open: { rotate: -45, y: -6 } }} {...commonLineAttributes} />
-    </motion.svg>
-  );
-};
-
 // --- App Layout ---
 function AppLayout({ children }: { children: ReactNode }) {
   const pathname = usePathname();
@@ -69,12 +28,16 @@ function AppLayout({ children }: { children: ReactNode }) {
     };
   }, [isSidebarOpen]);
 
-  // ✅ Updated Logic: Added specific background for /idcard to match the component
+  // ✅ Theme Background Logic
   const themeBg =
-    pathname === "/bgremover"
+    pathname === "/dashboard"
+      ? "bg-gray-50 text-gray-900"
+      : pathname === "/bgremover"
       ? "bg-white text-gray-900"
       : pathname === "/idcard"
-      ? "bg-slate-100 text-slate-900" // Matches your ID Card component background
+      ? "bg-slate-100 text-slate-900"
+      : pathname === "/certificates/database"
+      ? "bg-[#F8FAFC] text-gray-900"
       : theme === "light"
       ? "bg-white text-gray-900"
       : "relative overflow-hidden text-gray-900"; // Blossom
@@ -89,29 +52,9 @@ function AppLayout({ children }: { children: ReactNode }) {
       {!isLoginPage ? (
         <div className={`flex relative z-10 min-h-screen ${themeBg}`}>
           <Sidebar forceActive={forceActive} isOpen={isSidebarOpen} toggleSidebar={toggleSidebar} />
-          <main className="flex-1 overflow-y-auto transition-all duration-300 p-4 lg:p-8 relative">
-            <div className="flex items-center justify-between mb-6 lg:hidden">
-              <h1 className="text-3xl sm:text-4xl font-bold tracking-tight text-white">
-                {pathname === "/dashboard"
-                  ? "Dashboard"
-                  : pathname.startsWith("/poster/new")
-                  ? "Creative Studio"
-                  : pathname.startsWith("/templates")
-                  ? "Templates"
-                  : pathname.startsWith("/settings")
-                  ? "Settings"
-                  : pathname === "/idcard"
-                  ? "ID Cards" 
-                  : ""}
-              </h1>
-              <button
-                onClick={toggleSidebar}
-                className="p-2 text-gray-400 hover:text-white focus:outline-none focus:ring-2 focus:ring-blue-500 rounded-md"
-                aria-label="Toggle sidebar"
-              >
-                <AnimatedHamburgerIcon isOpen={isSidebarOpen} size={28} />
-              </button>
-            </div>
+          
+          {/* ✅ Added ml-4 here for the left margin */}
+          <main className="flex-1 overflow-y-auto transition-all duration-300 p-4 lg:p-8 ml-16 relative">
             {children}
           </main>
         </div>
@@ -126,7 +69,6 @@ export default function ClientRootLayout({ children }: { children: ReactNode }) 
   return (
     <AuthProvider>
       <ThemeProvider>
-        
         <UsageProvider>
           <AppLayout>{children}</AppLayout>
         </UsageProvider>
