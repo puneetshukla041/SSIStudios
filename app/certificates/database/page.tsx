@@ -12,20 +12,17 @@ import CertificateTable from '@/components/Certificates/CertificateTable';
 import { ICertificateClient } from '@/components/Certificates/utils/constants';
 import HospitalPieChart from '@/components/Certificates/analysis/HospitalPieChart';
 
-// =======================================================================
-// MAIN COMPONENT: CertificateDatabasePage
-// =======================================================================
-
 const CertificateDatabasePage: React.FC = () => {
   const [refreshKey, setRefreshKey] = useState(0);
   const [certificateData, setCertificateData] = useState<ICertificateClient[]>([]);
-  const [totalRecords, setTotalRecords] = useState(0);
+  const [totalRecords, setTotalRecords] = useState(0); // From Table (for pagination)
   const [isRefreshing, setIsRefreshing] = useState(false);
   
   // State for unique hospitals
   const [uniqueHospitals, setUniqueHospitals] = useState<string[]>([]);
 
-  // State for Doctors & Staff counts
+  // State for Database-wide Stats
+  const [dbTotalRecords, setDbTotalRecords] = useState(0); // Total in DB
   const [doctorsCount, setDoctorsCount] = useState(0);
   const [staffCount, setStaffCount] = useState(0);
 
@@ -34,8 +31,6 @@ const CertificateDatabasePage: React.FC = () => {
   const [searchQuery, setSearchQuery] = useState('');
   const [hospitalFilter, setHospitalFilter] = useState('');
   const [isAddFormVisible, setIsAddFormVisible] = useState(false);
-  
-  // State for the help card visibility
   const [isHelpCardVisible, setIsHelpCardVisible] = useState(false); 
 
   // --- State for Animated Counts ---
@@ -52,30 +47,33 @@ const CertificateDatabasePage: React.FC = () => {
     return () => clearTimeout(delayDebounceFn);
   }, [inputQuery]);
 
-  // --- LOGIC: Calculate Doctors vs Staff ---
+
+  // --- NEW LOGIC: Fetch Whole Database Stats ---
+  // We fetch this separately so it counts everything in MongoDB, 
+  // not just what is currently shown in the table.
   useEffect(() => {
-    if (!certificateData) return;
+    const fetchGlobalStats = async () => {
+      try {
+        const res = await fetch('/api/analytics/stats'); // Calls the API created in Step 1
+        if (res.ok) {
+          const data = await res.json();
+          setDoctorsCount(data.doctorsCount || 0);
+          setStaffCount(data.staffCount || 0);
+          setDbTotalRecords(data.totalRecords || 0);
+        }
+      } catch (error) {
+        console.error("Failed to fetch global stats:", error);
+      }
+    };
 
-    // Filter logic: Check if name starts with "Dr" (case insensitive)
-    const docCount = certificateData.filter(cert => 
-      cert.name.trim().toLowerCase().startsWith('dr') || 
-      cert.name.trim().toLowerCase().startsWith('dr.')
-    ).length;
-
-    const stfCount = certificateData.length - docCount;
-
-    setDoctorsCount(docCount);
-    setStaffCount(stfCount);
-
-  }, [certificateData]);
+    fetchGlobalStats();
+  }, [refreshKey]); // Refetch when user clicks "Sync"
 
 
   // --- Helper: Number Animation Hook ---
   const useCounterAnimation = (targetValue: number, setter: React.Dispatch<React.SetStateAction<number>>, duration = 2000) => {
     useEffect(() => {
       let start = 0; 
-      // We start from 0 for simplicity, or could track previous value. 
-      // For this implementation, refreshing triggers re-animation which looks nice.
       const end = targetValue;
       if (start === end) return;
 
@@ -98,8 +96,8 @@ const CertificateDatabasePage: React.FC = () => {
     }, [targetValue, duration, setter]);
   };
 
-  // Apply animations
-  useCounterAnimation(totalRecords, setAnimatedTotalRecords);
+  // Apply animations (Use dbTotalRecords instead of totalRecords for the card)
+  useCounterAnimation(dbTotalRecords, setAnimatedTotalRecords);
   useCounterAnimation(uniqueHospitals.length, setAnimatedHospitalCount);
   useCounterAnimation(doctorsCount, setAnimatedDoctors, 1500);
   useCounterAnimation(staffCount, setAnimatedStaff, 1500);
@@ -144,7 +142,7 @@ const CertificateDatabasePage: React.FC = () => {
   const handleTableDataUpdate = useCallback(
     (data: ICertificateClient[], totalCount: number, uniqueHospitalsList: string[]) => {
        setCertificateData(data);
-       setTotalRecords(totalCount);
+       setTotalRecords(totalCount); // This handles table pagination
        setUniqueHospitals(uniqueHospitalsList); 
        setIsRefreshing(false);
     },
@@ -154,14 +152,13 @@ const CertificateDatabasePage: React.FC = () => {
   return (
     <div className="min-h-screen bg-[#F8FAFC] text-slate-800 font-sans selection:bg-indigo-500/10 selection:text-indigo-700">
       
-      {/* Help Card Modal Overlay */}
       <AnimatePresence>
         {isHelpCardVisible && <HelpCard onClose={() => setIsHelpCardVisible(false)} />}
       </AnimatePresence>
 
       <main className="mx-auto w-full max-w-[1600px] px-6 py-10 space-y-8">
         
-        {/* --- HEADER SECTION: Title & Search --- */}
+        {/* --- HEADER SECTION --- */}
         <header className="flex flex-col gap-6 lg:flex-row lg:items-center lg:justify-between border-b border-slate-200 pb-8">
           <div className="space-y-1">
             <h1 className="text-2xl font-bold tracking-tight text-slate-900 sm:text-3xl">
@@ -172,7 +169,6 @@ const CertificateDatabasePage: React.FC = () => {
             </p>
           </div>
 
-          {/* Professional Search Bar */}
           <div className="relative w-full lg:w-96 group">
             <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
               <FiSearch className="h-4 w-4 text-slate-400 group-focus-within:text-slate-600 transition-colors" />
@@ -192,10 +188,10 @@ const CertificateDatabasePage: React.FC = () => {
           </div>
         </header>
 
-        {/* --- DASHBOARD STATS GRID (4 Cards) --- */}
+        {/* --- DASHBOARD STATS GRID --- */}
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
           
-          {/* 1. TOTAL CERTIFICATES (Emerald) */}
+          {/* 1. TOTAL CERTIFICATES */}
           <motion.div 
             initial={{ opacity: 0, y: 5 }}
             animate={{ opacity: 1, y: 0 }}
@@ -213,6 +209,7 @@ const CertificateDatabasePage: React.FC = () => {
               </div>
               <div className="flex items-baseline gap-1">
                 <span className="text-3xl font-bold text-slate-900 tracking-tight">
+                  {/* Using Animated DB Total */}
                   {animatedTotalRecords.toLocaleString()}
                 </span>
                 <span className="text-sm font-medium text-slate-400">entries</span>
@@ -228,7 +225,7 @@ const CertificateDatabasePage: React.FC = () => {
             </div>
           </motion.div>
 
-          {/* 2. TOTAL HOSPITALS (Blue) */}
+          {/* 2. TOTAL HOSPITALS */}
           <motion.div 
             initial={{ opacity: 0, y: 5 }}
             animate={{ opacity: 1, y: 0 }}
@@ -257,7 +254,7 @@ const CertificateDatabasePage: React.FC = () => {
             </div>
           </motion.div>
 
-          {/* 3. TOTAL DOCTORS (Violet) */}
+          {/* 3. TOTAL DOCTORS */}
           <motion.div 
             initial={{ opacity: 0, y: 5 }}
             animate={{ opacity: 1, y: 0 }}
@@ -276,6 +273,7 @@ const CertificateDatabasePage: React.FC = () => {
               </div>
               <div className="flex items-baseline gap-1">
                 <span className="text-3xl font-bold text-slate-900 tracking-tight">
+                  {/* Using Animated DB Doctors */}
                   {animatedDoctors.toLocaleString()}
                 </span>
                 <span className="text-sm font-medium text-slate-400">identified</span>
@@ -286,7 +284,7 @@ const CertificateDatabasePage: React.FC = () => {
             </div>
           </motion.div>
 
-          {/* 4. TOTAL STAFF (Amber) */}
+          {/* 4. TOTAL STAFF */}
           <motion.div 
             initial={{ opacity: 0, y: 5 }}
             animate={{ opacity: 1, y: 0 }}
@@ -305,6 +303,7 @@ const CertificateDatabasePage: React.FC = () => {
               </div>
               <div className="flex items-baseline gap-1">
                 <span className="text-3xl font-bold text-slate-900 tracking-tight">
+                  {/* Using Animated DB Staff */}
                   {animatedStaff.toLocaleString()}
                 </span>
                 <span className="text-sm font-medium text-slate-400">others</span>
@@ -317,7 +316,7 @@ const CertificateDatabasePage: React.FC = () => {
 
         </div>
 
-        {/* --- ACTION TOOLBAR (Moved below cards) --- */}
+        {/* --- ACTION TOOLBAR --- */}
         <div className="flex flex-col sm:flex-row items-center justify-end gap-3 pb-2">
             <div className="w-full sm:w-auto">
               <UploadButton
