@@ -1,5 +1,3 @@
-// D:\ssistudios\ssistudios\components\Certificates\hooks\useCertificateActions.ts
-
 import { useState } from 'react';
 import * as XLSX from 'xlsx';
 import { ICertificateClient, CertificateTableProps, initialNewCertificateState, NotificationType } from '../utils/constants';
@@ -302,7 +300,12 @@ export const useCertificateActions = ({
         showNotification(`Preparing ${selectedIds.length} Proctorship certificates...`, 'info');
 
         try {
-            const selectedCertificates = await fetchCertificatesForExport(true, selectedIds);
+            let selectedCertificates = await fetchCertificatesForExport(true, selectedIds);
+            
+            // FAIL-SAFE: Filter again client-side to ensure we ONLY have what was selected.
+            // This prevents the issue where the fetch might return ALL records if passing IDs fails.
+            selectedCertificates = selectedCertificates.filter(cert => selectedIds.includes(cert._id));
+
             if (selectedCertificates.length === 0) {
                 throw new Error('Could not retrieve selected data for bulk V1 export.');
             }
@@ -360,7 +363,11 @@ export const useCertificateActions = ({
         showNotification(`Preparing ${selectedIds.length} Training certificates...`, 'info');
 
         try {
-            const selectedCertificates = await fetchCertificatesForExport(true, selectedIds);
+            let selectedCertificates = await fetchCertificatesForExport(true, selectedIds);
+            
+            // FAIL-SAFE: Filter again client-side to ensure we ONLY have what was selected.
+            selectedCertificates = selectedCertificates.filter(cert => selectedIds.includes(cert._id));
+
             if (selectedCertificates.length === 0) {
                 throw new Error('Could not retrieve selected data for bulk V2 export.');
             }
@@ -432,7 +439,7 @@ export const useCertificateActions = ({
 
         if (type === 'xlsx') {
             const exportColumnConfig = [
-                { wch: 8 },  // S. No.
+                { wch: 8 },   // S. No.
                 { wch: 18 }, // Certificate No.
                 { wch: 30 }, // Name
                 { wch: 55 }, // Hospital
