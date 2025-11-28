@@ -1,83 +1,93 @@
-// D:\ssistudios\ssistudios\app\reportbug\page.tsx
-
 'use client'
-import React, { useState, useEffect, useCallback } from 'react';
-import { ShieldAlert, Send, Star, Loader2, ChevronDown, MessageSquare, Bug, ThumbsUp, Activity, Lock, Image, CheckCircle } from 'lucide-react';
-// IMPORT useAuth HOOK
+import React, { useState, useCallback } from 'react';
+import { 
+  ShieldAlert, Send, Star, Loader2, ChevronDown, 
+  MessageSquare, Bug, ThumbsUp, Activity, Lock, 
+  Image as ImageIcon, CheckCircle, AlertCircle, Paperclip 
+} from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext'; 
+import { Plus_Jakarta_Sans, Inter } from 'next/font/google';
+import clsx from 'clsx';
+
+// --- Professional Typography ---
+const fontHeading = Plus_Jakarta_Sans({ 
+  subsets: ['latin'], 
+  weight: ['500', '600', '700'],
+  display: 'swap',
+});
+
+const fontBody = Inter({ 
+  subsets: ['latin'], 
+  weight: ['400', '500'],
+  display: 'swap',
+});
 
 // --- Feedback Type Options ---
 const FEEDBACK_TYPES = [
-    { value: 'Bug', label: 'Bug Report', icon: Bug },
-    { value: 'Suggestion', label: 'Feature Request', icon: MessageSquare },
-    { value: 'Performance', label: 'Performance Issue', icon: Activity },
-    { value: 'Security', label: 'Security Concern', icon: Lock },
-    { value: 'General', label: 'General Feedback', icon: ThumbsUp },
+    { value: 'Bug', label: 'Bug Report', icon: Bug, color: 'text-red-600', bg: 'bg-red-50', border: 'border-red-100', hoverBg: 'hover:bg-red-50' },
+    { value: 'Suggestion', label: 'Feature Request', icon: MessageSquare, color: 'text-purple-600', bg: 'bg-purple-50', border: 'border-purple-100', hoverBg: 'hover:bg-purple-50' },
+    { value: 'Performance', label: 'Performance Issue', icon: Activity, color: 'text-orange-600', bg: 'bg-orange-50', border: 'border-orange-100', hoverBg: 'hover:bg-orange-50' },
+    { value: 'Security', label: 'Security Concern', icon: Lock, color: 'text-blue-600', bg: 'bg-blue-50', border: 'border-blue-100', hoverBg: 'hover:bg-blue-50' },
+    { value: 'General', label: 'General Feedback', icon: ThumbsUp, color: 'text-green-600', bg: 'bg-green-50', border: 'border-green-100', hoverBg: 'hover:bg-green-50' },
 ];
 
-// --- CONTENT PRESETS ---
+// --- CONTENT PRESETS (Same as before) ---
 const CONTENT_PRESETS: Record<string, { summaries: string[] }> = {
     Bug: {
         summaries: [
-            'Please select a summary...', 
-            '[UI] Layout elements are overlapping on mobile',
-            '[Functionality] Failed to save configuration settings',
-            '[Data Integrity] Data synchronization failure leading to loss',
-            '[Integration] Third-party API connection is failing',
-            '[Validation] Form accepts invalid input without error'
+            'Select a common issue...', 
+            '[UI] Layout elements overlapping on mobile',
+            '[Functionality] Configuration settings failed to save',
+            '[Data] Synchronization failure',
+            '[Integration] API connection error',
+            '[Validation] Form submission error'
         ],
     },
     Suggestion: {
         summaries: [
-            'Please select a summary...', 
-            'Request for a CSV/Excel export feature',
-            'Suggestion for a simplified onboarding process',
-            'Idea to add contextual help links',
-            'Request: Integrate with external service X',
-            'Improve filter options in data tables'
+            'Select a suggestion...', 
+            'Feature: CSV/Excel export',
+            'UX: Simplify onboarding process',
+            'Content: Add contextual help tooltips',
+            'Integration: Connect with external service',
         ],
     },
     Performance: {
         summaries: [
-            'Please select a summary...', 
-            'Dashboard takes >10 seconds to load',
-            'Application freezes when navigating to the Reports section',
-            'Slow response time on API calls',
-            'Excessive CPU/Memory usage during operation'
+            'Select an observation...', 
+            'High Latency: Dashboard load time >10s',
+            'UI Freeze: navigating Reports section',
+            'API Timeout: Slow response',
         ],
     },
     Security: {
         summaries: [
-            'Please select a summary...',
-            'Potential cross-site scripting (XSS) vulnerability found',
-            'Insecure direct object reference (IDOR) possibility',
-            'Misconfiguration in user permission access',
-            'Vulnerable library detected'
+            'Select a concern...',
+            'Vulnerability: Potential XSS detected',
+            'Access Control: Permission mismatch',
+            'Compliance: Data handling concern',
         ],
     },
     General: {
         summaries: [
-            'Please select a summary...',
-            'General praise for the application',
-            'Inquiry regarding future roadmap or updates',
-            'Problem with receiving email notifications',
-            'Comments on the recent update'
+            'Select a topic...',
+            'Feedback: Positive experience',
+            'Inquiry: Roadmap question',
+            'Issue: Notification delivery',
         ],
     },
 };
 
-// --- SATISFACTION Options ---
 const SATISFACTION_OPTIONS = [
-    { value: 5, stars: 5, label: 'Excellent', description: 'Exceptional experience. I love using this application!' },
-    { value: 4, stars: 4, label: 'Very Good', description: 'Solid experience. Just a few minor things to iron out.' },
-    { value: 3, stars: 3, label: 'Average', description: 'It works, but the experience is neutral or mixed.' },
-    { value: 2, stars: 2, label: 'Needs Improvement', description: 'Frustrating or difficult to use. Needs attention.' },
-    { value: 1, stars: 1, label: 'Poor', description: 'Very poor experience. Difficult or impossible to complete tasks.' },
-    { value: 0, stars: 0, label: 'Not Rated', description: 'Please click on a star to provide a satisfaction rating.' },
+    { value: 1, label: 'Critical' },
+    { value: 2, label: 'Poor' },
+    { value: 3, label: 'Average' },
+    { value: 4, label: 'Very Good' },
+    { value: 5, label: 'Excellent' },
 ];
 
 const BugReportApp: React.FC = () => {
-    const { user, isLoading: authLoading } = useAuth(); // Destructure user and loading state
+    const { user, isLoading: authLoading } = useAuth();
     const DEFAULT_SATISFACTION = 0; 
     
     const [feedbackType, setFeedbackType] = useState(FEEDBACK_TYPES[0].value);
@@ -89,12 +99,8 @@ const BugReportApp: React.FC = () => {
     const [satisfaction, setSatisfaction] = useState(DEFAULT_SATISFACTION); 
     const [hoverSatisfaction, setHoverSatisfaction] = useState(0); 
     const [isSubmitting, setIsSubmitting] = useState(false);
-    const [message, setMessage] = useState<{ text: string, type: 'success' | 'error' | 'info' } | null>(null);
+    const [message, setMessage] = useState<{ text: string, type: 'success' | 'error' } | null>(null);
     
-    // NOTE: userId state removed. We use user.username and user.id directly.
-
-    const selectedSatisfaction = SATISFACTION_OPTIONS.find(opt => opt.value === satisfaction) || SATISFACTION_OPTIONS[5];
-
     const handleFeedbackTypeChange = (newType: string) => {
         setFeedbackType(newType);
         setTitle(CONTENT_PRESETS[newType].summaries[0]); 
@@ -113,46 +119,37 @@ const BugReportApp: React.FC = () => {
         e.preventDefault();
 
         if (!user) {
-             setMessage({ text: 'Error: User authentication data is missing.', type: 'error' });
+             setMessage({ text: 'Authentication required.', type: 'error' });
              return;
         }
 
-        // 1. Mandatory Checks
         if (satisfaction === 0) {
-             setMessage({ text: 'The Overall Satisfaction Rating is required.', type: 'error' });
+             setMessage({ text: 'Please provide a satisfaction rating.', type: 'error' });
              return;
         }
         
-        // 2. Determine Final Title
         let finalTitle = title;
-        if (title === "Custom Summary") {
-            if (!customTitle.trim()) {
-                 setMessage({ text: 'Please enter a custom summary or select an option.', type: 'error' });
+        if (title === CONTENT_PRESETS[feedbackType].summaries[0] || title === "Custom Summary") {
+            if (title === "Custom Summary" && !customTitle.trim()) {
+                 setMessage({ text: 'Please enter a summary title.', type: 'error' });
                  return;
-            }
-            finalTitle = customTitle.trim();
-        } else if (title === CONTENT_PRESETS[feedbackType].summaries[0]) {
-             if (!description.trim()) {
-                setMessage({ text: 'Please provide a Summary or a Detailed Description.', type: 'error' });
+            } else if (title === CONTENT_PRESETS[feedbackType].summaries[0] && !description.trim()) {
+                setMessage({ text: 'Please specify the issue in the description.', type: 'error' });
                 return;
-             }
+            }
+            if (title === "Custom Summary") finalTitle = customTitle.trim();
         }
         
-        // Use default description if empty
         const finalDescription = description.trim() || `No detailed description provided. Type: ${feedbackType}.`;
 
         setIsSubmitting(true);
         setMessage(null);
 
         try {
-            // **CRITICAL FIX: Sending user.username (as userId) and user.id (as actual mongo _id) to the server**
             const response = await fetch('/api/bug-report', {
                 method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                },
+                headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({
-                    // Send the username for the server-side lookup
                     userId: user.username, 
                     title: finalTitle,
                     description: finalDescription,
@@ -163,18 +160,10 @@ const BugReportApp: React.FC = () => {
 
             const data = await response.json();
 
-            if (!response.ok) {
-                throw new Error(data.error || `Submission failed with status: ${response.status}`);
-            }
+            if (!response.ok) throw new Error(data.error || 'Submission failed');
 
-            // Mock image upload if file exists
-            if (imageFile) {
-                console.log(`Simulating upload of image: ${imageFile.name}`);
-            }
-
-            setMessage({ text: 'Report submitted successfully! Thank you for your rating and feedback.', type: 'success' });
+            setMessage({ text: 'Report submitted successfully.', type: 'success' });
             
-            // Reset form state (keep submittedUser logic removed)
             handleFeedbackTypeChange(FEEDBACK_TYPES[0].value);
             setCustomTitle('');
             setDescription('');
@@ -182,268 +171,249 @@ const BugReportApp: React.FC = () => {
             setImageFile(null);
             
         } catch (error: any) {
-            console.error("Submission Error:", error);
-            setMessage({ text: error.message || 'Failed to submit report. Please try again.', type: 'error' });
+            setMessage({ text: 'Unable to submit report.', type: 'error' });
         } finally {
             setIsSubmitting(false);
         }
     }, [satisfaction, feedbackType, title, customTitle, description, user, imageFile]); 
 
-    // Renders the golden stars 
-    const renderStars = () => {
-        const stars = [];
-        const starsToFill = hoverSatisfaction || satisfaction; 
-
-        for (let i = 1; i <= 5; i++) {
-            const isFilled = i <= starsToFill; 
-            const starColor = isFilled ? 'text-amber-400 fill-amber-400' : 'text-blue-200/50 fill-blue-50/50';
-
-            stars.push(
-                <Star 
-                    key={i} 
-                    className={`w-5 h-5 transition-colors duration-150 ${starColor} cursor-pointer hover:scale-110`} 
-                    onClick={() => setSatisfaction(i)} 
-                    onMouseEnter={() => setHoverSatisfaction(i)} 
-                    onMouseLeave={() => setHoverSatisfaction(0)}
-                />
-            );
-        }
-        return stars;
-    };
-
-    // Get the description text for the hover effect
-    const getSatisfactionDescription = () => {
-        const currentRating = hoverSatisfaction || satisfaction;
-        const option = SATISFACTION_OPTIONS.find(opt => opt.value === currentRating);
-        
-        if (currentRating === 0) {
-            return SATISFACTION_OPTIONS.find(opt => opt.value === 0)?.description || 'Select a star rating.';
-        }
-
-        return option ? `${option.label}: ${option.description}` : 'Select a star rating.';
-    }
-    
-    const getFeedbackIcon = () => {
-        const type = FEEDBACK_TYPES.find(t => t.value === feedbackType);
-        return type ? type.icon : Bug;
-    }
-
-    // --- POSITIVE & PROFESSIONAL COLOR PALETTE ---
-    const messageStyles = {
-        success: 'bg-green-50 border-green-300 text-green-800',
-        error: 'bg-red-50 border-red-300 text-red-800',
-        info: 'bg-blue-50 border-blue-300 text-blue-800',
-    };
-    
-    const IconComponent = getFeedbackIcon();
-
-    // Show a loading or empty state if auth is not ready
+    // --- Loading State ---
     if (authLoading || !user) {
         return (
-            <div className="min-h-screen flex items-center justify-center bg-gray-50">
-                <div className="text-center text-gray-700">
-                    <Loader2 className="w-8 h-8 animate-spin mx-auto mb-4 text-indigo-600" />
-                    <p className="text-base font-medium">Loading user session...</p>
+            <div className={`min-h-[60vh] flex items-center justify-center ${fontBody.className}`}>
+                <div className="flex flex-col items-center gap-3 text-gray-500">
+                    <Loader2 className="w-6 h-6 animate-spin text-gray-900" />
+                    <p className="text-sm font-medium">Authenticating...</p>
                 </div>
             </div>
         );
     }
 
     return (
-        <div className="min-h-screen p-4 sm:p-8 flex justify-center items-start font-sans bg-white">
-            <div className="w-full max-w-xl bg-gradient-to-br from-white-200 to-indigo-100 shadow-xl rounded-xl p-5 sm:p-6 border border-gray-300">
-
-                <header className="flex flex-col items-center mb-5 pb-3 border-b border-gray-100">
-                    <div className="p-2 bg-blue-600 rounded-full mb-3 shadow-md">
-                        <CheckCircle className="w-6 h-6 text-white" /> 
-                    </div>
-                    <h1 className="text-2xl font-extrabold text-gray-900 tracking-tight">Feedback Submission</h1>
-                    <p className="text-sm text-gray-500 mt-1 text-center">Your input drives our improvements. Rating is mandatory.</p>
-                </header>
-
-                <form onSubmit={handleSubmit} className="space-y-4"> 
-
-                    {/* FIXED: AUTOMATICALLY FETCHED USERNAME/ID DISPLAY */}
-                    <div>
-                        <label htmlFor="submitted-user" className="flex items-center text-sm font-semibold text-gray-700 mb-1">
-                            <ShieldAlert className="w-4 h-4 mr-1 text-green-600" /> Logged In User/ID 
-                        </label>
-                        <div className="flex items-center space-x-2">
-                             <input
-                                type="text"
-                                value={user.username} // Displaying the logged-in username
-                                readOnly
-                                className="flex-1 px-3 py-2 border border-gray-300 rounded-lg bg-gray-100 cursor-default text-sm font-bold text-green-700"
-                            />
-                            <div className="px-3 py-2 text-xs font-mono text-gray-600 bg-gray-100 border border-gray-300 rounded-lg select-all">
-                                ID: {user.id.substring(0, 8)}...
-                            </div>
-                        </div>
-                    </div>
+        <div className={`w-full max-w-6xl mx-auto py-8 px-4 sm:px-6 ${fontBody.className} h-full flex flex-col justify-center`}>
+            
+            {/* Main Rectangular Card */}
+            <div className="bg-white rounded-2xl shadow-xl border border-gray-200 overflow-hidden flex flex-col lg:flex-row min-h-[600px]">
+                
+                {/* --- LEFT SIDEBAR (Context & Selection) --- */}
+                <div className="lg:w-[35%] bg-gray-50/80 p-6 lg:p-8 border-b lg:border-b-0 lg:border-r border-gray-100 flex flex-col gap-6">
                     
-                    {/* 1. Feedback Type Dropdown (Optional) */}
+                    {/* Header */}
                     <div>
-                        <label htmlFor="feedback-type" className="flex items-center text-sm font-semibold text-gray-700 mb-1">
-                            <IconComponent className="w-4 h-4 mr-1 text-blue-600" /> 1. Type of Feedback (Optional)
-                        </label>
-                        <div className="relative">
-                            <select
-                                id="feedback-type"
-                                value={feedbackType}
-                                onChange={(e) => handleFeedbackTypeChange(e.target.value)}
-                                className="w-full appearance-none px-3 py-2 border border-gray-300 rounded-lg bg-white focus:ring-blue-500 focus:border-blue-500 transition shadow-sm cursor-pointer pr-8 text-sm text-gray-800 font-medium"
-                                disabled={isSubmitting}
-                            >
-                                {FEEDBACK_TYPES.map((type) => (
-                                    <option key={type.value} value={type.value}>
-                                        {type.label}
-                                    </option>
-                                ))}
-                                <option disabled value="">Select Type</option> 
-                            </select>
-                            <ChevronDown className="absolute right-2 top-1/2 transform -translate-y-1/2 w-4 h-4 text-gray-400 pointer-events-none" />
-                        </div>
+                        <h1 className={`text-2xl font-bold text-gray-900 tracking-tight ${fontHeading.className}`}>
+                            Submit Feedback
+                        </h1>
+                        <p className="text-gray-500 text-sm mt-1">
+                            We value your input. Please fill out the details.
+                        </p>
                     </div>
-                    
-                    {/* 2. Short Summary Dropdown (Optional) */}
-                    <div>
-                        <label htmlFor="bug-title" className="block text-sm font-semibold text-gray-700 mb-1">
-                            2. Short Summary (Optional)
-                        </label>
-                        <div className="relative">
-                            <select
-                                id="bug-title"
-                                value={title}
-                                onChange={(e) => {
-                                    setTitle(e.target.value);
-                                    if(e.target.value !== "Custom Summary") {
-                                        setCustomTitle('');
-                                    }
-                                }}
-                                className="w-full appearance-none px-3 py-2 border border-gray-300 rounded-lg bg-white focus:ring-blue-500 focus:border-blue-500 transition shadow-sm cursor-pointer pr-8 text-sm text-gray-800"
-                                disabled={isSubmitting}
-                            >
-                                {CONTENT_PRESETS[feedbackType].summaries.map((summary, index) => (
-                                    <option 
-                                        key={index} 
-                                        value={summary}
-                                        className={index === 0 ? 'text-gray-400' : 'text-gray-800'}
+
+                    {/* Reporter Info Card */}
+                    <div className="bg-white p-4 rounded-xl border border-gray-200 shadow-sm flex items-center gap-3 hover:shadow-md transition-shadow duration-300">
+                         <div className="w-10 h-10 rounded-full bg-gradient-to-br from-gray-800 to-black flex items-center justify-center text-xs font-bold text-white shadow-inner">
+                            {user.username.charAt(0).toUpperCase()}
+                        </div>
+                        <div className="flex-1 min-w-0">
+                            <p className="text-sm font-bold text-gray-900 truncate">{user.username}</p>
+                            <p className="text-xs text-gray-500 font-mono truncate">ID: {user.id}</p>
+                        </div>
+                        <div className="h-2 w-2 rounded-full bg-green-500 animate-pulse" title="Session Active" />
+                    </div>
+
+                    {/* Feedback Type Selection (Vertical List) */}
+                    <div className="flex-1 flex flex-col gap-2">
+                         <label className="text-xs font-bold text-gray-400 uppercase tracking-wider">Feedback Type</label>
+                         <div className="flex-1 space-y-2 overflow-y-auto pr-1 custom-scrollbar">
+                            {FEEDBACK_TYPES.map((type) => {
+                                const Icon = type.icon;
+                                const isSelected = feedbackType === type.value;
+                                return (
+                                    <button
+                                        key={type.value}
+                                        type="button"
+                                        onClick={() => handleFeedbackTypeChange(type.value)}
+                                        className={clsx(
+                                            "w-full flex items-center gap-3 p-3 rounded-lg border text-left transition-all duration-200 group relative overflow-hidden cursor-pointer", // Added cursor-pointer
+                                            isSelected 
+                                                ? "bg-white border-gray-900 ring-1 ring-gray-900 shadow-md" 
+                                                : "bg-white border-gray-200 hover:border-gray-400 hover:shadow-sm"
+                                        )}
                                     >
-                                        {summary}
-                                    </option>
-                                ))}
-                                <option value="Custom Summary">-- Custom Summary --</option>
-                            </select>
-                            <ChevronDown className="absolute right-2 top-1/2 transform -translate-y-1/2 w-4 h-4 text-gray-400 pointer-events-none" />
-                        </div>
-                        {/* Custom entry if selected */}
-                        {title === "Custom Summary" && (
-                            <input
-                                type="text"
-                                value={customTitle}
-                                onChange={(e) => setCustomTitle(e.target.value)}
-                                placeholder="Enter your custom summary here"
-                                className="w-full mt-2 px-3 py-2 border border-gray-300 rounded-lg focus:ring-blue-500 focus:border-blue-500 transition shadow-sm text-sm"
-                                disabled={isSubmitting}
-                                maxLength={100} 
-                            />
-                        )}
+                                        <div className={clsx(
+                                            "p-2 rounded-md transition-colors",
+                                            isSelected ? type.bg : "bg-gray-100 group-hover:bg-gray-200"
+                                        )}>
+                                            <Icon className={clsx("w-4 h-4", type.color)} />
+                                        </div>
+                                        <div>
+                                            <p className={clsx("text-sm font-semibold", isSelected ? "text-gray-900" : "text-gray-600")}>{type.label}</p>
+                                        </div>
+                                        {isSelected && (
+                                            <div className="absolute right-0 top-0 bottom-0 w-1 bg-gray-900" />
+                                        )}
+                                    </button>
+                                );
+                            })}
+                         </div>
                     </div>
+                </div>
 
-                    {/* 3. Detailed Description (Optional) */}
-                    <div>
-                        <label htmlFor="description" className="block text-sm font-semibold text-gray-700 mb-1">
-                            3. Detailed Description (Optional)
-                        </label>
-                        <textarea
-                            id="description"
-                            rows={4} 
-                            value={description}
-                            onChange={(e) => setDescription(e.target.value)}
-                            placeholder="Please provide any relevant details, steps, or suggestions here."
-                            className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-blue-500 focus:border-blue-500 transition shadow-sm resize-none text-sm"
-                            disabled={isSubmitting}
-                        />
-                    </div>
+                {/* --- RIGHT CONTENT (Form) --- */}
+                <div className="lg:w-[65%] p-6 lg:p-8 flex flex-col relative bg-white">
                     
-                    {/* 4. Attached Image (Optional) */}
-                    <div>
-                        <label htmlFor="image-attachment" className="flex items-center text-sm font-semibold text-gray-700 mb-1">
-                            <Image className="w-4 h-4 mr-1 text-blue-600" /> 4. Attached Image (Optional)
-                        </label>
-                        <input
-                            id="image-attachment"
-                            type="file"
-                            accept="image/*"
-                            onChange={handleImageChange}
-                            className="w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-gray-100 file:text-gray-700 hover:file:bg-gray-200"
-                            disabled={isSubmitting}
-                        />
-                        {imageFile && (
-                            <p className="mt-1 text-xs text-gray-500">
-                                Attached: {imageFile.name} ({(imageFile.size / 1024).toFixed(1)} KB)
-                            </p>
-                        )}
-                    </div>
-
-
-                    {/* 5. Satisfaction Stars (Mandatory) */}
-                    <div className={`pt-3 p-4 rounded-xl shadow-inner transition-all duration-300 ${satisfaction === 0 ? 'bg-green-50 border border-blue-400' : 'bg-blue-50 border border-blue-300'}`}>
-                        <label className="block text-sm font-extrabold text-gray-700 mb-3 uppercase tracking-wide">
-                            5. Overall Satisfaction Rating <span className="text-red-600">*</span>
-                        </label>
-                        <div className="flex flex-col space-y-2">
-                            
-                            <div className="flex items-center space-x-2">
-                                <div className="flex space-x-0.5">
-                                    {renderStars()}
-                                </div>
-                                <span className="text-xs font-bold text-gray-700">
-                                    {satisfaction > 0 ? `(${selectedSatisfaction.value}/5 Stars - ${selectedSatisfaction.label})` : <span className="text-red-600 font-bold"></span>}
-                                </span>
-                            </div>
-
-                            <p className={`text-xs font-medium ${satisfaction === 0 ? 'text-green-800' : 'text-gray-700'}`}>
-                                <span className="transition-colors duration-150">
-                                    {getSatisfactionDescription()}
-                                </span>
-                            </p>
-                        </div>
-                    </div>
-
-                    {/* Message Display */}
+                    {/* Floating Status Message */}
                     {message && (
-                        <div className={`p-3 rounded-lg border-l-4 font-medium shadow-md ${messageStyles[message.type]}`}>
+                        <div className={clsx(
+                            "absolute top-0 left-0 right-0 py-2 px-4 text-center text-xs font-semibold animate-in slide-in-from-top-2",
+                            message.type === 'success' ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'
+                        )}>
                             {message.text}
                         </div>
                     )}
 
-                    {/* Submit Button */}
-                    <button
-                        type="submit"
-                        disabled={isSubmitting}
-                        className={`w-full flex justify-center items-center space-x-2 px-3 py-2.5 text-base font-bold rounded-lg transition-all duration-300 ease-in-out backdrop-blur-md 
-                            ${isSubmitting 
-                                ? 'bg-blue-400/50 text-white cursor-not-allowed border border-blue-300/50' 
-                                : 'bg-white/30 text-blue-800 border border-blue-300/50 shadow-lg shadow-blue-500/20 hover:bg-white/50 hover:shadow-xl hover:shadow-blue-500/30'
-                            }
-                        `}
-                    >
-                        {isSubmitting ? (
-                            <>
-                                <Loader2 className="w-4 h-4 animate-spin" /> 
-                                <span>Submitting...</span>
-                            </>
-                        ) : (
-                            <>
-                                <Send className="w-4 h-4 -rotate-45" /> 
-                                <span>Submit {feedbackType}</span>
-                            </>
-                        )}
-                    </button>
+                    <form onSubmit={handleSubmit} className="flex-1 flex flex-col gap-5 h-full">
+                        
+                        {/* 1. Summary */}
+                        <div className="space-y-1.5">
+                            <label className="text-sm font-semibold text-gray-900">Summary</label>
+                            <div className="relative group">
+                                <select
+                                    value={title}
+                                    onChange={(e) => {
+                                        setTitle(e.target.value);
+                                        if(e.target.value !== "Custom Summary") setCustomTitle('');
+                                    }}
+                                    className="w-full appearance-none pl-4 pr-10 py-3 bg-gray-50 border border-gray-200 rounded-lg text-sm text-gray-900 focus:outline-none focus:bg-white focus:ring-2 focus:ring-gray-900/10 focus:border-gray-900 transition-all cursor-pointer hover:bg-gray-100"
+                                >
+                                    {CONTENT_PRESETS[feedbackType].summaries.map((s, i) => (
+                                        <option key={i} value={s} disabled={i === 0}>{s}</option>
+                                    ))}
+                                    <option value="Custom Summary">Other (Custom Summary)</option>
+                                </select>
+                                <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400 pointer-events-none group-hover:text-gray-600 transition-colors" />
+                            </div>
+                            
+                            {title === "Custom Summary" && (
+                                <input 
+                                    type="text"
+                                    value={customTitle}
+                                    onChange={(e) => setCustomTitle(e.target.value)}
+                                    placeholder="Enter a brief summary..."
+                                    className="mt-2 w-full px-4 py-3 bg-white border border-gray-200 rounded-lg text-sm text-gray-900 focus:outline-none focus:ring-2 focus:ring-gray-900/10 focus:border-gray-900 transition-all animate-in fade-in slide-in-from-top-1"
+                                    autoFocus
+                                />
+                            )}
+                        </div>
 
-                </form>
+                        {/* 2. Description */}
+                        <div className="space-y-1.5 flex-1 min-h-[120px]">
+                            <label className="text-sm font-semibold text-gray-900 flex justify-between">
+                                Description
+                                <span className="text-xs font-normal text-gray-400">Be specific</span>
+                            </label>
+                            <textarea
+                                value={description}
+                                onChange={(e) => setDescription(e.target.value)}
+                                placeholder="Steps to reproduce, expected behavior, details..."
+                                className="w-full h-full min-h-[120px] px-4 py-3 bg-gray-50 border border-gray-200 rounded-lg text-sm text-gray-900 resize-none focus:outline-none focus:bg-white focus:ring-2 focus:ring-gray-900/10 focus:border-gray-900 transition-all placeholder:text-gray-400"
+                            />
+                        </div>
 
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-5 mt-auto pt-4 border-t border-gray-100">
+                             {/* 3. Attachment */}
+                             <div className="space-y-1.5">
+                                <label className="text-sm font-semibold text-gray-900">Attachment</label>
+                                <div className="relative group">
+                                    <input
+                                        type="file"
+                                        accept="image/*"
+                                        onChange={handleImageChange}
+                                        className="absolute inset-0 w-full h-full opacity-0 cursor-pointer z-10"
+                                    />
+                                    <div className={clsx(
+                                        "w-full px-4 py-2.5 rounded-lg border border-dashed flex items-center gap-2 transition-all duration-200 cursor-pointer", // Added cursor-pointer
+                                        imageFile 
+                                            ? "bg-blue-50 border-blue-200 text-blue-700" 
+                                            : "bg-white border-gray-300 text-gray-500 group-hover:border-gray-400 group-hover:bg-gray-50"
+                                    )}>
+                                        {imageFile ? <CheckCircle className="w-4 h-4" /> : <Paperclip className="w-4 h-4" />}
+                                        <span className="text-xs font-medium truncate">
+                                            {imageFile ? imageFile.name : "Click to upload screenshot"}
+                                        </span>
+                                    </div>
+                                </div>
+                             </div>
+
+                             {/* 4. Rating */}
+                             <div className="space-y-1.5">
+                                <label className="text-sm font-semibold text-gray-900 flex justify-between">
+                                    Satisfaction
+                                    <span className="text-xs font-normal text-gray-400">
+                                        {(hoverSatisfaction || satisfaction) > 0 
+                                            ? SATISFACTION_OPTIONS.find(o => o.value === (hoverSatisfaction || satisfaction))?.label 
+                                            : 'Required'}
+                                    </span>
+                                </label>
+                                <div className="flex items-center justify-between bg-gray-50 px-3 py-2 rounded-lg border border-gray-200 hover:border-gray-300 transition-colors">
+                                    {[1, 2, 3, 4, 5].map((star) => (
+                                        <button
+                                            key={star}
+                                            type="button"
+                                            onClick={() => setSatisfaction(star)}
+                                            onMouseEnter={() => setHoverSatisfaction(star)}
+                                            onMouseLeave={() => setHoverSatisfaction(0)}
+                                            className="p-1 focus:outline-none transition-transform hover:scale-125 active:scale-95 cursor-pointer" // Added cursor-pointer
+                                        >
+                                            <Star 
+                                                className={clsx(
+                                                    "w-5 h-5 transition-all duration-200", 
+                                                    (hoverSatisfaction || satisfaction) >= star 
+                                                        ? "fill-amber-400 text-amber-400 drop-shadow-sm" 
+                                                        : "fill-gray-200 text-gray-200"
+                                                )} 
+                                            />
+                                        </button>
+                                    ))}
+                                </div>
+                             </div>
+                        </div>
+
+                        {/* 5. Submit Button */}
+                        <div className="mt-2">
+                            <button
+                                type="submit"
+                                disabled={isSubmitting}
+                                className={clsx(
+                                    "w-full flex justify-center items-center gap-2 px-6 py-4 rounded-xl text-sm font-bold text-white transition-all duration-300 shadow-lg shadow-gray-200",
+                                    isSubmitting 
+                                        ? "bg-gray-400 cursor-not-allowed" 
+                                        : "bg-gray-900 hover:bg-black hover:scale-[1.01] hover:shadow-xl active:scale-[0.99] cursor-pointer" // Added cursor-pointer
+                                )}
+                            >
+                                {isSubmitting ? (
+                                    <>
+                                        <Loader2 className="w-4 h-4 animate-spin" />
+                                        <span>Submitting...</span>
+                                    </>
+                                ) : (
+                                    <>
+                                        <Send className="w-4 h-4" />
+                                        <span>Submit Report</span>
+                                    </>
+                                )}
+                            </button>
+                        </div>
+
+                    </form>
+                </div>
+            </div>
+            
+            {/* Footer */}
+            <div className="mt-4 text-center">
+                 <p className="text-[10px] text-gray-400 flex items-center justify-center gap-1.5">
+                    <ShieldAlert className="w-3 h-3" />
+                    Encrypted End-to-End • Secure Feedback System
+                </p>
             </div>
         </div>
     );

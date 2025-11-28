@@ -3,7 +3,7 @@
 import { usePathname } from "next/navigation";
 import Sidebar from "@/components/Sidebar";
 import { AuthProvider, useAuth } from "@/contexts/AuthContext";
-import { ThemeProvider, useTheme, CherryBlossomBackground } from "@/contexts/ThemeContext";
+import { ThemeProvider, useTheme } from "@/contexts/ThemeContext"; 
 import { ReactNode, useState, useEffect } from "react";
 import { motion } from "framer-motion";
 import { UsageProvider } from "@/contexts/UsageContext"; 
@@ -69,15 +69,15 @@ function AppLayout({ children }: { children: ReactNode }) {
     };
   }, [isSidebarOpen]);
 
-  // ✅ Updated Logic: Added specific background for /idcard to match the component
+  // ✅ Updated Logic: Added specific background for /userprofile
   const themeBg =
     pathname === "/bgremover"
       ? "bg-white text-gray-900"
       : pathname === "/idcard"
-      ? "bg-slate-100 text-slate-900" // Matches your ID Card component background
-      : theme === "light"
-      ? "bg-white text-gray-900"
-      : "relative overflow-hidden text-gray-900"; // Blossom
+      ? "bg-slate-100 text-slate-900"
+      : pathname === "/userprofile"
+      ? "bg-[#F3F4F6] text-gray-900" // Added background for userprofile
+      : "bg-white text-gray-900"; 
 
   if (isEditorPage) return <>{children}</>;
 
@@ -85,13 +85,12 @@ function AppLayout({ children }: { children: ReactNode }) {
 
   return (
     <>
-      <CherryBlossomBackground />
       {!isLoginPage ? (
         <div className={`flex relative z-10 min-h-screen ${themeBg}`}>
           <Sidebar forceActive={forceActive} isOpen={isSidebarOpen} toggleSidebar={toggleSidebar} />
           <main className="flex-1 overflow-y-auto transition-all duration-300 p-4 lg:p-8 relative">
             <div className="flex items-center justify-between mb-6 lg:hidden">
-              <h1 className="text-3xl sm:text-4xl font-bold tracking-tight text-white">
+              <h1 className="text-3xl sm:text-4xl font-bold tracking-tight text-gray-900">
                 {pathname === "/dashboard"
                   ? "Dashboard"
                   : pathname.startsWith("/poster/new")
@@ -102,11 +101,13 @@ function AppLayout({ children }: { children: ReactNode }) {
                   ? "Settings"
                   : pathname === "/idcard"
                   ? "ID Cards" 
+                  : pathname === "/userprofile"
+                  ? "Profile"
                   : ""}
               </h1>
               <button
                 onClick={toggleSidebar}
-                className="p-2 text-gray-400 hover:text-white focus:outline-none focus:ring-2 focus:ring-blue-500 rounded-md"
+                className="p-2 text-gray-400 hover:text-gray-900 focus:outline-none focus:ring-2 focus:ring-blue-500 rounded-md"
                 aria-label="Toggle sidebar"
               >
                 <AnimatedHamburgerIcon isOpen={isSidebarOpen} size={28} />
@@ -126,7 +127,6 @@ export default function ClientRootLayout({ children }: { children: ReactNode }) 
   return (
     <AuthProvider>
       <ThemeProvider>
-        
         <UsageProvider>
           <AppLayout>{children}</AppLayout>
         </UsageProvider>
