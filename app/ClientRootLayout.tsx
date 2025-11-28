@@ -92,7 +92,7 @@ function AppLayout({ children }: { children: ReactNode }) {
             <div className="flex items-center justify-between mb-6 lg:hidden">
               <h1 className="text-3xl sm:text-4xl font-bold tracking-tight text-gray-900">
                 {pathname === "/dashboard"
-                  ? "Dashboard"
+                  ? ""
                   : pathname.startsWith("/poster/new")
                   ? ""
                   : pathname.startsWith("/templates")

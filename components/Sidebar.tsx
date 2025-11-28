@@ -1,4 +1,3 @@
-// Sidebar.tsx
 'use client'
 
 import { useState, useEffect } from 'react'
@@ -8,27 +7,25 @@ import { Tooltip } from 'react-tooltip'
 
 import Logo from '@/components/aminations/Logo'
 
-// Importing "Best" React Icons (Tabler Icons)
+// Importing Lucide Icons (Clean, rounded, modern)
 import {
-  TbHome,
-  TbHome2,
-  TbCertificate,
-  TbEraser, // For Bg Remover
-  TbIdBadge2, // For Visiting Cards
-  TbWand, // For Image Enhancer
-  TbId, // For ID Card
-  TbLayoutCollage, // For Posters
-  TbPalette,
-  TbSettings,
-  TbBug,
-  TbLogout,
-  TbChevronDown,
-  TbChevronRight,
-  // New icons for the footer
-  TbBrandAndroid,
-  TbDeviceDesktop,
-  TbVersions,
-} from 'react-icons/tb'
+  LuLayoutDashboard, // Dashboard
+  LuAward,           // Certificates
+  LuEraser,          // Bg Remover
+  LuContact,         // Visiting Cards
+  LuWand,           // Image Enhancer
+  LuIdCard,         // ID Card
+  LuLayoutTemplate,  // Posters
+  LuPalette,         // Branding
+  LuSettings,        // Settings
+  LuBug,             // Bug Report
+  LuLogOut,          // Logout
+  LuChevronDown,
+  LuChevronRight,
+  LuSmartphone,      // Android
+  LuMonitor,         // Desktop
+  LuGitBranch,       // Versions
+} from 'react-icons/lu'
 
 import { useAuth } from '@/contexts/AuthContext'
 import { useRouter, usePathname } from 'next/navigation'
@@ -46,15 +43,15 @@ type MenuItem = {
   onClick?: () => void
   mobileOnly?: boolean
   requiredAccess?: keyof UserAccess;
-  isUnderDevelopment?: boolean; // New property for development state
+  isUnderDevelopment?: boolean;
 }
 
 const menu: MenuItem[] = [
-  { name: 'Dashboard', icon: TbHome, path: '/dashboard' },
+  { name: 'Dashboard', icon: LuLayoutDashboard, path: '/dashboard' },
 
   {
     name: 'Certificates',
-    icon: TbCertificate,
+    icon: LuAward,
     requiredAccess: 'certificateEditor',
     children: [
       { name: 'Database', path: '/certificates/database' },
@@ -63,61 +60,61 @@ const menu: MenuItem[] = [
   },
   {
     name: 'Bg Remover',
-    icon: TbEraser,
+    icon: LuEraser,
     path: "/bgremover",
     requiredAccess: 'bgRemover',
   },
   {
-    name: 'VisitingCards',
-    icon: TbIdBadge2,
+    name: 'Visiting Cards',
+    icon: LuContact,
     path: "/visitingcards",
     requiredAccess: 'bgRemover',
   },
 
   {
     name: 'Image Enhancer',
-    icon: TbWand,
+    icon: LuWand,
     path: '/imageenhancer',
-    isUnderDevelopment: true, // 👈 MODIFIED: Set as under development
+    isUnderDevelopment: true,
   },
   {
     name: 'ID Card Maker',
-    icon: TbId,
+    icon: LuIdCard,
     path: "/idcard",
     requiredAccess: 'idCard',
   },
     {
     name: 'Posters',
-    icon: TbLayoutCollage,
-    path: "/poster/editor",
+    icon: LuLayoutTemplate,
+    path: "/poster",
     requiredAccess: 'posterEditor',
   },
   
   {
     name: 'Branding Assets',
-    icon: TbPalette,
+    icon: LuPalette,
     requiredAccess: 'assets',
-    isUnderDevelopment: true, // 👈 MODIFIED: Set as under development
+    isUnderDevelopment: true,
     children: [
       { name: 'Logo Library', path: '/logo' },
     ],
   },
   {
     name: 'Settings',
-    icon: TbSettings,
+    icon: LuSettings,
     children: [
       { name: 'Theme', path: '/theme' },
       { name: 'Profile & Preferences', path: '/userprofile' },
     ],
   },
     {
-    name: 'Report an Bug',
-    icon: TbBug,
+    name: 'Report a Bug',
+    icon: LuBug,
     path: "/reportbug",
     requiredAccess: 'idCard',
   },
 
-  { name: 'Logout', icon: TbLogout, mobileOnly: true },
+  { name: 'Logout', icon: LuLogOut, mobileOnly: true },
 ]
 
 // Define the menu items that should NOT show the loading animation
@@ -196,7 +193,7 @@ export default function Sidebar({ forceActive, isOpen, toggleSidebar }: SidebarP
 
   const renderSidebarContent = (isMobile: boolean, isDesktopHovered = false) => (
     <aside
-      className={`h-screen bg-[#111214] text-white flex flex-col font-fredoka border-r-2 border-white/5 shadow-xl transition-all duration-300 ease-in-out relative
+      className={`h-screen bg-[#111214] text-white flex flex-col font-quicksand border-r-2 border-white/5 shadow-xl transition-all duration-300 ease-in-out relative
         ${isMobile ? 'w-[85%] max-w-sm' : isDesktopHovered ? 'w-64' : 'w-20'}
       `}
     >
@@ -244,7 +241,7 @@ export default function Sidebar({ forceActive, isOpen, toggleSidebar }: SidebarP
           // This is the access check logic.
           const hasAccess = !item.requiredAccess || (user?.access?.[item.requiredAccess] ?? false);
           const isRestricted = !hasAccess;
-          // 👈 NEW LOGIC: Check for development status
+          // Check for development status
           const isDeveloping = item.isUnderDevelopment || isRestricted; 
           const tooltipContent = item.isUnderDevelopment ? "Feature under development" : "Take permission from admin";
 
@@ -257,10 +254,11 @@ export default function Sidebar({ forceActive, isOpen, toggleSidebar }: SidebarP
           const active = isParentActive(item)
 
           // Unify the button styling for all states (restricted, active, default, developing).
+          // CHANGED: Used font-medium for active, font-normal for inactive. Removed heavy bolding.
           const buttonClass = `
             text-white hover:text-white transition-all duration-200
             ${isDeveloping ? 'opacity-30 cursor-not-allowed' : 'opacity-100 cursor-pointer'}
-            ${active && !isDeveloping ? 'font-medium bg-white/10' : 'font-normal hover:bg-white/5'}
+            ${active && !isDeveloping ? 'font-semibold bg-white/10' : 'font-medium hover:bg-white/5'}
             ${item.name === 'Logout' ? 'text-red-500 hover:bg-red-500/10 hover:text-red-400' : ''}
           `;
 
@@ -268,7 +266,7 @@ export default function Sidebar({ forceActive, isOpen, toggleSidebar }: SidebarP
             <motion.div key={item.name} className="mb-1.5" variants={menuItemVariants}>
               <button
                 onClick={() => {
-                  if (isDeveloping) return; // 👈 MODIFIED: Prevent action if under development or restricted
+                  if (isDeveloping) return;
                   if (item.name === 'Logout') {
                     handleLogout();
                     return;
@@ -288,16 +286,17 @@ export default function Sidebar({ forceActive, isOpen, toggleSidebar }: SidebarP
                 className={`group flex items-center justify-between w-full px-3 py-2.5 rounded-lg transition-all duration-200 relative ${buttonClass}`}
                 type="button"
                 data-tooltip-id={`tooltip-${item.name.replace(/\s/g, '-')}`}
-                data-tooltip-content={tooltipContent} // 👈 MODIFIED: Use dynamic tooltip content
-                disabled={isDeveloping} // 👈 MODIFIED: Disable if under development or restricted
+                data-tooltip-content={tooltipContent}
+                disabled={isDeveloping}
               >
                 <div className="relative flex items-center gap-3 overflow-hidden">
                   <Icon
-                    size={22}
-                    className={`transition-colors flex-shrink-0 text-white ${isDeveloping ? 'opacity-40' : 'opacity-100'}`} // 👈 MODIFIED: Icon fade
+                    size={20} // Slightly smaller size looks more elegant with these icons
+                    strokeWidth={2} // Ensures they aren't too bold
+                    className={`transition-colors flex-shrink-0 text-white ${isDeveloping ? 'opacity-40' : 'opacity-100'}`}
                   />
                   <span
-                    className={`text-[15px] whitespace-nowrap transition-opacity duration-200 ${
+                    className={`text-[14px] whitespace-nowrap transition-opacity duration-200 ${
                       isMobile || isDesktopHovered ? 'opacity-100' : 'opacity-0'
                     }`}
                   >
@@ -312,20 +311,20 @@ export default function Sidebar({ forceActive, isOpen, toggleSidebar }: SidebarP
                 {item.children &&
                   (isMobile || isDesktopHovered ? (
                     isOpenMenuItem ? (
-                      <TbChevronDown
-                        size={18}
-                        className={`text-gray-500 group-hover:text-gray-300 transition-transform duration-200 flex-shrink-0 rotate-180 ${isDeveloping ? 'opacity-0' : 'opacity-100'}`}
+                      <LuChevronDown
+                        size={16}
+                        className={`text-gray-500 group-hover:text-gray-300 transition-transform duration-200 flex-shrink-0 ${isDeveloping ? 'opacity-0' : 'opacity-100'}`}
                       />
                     ) : (
-                      <TbChevronRight
-                        size={18}
+                      <LuChevronRight
+                        size={16}
                         className={`text-gray-500 group-hover:text-gray-300 transition-transform duration-200 flex-shrink-0 ${isDeveloping ? 'opacity-0' : 'opacity-100'}`}
                       />
                     )
                   ) : null)}
               </button>
-              {isDeveloping && ( // 👈 MODIFIED: Show tooltip if under development or restricted
-                <Tooltip id={`tooltip-${item.name.replace(/\s/g, '-')}`} className="z-50 font-fredoka" />
+              {isDeveloping && (
+                <Tooltip id={`tooltip-${item.name.replace(/\s/g, '-')}`} className="z-50 font-quicksand" />
               )}
               {item.children && (
                 <motion.div
@@ -339,13 +338,13 @@ export default function Sidebar({ forceActive, isOpen, toggleSidebar }: SidebarP
                     const childButtonClass = `
                       text-white transition-all duration-200
                       ${isDeveloping ? 'opacity-40 cursor-not-allowed' : 'opacity-100 cursor-pointer'}
-                      ${childIsActive && !isDeveloping ? 'font-medium' : 'font-normal hover:bg-white/5'}
+                      ${childIsActive && !isDeveloping ? 'font-semibold text-white' : 'font-medium text-gray-300 hover:text-white hover:bg-white/5'}
                     `;
                     return (
                       <button
                         key={child.path}
                         onClick={() => { 
-                          if (isDeveloping) return; // 👈 MODIFIED: Prevent action if under development or restricted
+                          if (isDeveloping) return;
                           if (child.path !== pathname) {
                             if (NO_LOADING_ANIMATION_PATHS.has(child.path)) {
                               router.push(child.path);
@@ -355,11 +354,11 @@ export default function Sidebar({ forceActive, isOpen, toggleSidebar }: SidebarP
                             if (isOpen) toggleSidebar();
                           }
                         }}
-                        className={`block w-full text-left px-3 py-2 text-sm rounded-md transition-colors duration-200 mb-1 ${childButtonClass}`}
+                        className={`block w-full text-left px-3 py-2 text-[13px] rounded-md transition-colors duration-200 mb-1 ${childButtonClass}`}
                         type="button"
                         data-tooltip-id={`tooltip-${child.path.replace(/\s/g, '-')}`}
-                        data-tooltip-content={tooltipContent} // 👈 MODIFIED: Use dynamic tooltip content
-                        disabled={isDeveloping} // 👈 MODIFIED: Disable if under development or restricted
+                        data-tooltip-content={tooltipContent}
+                        disabled={isDeveloping}
                       >
                         {child.name}
                       </button>
@@ -392,7 +391,7 @@ export default function Sidebar({ forceActive, isOpen, toggleSidebar }: SidebarP
               rel="noopener noreferrer"
               className="group flex flex-col items-center justify-center p-2 rounded-lg border border-white/5 bg-white/[0.02] hover:bg-white/[0.05] hover:border-green-500/20 transition-all cursor-pointer"
             >
-              <TbBrandAndroid size={20} className="text-gray-400 group-hover:text-green-500 transition-colors mb-1.5" />
+              <LuSmartphone size={18} className="text-gray-400 group-hover:text-green-500 transition-colors mb-1.5" />
               <span className="text-[10px] font-medium text-gray-400 group-hover:text-gray-200">Android</span>
             </a>
 
@@ -402,7 +401,7 @@ export default function Sidebar({ forceActive, isOpen, toggleSidebar }: SidebarP
               download
               className="group flex flex-col items-center justify-center p-2 rounded-lg border border-white/5 bg-white/[0.02] hover:bg-white/[0.05] hover:border-blue-500/20 transition-all cursor-pointer"
             >
-              <TbDeviceDesktop size={20} className="text-gray-400 group-hover:text-blue-500 transition-colors mb-1.5" />
+              <LuMonitor size={18} className="text-gray-400 group-hover:text-blue-500 transition-colors mb-1.5" />
               <span className="text-[10px] font-medium text-gray-400 group-hover:text-gray-200">Desktop</span>
             </a>
           </div>
@@ -410,10 +409,10 @@ export default function Sidebar({ forceActive, isOpen, toggleSidebar }: SidebarP
 
         {/* System Info & Credits - HIGHLIGHTED SECTION */}
         <div className="space-y-2 px-1 pt-1">
-<div className="flex items-center justify-between text-[10px] text-gray-500">
+          <div className="flex items-center justify-between text-[10px] text-gray-500">
              <div className="flex items-center gap-2 group">
-               <TbVersions size={13} className="text-gray-600 group-hover:text-gray-400 transition-colors" />
-                
+               <LuGitBranch size={12} className="text-gray-600 group-hover:text-gray-400 transition-colors" />
+               
                {/* Version: Monospaced, matte gray, no glow */}
                <span className="font-mono text-gray-500 group-hover:text-gray-300 transition-colors">
                  v.1.08.25
@@ -436,18 +435,18 @@ export default function Sidebar({ forceActive, isOpen, toggleSidebar }: SidebarP
 
         {/* Divider */}
         <div className="h-px w-full bg-white/5" />
-<div className="flex justify-center">
-  <button
-    onClick={handleLogout}
-    className="group flex items-center gap-3 px-1 py-1 text-xs font-medium text-gray-400 hover:text-red-400 transition-colors cursor-pointer"
-    type="button"
-  >
-    <div className="flex items-center justify-center h-7 w-7 rounded-md bg-white/5 group-hover:bg-red-500/10 transition-colors text-inherit ">
-      <TbLogout size={14} />
-    </div>
-    <span>Sign Out</span>
-  </button>
-</div>
+        <div className="flex justify-center">
+          <button
+            onClick={handleLogout}
+            className="group flex items-center gap-3 px-1 py-1 text-xs font-medium text-gray-400 hover:text-red-400 transition-colors cursor-pointer"
+            type="button"
+          >
+            <div className="flex items-center justify-center h-7 w-7 rounded-md bg-white/5 group-hover:bg-red-500/10 transition-colors text-inherit ">
+              <LuLogOut size={14} />
+            </div>
+            <span>Sign Out</span>
+          </button>
+        </div>
 
         
       </motion.div>
@@ -458,9 +457,9 @@ export default function Sidebar({ forceActive, isOpen, toggleSidebar }: SidebarP
     <>
       <link rel="preconnect" href="https://fonts.googleapis.com" />
       <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="anonymous" />
-      {/* Changed to Fredoka for that cute look */}
+      {/* Changed to Quicksand - much cuter, lighter, and cleaner than Fredoka */}
       <link
-        href="https://fonts.googleapis.com/css2?family=Fredoka:wght@300;400;500;600;700&display=swap"
+        href="https://fonts.googleapis.com/css2?family=Quicksand:wght@300;400;500;600;700&display=swap"
         rel="stylesheet"
       />
 
@@ -510,8 +509,8 @@ export default function Sidebar({ forceActive, isOpen, toggleSidebar }: SidebarP
       </AnimatePresence>
 
       <style>{`
-        .font-fredoka {
-          font-family: 'Fredoka', sans-serif;
+        .font-quicksand {
+          font-family: 'Quicksand', sans-serif;
         }
         .shadow-glow {
           box-shadow: 0 0 10px rgba(255, 255, 255, 0.4);
