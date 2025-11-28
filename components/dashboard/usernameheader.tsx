@@ -3,6 +3,20 @@
 import React, { useEffect, useState } from "react";
 import { motion, useAnimation, AnimatePresence } from "framer-motion";
 import { useAuth } from "@/contexts/AuthContext";
+import { Plus_Jakarta_Sans, Inter } from 'next/font/google';
+
+// --- Professional Typography Configuration ---
+const fontHeading = Plus_Jakarta_Sans({ 
+  subsets: ['latin'],
+  weight: ['600', '700', '800'],
+  display: 'swap',
+});
+
+const fontBody = Inter({ 
+  subsets: ['latin'],
+  weight: ['400', '500', '600'],
+  display: 'swap',
+});
 
 // Helper to capitalize first letter
 function capitalizeFirstLetter(name: string): string {
@@ -98,14 +112,14 @@ export default function UserHeader() {
 
   return (
     <motion.header
-      className="mb-6 sm:mb-8 px-4 sm:px-6 md:px-0 w-full"
+      className={`mb-6 sm:mb-8 px-4 sm:px-6 md:px-0 w-full ${fontBody.className}`}
       initial={{ opacity: 0, y: 40 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.8, ease: "easeOut" }}
     >
       {/* Title */}
       <motion.h1
-        className="text-2xl sm:text-3xl md:text-4xl lg:text-5xl font-bold tracking-tight mb-2 leading-tight"
+        className={`text-2xl sm:text-3xl md:text-4xl lg:text-5xl font-bold tracking-tight mb-2 leading-tight ${fontHeading.className}`}
         initial={{ opacity: 0, x: -20 }}
         animate={{ opacity: 1, x: 0 }}
         transition={{ delay: 0.3, duration: 0.8, ease: "easeOut" }}
@@ -151,7 +165,7 @@ export default function UserHeader() {
         >
           <div className="relative flex items-center gap-1.5">
             <div className="w-1.5 h-1.5 bg-green-500 rounded-full animate-pulse"></div>
-            <span className="text-[10px] sm:text-xs bg-clip-text text-transparent bg-gradient-to-r from-blue-900 to-blue-600 relative">
+            <span className="text-[10px] sm:text-xs bg-clip-text text-transparent bg-gradient-to-r from-blue-900 to-blue-600 relative font-medium">
               All systems operational
               <span className="absolute inset-0 w-full h-full overflow-hidden">
                 <motion.span
