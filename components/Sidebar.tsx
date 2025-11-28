@@ -10,7 +10,8 @@ import Logo from '@/components/aminations/Logo'
 
 // Importing "Best" React Icons (Tabler Icons)
 import {
-  TbLayoutDashboard,
+  TbHome,
+  TbHome2,
   TbCertificate,
   TbEraser, // For Bg Remover
   TbIdBadge2, // For Visiting Cards
@@ -45,10 +46,11 @@ type MenuItem = {
   onClick?: () => void
   mobileOnly?: boolean
   requiredAccess?: keyof UserAccess;
+  isUnderDevelopment?: boolean; // New property for development state
 }
 
 const menu: MenuItem[] = [
-  { name: 'Dashboard', icon: TbLayoutDashboard, path: '/dashboard' },
+  { name: 'Dashboard', icon: TbHome, path: '/dashboard' },
 
   {
     name: 'Certificates',
@@ -76,7 +78,7 @@ const menu: MenuItem[] = [
     name: 'Image Enhancer',
     icon: TbWand,
     path: '/imageenhancer',
-    requiredAccess: 'imageEnhancer',
+    isUnderDevelopment: true, // 👈 MODIFIED: Set as under development
   },
   {
     name: 'ID Card Maker',
@@ -95,6 +97,7 @@ const menu: MenuItem[] = [
     name: 'Branding Assets',
     icon: TbPalette,
     requiredAccess: 'assets',
+    isUnderDevelopment: true, // 👈 MODIFIED: Set as under development
     children: [
       { name: 'Logo Library', path: '/logo' },
     ],
@@ -241,6 +244,10 @@ export default function Sidebar({ forceActive, isOpen, toggleSidebar }: SidebarP
           // This is the access check logic.
           const hasAccess = !item.requiredAccess || (user?.access?.[item.requiredAccess] ?? false);
           const isRestricted = !hasAccess;
+          // 👈 NEW LOGIC: Check for development status
+          const isDeveloping = item.isUnderDevelopment || isRestricted; 
+          const tooltipContent = item.isUnderDevelopment ? "Feature under development" : "Take permission from admin";
+
 
           // If the user doesn't have the required access, don't render it
           if (item.mobileOnly && !isMobile) return null
@@ -249,11 +256,11 @@ export default function Sidebar({ forceActive, isOpen, toggleSidebar }: SidebarP
           const isOpenMenuItem = expanded.includes(item.name)
           const active = isParentActive(item)
 
-          // Unify the button styling for all states (restricted, active, default).
+          // Unify the button styling for all states (restricted, active, default, developing).
           const buttonClass = `
             text-white hover:text-white transition-all duration-200
-            ${isRestricted ? 'opacity-40 cursor-not-allowed' : 'opacity-100 cursor-pointer'}
-            ${active && !isRestricted ? 'font-medium bg-white/10' : 'font-normal hover:bg-white/5'}
+            ${isDeveloping ? 'opacity-30 cursor-not-allowed' : 'opacity-100 cursor-pointer'}
+            ${active && !isDeveloping ? 'font-medium bg-white/10' : 'font-normal hover:bg-white/5'}
             ${item.name === 'Logout' ? 'text-red-500 hover:bg-red-500/10 hover:text-red-400' : ''}
           `;
 
@@ -261,7 +268,7 @@ export default function Sidebar({ forceActive, isOpen, toggleSidebar }: SidebarP
             <motion.div key={item.name} className="mb-1.5" variants={menuItemVariants}>
               <button
                 onClick={() => {
-                  if (isRestricted) return; 
+                  if (isDeveloping) return; // 👈 MODIFIED: Prevent action if under development or restricted
                   if (item.name === 'Logout') {
                     handleLogout();
                     return;
@@ -281,13 +288,13 @@ export default function Sidebar({ forceActive, isOpen, toggleSidebar }: SidebarP
                 className={`group flex items-center justify-between w-full px-3 py-2.5 rounded-lg transition-all duration-200 relative ${buttonClass}`}
                 type="button"
                 data-tooltip-id={`tooltip-${item.name.replace(/\s/g, '-')}`}
-                data-tooltip-content="Take permission from admin"
-                disabled={isRestricted}
+                data-tooltip-content={tooltipContent} // 👈 MODIFIED: Use dynamic tooltip content
+                disabled={isDeveloping} // 👈 MODIFIED: Disable if under development or restricted
               >
                 <div className="relative flex items-center gap-3 overflow-hidden">
                   <Icon
                     size={22}
-                    className={`transition-colors flex-shrink-0 text-white ${isRestricted ? 'opacity-40' : 'opacity-100'}`}
+                    className={`transition-colors flex-shrink-0 text-white ${isDeveloping ? 'opacity-40' : 'opacity-100'}`} // 👈 MODIFIED: Icon fade
                   />
                   <span
                     className={`text-[15px] whitespace-nowrap transition-opacity duration-200 ${
@@ -299,7 +306,7 @@ export default function Sidebar({ forceActive, isOpen, toggleSidebar }: SidebarP
                 </div>
                 <div
                   className={`absolute left-0 top-1/2 -translate-y-1/2 h-6 w-1 rounded-r-full transition-opacity duration-300 ${
-                    active && !isRestricted ? 'opacity-100 bg-white shadow-glow' : 'opacity-0'
+                    active && !isDeveloping ? 'opacity-100 bg-white shadow-glow' : 'opacity-0'
                   }`}
                 />
                 {item.children &&
@@ -307,17 +314,17 @@ export default function Sidebar({ forceActive, isOpen, toggleSidebar }: SidebarP
                     isOpenMenuItem ? (
                       <TbChevronDown
                         size={18}
-                        className={`text-gray-500 group-hover:text-gray-300 transition-transform duration-200 flex-shrink-0 rotate-180 ${isRestricted ? 'opacity-0' : 'opacity-100'}`}
+                        className={`text-gray-500 group-hover:text-gray-300 transition-transform duration-200 flex-shrink-0 rotate-180 ${isDeveloping ? 'opacity-0' : 'opacity-100'}`}
                       />
                     ) : (
                       <TbChevronRight
                         size={18}
-                        className={`text-gray-500 group-hover:text-gray-300 transition-transform duration-200 flex-shrink-0 ${isRestricted ? 'opacity-0' : 'opacity-100'}`}
+                        className={`text-gray-500 group-hover:text-gray-300 transition-transform duration-200 flex-shrink-0 ${isDeveloping ? 'opacity-0' : 'opacity-100'}`}
                       />
                     )
                   ) : null)}
               </button>
-              {isRestricted && (
+              {isDeveloping && ( // 👈 MODIFIED: Show tooltip if under development or restricted
                 <Tooltip id={`tooltip-${item.name.replace(/\s/g, '-')}`} className="z-50 font-fredoka" />
               )}
               {item.children && (
@@ -331,14 +338,14 @@ export default function Sidebar({ forceActive, isOpen, toggleSidebar }: SidebarP
                     const childIsActive = isChildActive(child.path)
                     const childButtonClass = `
                       text-white transition-all duration-200
-                      ${isRestricted ? 'opacity-40 cursor-not-allowed' : 'opacity-100 cursor-pointer'}
-                      ${childIsActive && !isRestricted ? 'font-medium' : 'font-normal hover:bg-white/5'}
+                      ${isDeveloping ? 'opacity-40 cursor-not-allowed' : 'opacity-100 cursor-pointer'}
+                      ${childIsActive && !isDeveloping ? 'font-medium' : 'font-normal hover:bg-white/5'}
                     `;
                     return (
                       <button
                         key={child.path}
                         onClick={() => { 
-                          if (isRestricted) return;
+                          if (isDeveloping) return; // 👈 MODIFIED: Prevent action if under development or restricted
                           if (child.path !== pathname) {
                             if (NO_LOADING_ANIMATION_PATHS.has(child.path)) {
                               router.push(child.path);
@@ -351,8 +358,8 @@ export default function Sidebar({ forceActive, isOpen, toggleSidebar }: SidebarP
                         className={`block w-full text-left px-3 py-2 text-sm rounded-md transition-colors duration-200 mb-1 ${childButtonClass}`}
                         type="button"
                         data-tooltip-id={`tooltip-${child.path.replace(/\s/g, '-')}`}
-                        data-tooltip-content="Take permission from admin"
-                        disabled={isRestricted}
+                        data-tooltip-content={tooltipContent} // 👈 MODIFIED: Use dynamic tooltip content
+                        disabled={isDeveloping} // 👈 MODIFIED: Disable if under development or restricted
                       >
                         {child.name}
                       </button>
@@ -405,24 +412,24 @@ export default function Sidebar({ forceActive, isOpen, toggleSidebar }: SidebarP
         <div className="space-y-2 px-1 pt-1">
 <div className="flex items-center justify-between text-[10px] text-gray-500">
              <div className="flex items-center gap-2 group">
-                <TbVersions size={13} className="text-gray-600 group-hover:text-gray-400 transition-colors" />
+               <TbVersions size={13} className="text-gray-600 group-hover:text-gray-400 transition-colors" />
                 
-                {/* Version: Monospaced, matte gray, no glow */}
-                <span className="font-mono text-gray-500 group-hover:text-gray-300 transition-colors">
-                  v.1.08.25
-                </span>
+               {/* Version: Monospaced, matte gray, no glow */}
+               <span className="font-mono text-gray-500 group-hover:text-gray-300 transition-colors">
+                 v.1.08.25
+               </span>
              </div>
              
              {/* BETA Tag: Flat, bordered, muted emerald (Professional style) */}
              <span className="border border-emerald-900/30 bg-emerald-900/10 text-emerald-600 px-1.5 py-0.5 rounded-[3px] text-[9px] font-bold tracking-wider opacity-80">
-                BETA
+               BETA
              </span>
           </div>
           
           {/* Replaced Text with Professional Styling */}
           <div className="flex items-center justify-center pt-2">
              <span className="text-[10px] font-bold tracking-[0.2em] text-transparent bg-clip-text bg-gradient-to-r from-gray-500 via-gray-200 to-gray-500 uppercase hover:from-white hover:to-white transition-all duration-500">
-                A SSI MAYA APPLICATION
+               A SSI MAYA APPLICATION
              </span>
           </div>
         </div>

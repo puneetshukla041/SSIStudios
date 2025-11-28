@@ -94,15 +94,15 @@ function AppLayout({ children }: { children: ReactNode }) {
                 {pathname === "/dashboard"
                   ? "Dashboard"
                   : pathname.startsWith("/poster/new")
-                  ? "Creative Studio"
+                  ? ""
                   : pathname.startsWith("/templates")
-                  ? "Templates"
+                  ? ""
                   : pathname.startsWith("/settings")
-                  ? "Settings"
+                  ? ""
                   : pathname === "/idcard"
-                  ? "ID Cards" 
+                  ? "" 
                   : pathname === "/userprofile"
-                  ? "Profile"
+                  ? ""
                   : ""}
               </h1>
               <button
