@@ -73,6 +73,8 @@ function AppLayout({ children }: { children: ReactNode }) {
   const themeBg =
     pathname === "/bgremover"
       ? "bg-white text-gray-900"
+      : pathname === "/poster"
+      ? "bg-slate-100 text-slate-900"
       : pathname === "/idcard"
       ? "bg-slate-100 text-slate-900"
       : pathname === "/userprofile"
