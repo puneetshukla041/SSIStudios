@@ -17,27 +17,20 @@ import {
   Trash2,
   Upload,
   X,
-  CheckCircle2,
   Palette,
   ChevronDown,
   BoxSelect,
   Monitor,
-  Type,
-  Grid,
-  ZoomIn,
-  Wand2
+  PanelRightOpen,
+  PanelLeftOpen,
+  Smartphone,
+  Check,
+  ChevronRight
 } from 'lucide-react'
 
-// --- HELPER FUNCTIONS & ALGORITHMS ---
+// --- HELPER FUNCTIONS (UNCHANGED) ---
 
-function drawRoundedRect(
-  ctx: CanvasRenderingContext2D,
-  x: number,
-  y: number,
-  width: number,
-  height: number,
-  radius: number
-) {
+function drawRoundedRect(ctx: CanvasRenderingContext2D, x: number, y: number, width: number, height: number, radius: number) {
   ctx.beginPath()
   ctx.moveTo(x + radius, y)
   ctx.lineTo(x + width - radius, y)
@@ -51,49 +44,23 @@ function drawRoundedRect(
   ctx.closePath()
 }
 
-function clipRoundedRect(
-  ctx: CanvasRenderingContext2D,
-  x: number,
-  y: number,
-  width: number,
-  height: number,
-  radius: number
-) {
-  drawRoundedRect(ctx, x, y, width, height, radius)
+function clipRoundedRect(ctx: CanvasRenderingContext2D, x: number, y: number, w: number, h: number, r: number) {
+  drawRoundedRect(ctx, x, y, w, h, r)
   ctx.clip()
 }
 
-function fillRoundedRect(
-  ctx: CanvasRenderingContext2D,
-  x: number,
-  y: number,
-  width: number,
-  height: number,
-  radius: number,
-  color: string
-) {
-  ctx.fillStyle = color
-  drawRoundedRect(ctx, x, y, width, height, radius)
+function fillRoundedRect(ctx: CanvasRenderingContext2D, x: number, y: number, w: number, h: number, r: number, c: string) {
+  ctx.fillStyle = c
+  drawRoundedRect(ctx, x, y, w, h, r)
   ctx.fill()
 }
 
-function strokeRoundedRect(
-  ctx: CanvasRenderingContext2D,
-  x: number,
-  y: number,
-  width: number,
-  height: number,
-  radius: number,
-  lineWidth: number,
-  color: string
-) {
-  ctx.lineWidth = lineWidth
-  ctx.strokeStyle = color
-  drawRoundedRect(ctx, x, y, width, height, radius)
+function strokeRoundedRect(ctx: CanvasRenderingContext2D, x: number, y: number, w: number, h: number, r: number, lw: number, c: string) {
+  ctx.lineWidth = lw
+  ctx.strokeStyle = c
+  drawRoundedRect(ctx, x, y, w, h, r)
   ctx.stroke()
 }
-
-// --- DPI WRITERS (METADATA INJECTION) ---
 
 const crc32Table = new Int32Array(256)
 for (let i = 0; i < 256; i++) {
@@ -126,13 +93,11 @@ function setPngDpi(dataUrl: string, dpi: number) {
   const pHYsData = new Uint8Array(9)
   writeUInt32BE(pHYsData, 0, ppm)
   writeUInt32BE(pHYsData, 4, ppm)
-  pHYsData[8] = 1 // Unit specifier: meter
-
-  const type = new Uint8Array([112, 72, 89, 115]) // 'pHYs'
+  pHYsData[8] = 1 
+  const type = new Uint8Array([112, 72, 89, 115]) 
   const data = new Uint8Array(type.length + pHYsData.length)
   data.set(type, 0)
   data.set(pHYsData, type.length)
-  
   const crc = crc32(data)
   const chunk = new Uint8Array(4 + 4 + 9 + 4)
   writeUInt32BE(chunk, 0, 9)
@@ -140,8 +105,7 @@ function setPngDpi(dataUrl: string, dpi: number) {
   chunk.set(pHYsData, 8)
   writeUInt32BE(chunk, 17, crc)
 
-  // Find insertion point (after IHDR)
-  let pos = 8 // Skip signature
+  let pos = 8 
   while (pos < bytes.length) {
     const len = (bytes[pos] << 24) | (bytes[pos+1] << 16) | (bytes[pos+2] << 8) | bytes[pos+3]
     const chunkType = String.fromCharCode(bytes[pos+4], bytes[pos+5], bytes[pos+6], bytes[pos+7])
@@ -169,15 +133,12 @@ function setJpegDpi(dataUrl: string, dpi: number) {
   const bin = atob(base64)
   const bytes = new Uint8Array(bin.length)
   for (let i = 0; i < bin.length; i++) bytes[i] = bin.charCodeAt(i)
-
   if (bytes[2] !== 0xFF || bytes[3] !== 0xE0) return dataUrl 
-  
   bytes[13] = 1
   bytes[14] = (dpi >> 8) & 0xFF
   bytes[15] = dpi & 0xFF
   bytes[16] = (dpi >> 8) & 0xFF
   bytes[17] = dpi & 0xFF
-
   let binary = ''
   for (let i = 0; i < bytes.length; i++) binary += String.fromCharCode(bytes[i])
   return 'data:image/jpeg;base64,' + btoa(binary)
@@ -193,19 +154,15 @@ interface LogoLayer {
   file: File | null
   imageSrc: string
   imageElement: HTMLImageElement | null
-  x: number // Horizontal Offset % (-50 to 50)
-  y: number // Vertical Offset % (-50 to 50)
-  scale: number // Zoom % (10-200)
-  opacity: number // % (0-100)
-  rotation: number // degrees
+  x: number 
+  y: number 
+  scale: number 
+  opacity: number 
+  rotation: number 
   blendMode: BlendMode
-  
-  // Styling
-  radius: number // px
-  borderWidth: number // px
+  radius: number 
+  borderWidth: number 
   borderColor: string
-  
-  // Plate (Background container)
   plateType: 'none' | 'white' | 'glass'
   platePaddingX: number
   platePaddingY: number
@@ -217,82 +174,61 @@ const BLEND_MODES: BlendMode[] = [
 ]
 
 const RESOLUTIONS = [
-  { name: 'Original', width: 0, height: 0 },
-  { name: 'Social Square (1080x1080)', width: 1080, height: 1080 },
+  { name: 'Original Size', width: 0, height: 0 },
+  { name: 'Instagram Square (1080x1080)', width: 1080, height: 1080 },
   { name: 'Full HD (1920x1080)', width: 1920, height: 1080 },
-  { name: '4K UHD (3840x2160)', width: 3840, height: 2160 },
+  { name: '4K Ultra HD (3840x2160)', width: 3840, height: 2160 },
   { name: 'Print A4 (300 DPI)', width: 2480, height: 3508 },
 ]
 
-// --- COMPONENTS ---
+// --- UI COMPONENTS ---
 
-const SmoothSlider = ({ 
-  value, 
-  min, 
-  max, 
-  step = 1, 
-  onChange, 
-  label, 
-  unit = '' 
-}: { 
-  value: number, 
-  min: number, 
-  max: number, 
-  step?: number, 
-  onChange: (val: number) => void, 
-  label: string, 
-  unit?: string 
-}) => {
+const SmoothSlider = ({ value, min, max, step = 1, onChange, label, unit = '' }: any) => {
   const handleChange = (e: ChangeEvent<HTMLInputElement>) => {
     const newVal = parseFloat(e.target.value)
     requestAnimationFrame(() => onChange(newVal))
   }
-
   const percentage = ((value - min) / (max - min)) * 100
-
   return (
     <div className="flex flex-col gap-2 mb-5 group">
       <div className="flex justify-between items-center">
-        <label className="text-xs font-semibold text-slate-600 tracking-wide">{label}</label>
-        <span className="text-[10px] font-bold text-slate-500 font-mono bg-white px-2 py-0.5 rounded-full border border-slate-200 shadow-sm min-w-[36px] text-center">{Math.round(value)}{unit}</span>
+        <label className="text-[11px] font-bold text-slate-500 tracking-wide uppercase">{label}</label>
+        <motion.span 
+            key={value}
+            initial={{ opacity: 0, y: 5 }}
+            animate={{ opacity: 1, y: 0 }}
+            className="text-[10px] font-bold text-slate-600 font-mono bg-slate-100 px-2 py-0.5 rounded-md border border-slate-200 min-w-[36px] text-center"
+        >
+            {Math.round(value)}{unit}
+        </motion.span>
       </div>
-      <div className="relative h-5 flex items-center">
-        <input
-          type="range"
-          min={min}
-          max={max}
-          step={step}
-          value={value}
-          onChange={handleChange}
-          className="absolute z-10 w-full h-full opacity-0 cursor-pointer"
+      <div className="relative h-6 flex items-center cursor-pointer">
+        <input 
+            type="range" min={min} max={max} step={step} value={value} onChange={handleChange} 
+            className="absolute z-20 w-full h-full opacity-0 cursor-pointer" 
         />
-        <div className="w-full h-1.5 bg-slate-200 rounded-full overflow-hidden relative">
-           <div 
-             className="h-full bg-slate-900 rounded-full transition-all duration-75 ease-out"
-             style={{ width: `${percentage}%` }}
-           />
+        <div className="w-full h-1.5 bg-slate-100 rounded-full overflow-hidden relative border border-slate-200/50">
+           <div className="h-full bg-slate-800 rounded-full transition-all duration-75 ease-out" style={{ width: `${percentage}%` }} />
         </div>
-        <div 
-            className="absolute h-4 w-4 bg-white border-2 border-slate-900 shadow-md rounded-full pointer-events-none transition-all duration-75 ease-out group-hover:scale-110"
-            style={{ left: `calc(${percentage}% - 8px)` }}
-        />
+        <motion.div 
+            className="absolute h-5 w-5 bg-white border border-slate-200 shadow-[0_2px_8px_rgba(0,0,0,0.1)] rounded-full pointer-events-none z-10 flex items-center justify-center" 
+            style={{ left: `calc(${percentage}% - 10px)` }}
+            transition={{ type: 'spring', stiffness: 300, damping: 30 }}
+        >
+            <div className="w-1.5 h-1.5 bg-slate-800 rounded-full" />
+        </motion.div>
       </div>
     </div>
   )
 }
 
-const ColorPicker = ({ color, onChange, label }: { color: string, onChange: (c: string) => void, label: string }) => (
-  <div className="flex items-center justify-between mb-4 p-3 bg-white rounded-xl border border-slate-100 shadow-sm">
-    <label className="text-xs font-semibold text-slate-600 pl-1">{label}</label>
+const ColorPicker = ({ color, onChange, label }: any) => (
+  <div className="flex items-center justify-between mb-4 p-1 pl-3 bg-slate-50 rounded-xl border border-slate-100 transition-colors hover:border-slate-200 cursor-pointer group">
+    <label className="text-xs font-bold text-slate-600 cursor-pointer">{label}</label>
     <div className="flex items-center gap-3">
-      <span className="text-[10px] text-slate-400 font-mono uppercase">{color}</span>
-      <div className="relative w-8 h-8 rounded-full border-2 border-white shadow-md overflow-hidden cursor-pointer hover:scale-105 transition-transform ring-1 ring-slate-100">
-        <input 
-          type="color" 
-          value={color} 
-          onChange={(e) => onChange(e.target.value)}
-          className="absolute -top-1/2 -left-1/2 w-[200%] h-[200%] p-0 cursor-pointer border-none opacity-0"
-        />
+      <span className="text-[10px] text-slate-400 font-mono uppercase group-hover:text-slate-600 transition-colors">{color}</span>
+      <div className="relative w-8 h-8 rounded-lg border-2 border-white shadow-sm overflow-hidden cursor-pointer hover:scale-110 transition-transform active:scale-95">
+        <input type="color" value={color} onChange={(e) => onChange(e.target.value)} className="absolute -top-1/2 -left-1/2 w-[200%] h-[200%] p-0 cursor-pointer border-none opacity-0" />
         <div className="w-full h-full" style={{ backgroundColor: color }} />
       </div>
     </div>
@@ -309,14 +245,11 @@ export default function ProPosterEditor() {
   const [selectedLogoId, setSelectedLogoId] = useState<string | null>(null)
   
   const [isExportModalOpen, setIsExportModalOpen] = useState(false)
-  const [exportSettings, setExportSettings] = useState({
-    format: 'jpeg' as ExportFormat,
-    resolutionIdx: 0,
-    quality: 0.9,
-    dpi: 300
-  })
+  const [exportSettings, setExportSettings] = useState({ format: 'jpeg' as ExportFormat, resolutionIdx: 0, quality: 0.9, dpi: 300 })
   const [exportStatus, setExportStatus] = useState<'idle' | 'generating' | 'done'>('idle')
   const [zoomLevel, setZoomLevel] = useState(85) 
+
+  const [activeMobileTab, setActiveMobileTab] = useState<'layers' | 'canvas' | 'properties'>('canvas')
 
   const canvasRef = useRef<HTMLCanvasElement>(null)
   const fileInputRef = useRef<HTMLInputElement>(null)
@@ -325,54 +258,41 @@ export default function ProPosterEditor() {
 
   useEffect(() => {
     if (!baseImageSrc) return;
-
     const img = new Image()
     img.src = baseImageSrc
     img.crossOrigin = 'anonymous'
     img.onload = () => setBaseImage(img)
-    img.onerror = () => {
-      console.error("Could not load base poster.")
-    }
+    img.onerror = () => console.error("Could not load base poster.")
   }, [baseImageSrc])
 
-  const drawCanvas = useCallback((
-    ctx: CanvasRenderingContext2D, 
-    width: number, 
-    height: number,
-    renderForExport = false
-  ) => {
-    ctx.clearRect(0, 0, width, height)
+  useEffect(() => {
+    if (selectedLogoId) {
+        if (window.innerWidth < 1024) setActiveMobileTab('properties')
+    }
+  }, [selectedLogoId])
 
-    // Draw Base
+  const drawCanvas = useCallback((ctx: CanvasRenderingContext2D, width: number, height: number, renderForExport = false) => {
+    ctx.clearRect(0, 0, width, height)
     if (baseImage) {
       const imgRatio = baseImage.width / baseImage.height
       const canvasRatio = width / height
-      let dw = width
-      let dh = height
-      let dx = 0
-      let dy = 0
-
-      if (imgRatio > canvasRatio) {
+      let dw = width, dh = height, dx = 0, dy = 0
+      
+      // Force cover to ensure no white space if aspect ratios slightly differ
+      if (imgRatio > canvasRatio) { 
         dw = height * imgRatio
-        dx = (width - dw) / 2
-      } else {
+        dx = (width - dw) / 2 
+      } else { 
         dh = width / imgRatio
-        dy = (height - dh) / 2
+        dy = (height - dh) / 2 
       }
       ctx.drawImage(baseImage, dx, dy, dw, dh)
     } else {
-      ctx.fillStyle = '#f8fafc'
-      ctx.fillRect(0,0, width, height)
-      ctx.strokeStyle = '#e2e8f0'
-      ctx.lineWidth = 2
-      ctx.beginPath()
-      ctx.moveTo(0,0); ctx.lineTo(width, height);
-      ctx.moveTo(width, 0); ctx.lineTo(0, height);
-      ctx.stroke()
+      ctx.fillStyle = '#f8fafc'; ctx.fillRect(0,0, width, height)
+      ctx.strokeStyle = '#e2e8f0'; ctx.lineWidth = 2; ctx.strokeRect(0,0,width,height)
     }
 
     const containerConfig = { top: 0.62, bottom: 0.76, hPadding: 0.35 }
-    
     const containerY = height * containerConfig.top
     const containerHeight = height * (containerConfig.bottom - containerConfig.top)
     const containerX = width * containerConfig.hPadding
@@ -380,27 +300,15 @@ export default function ProPosterEditor() {
 
     logos.forEach(logo => {
       if (!logo.imageElement) return
-      
-      const { 
-        x, y, scale, opacity, rotation, 
-        radius, borderWidth, borderColor, blendMode,
-        plateType, platePaddingX, platePaddingY, plateRadius
-      } = logo
-
+      const { x, y, scale, opacity, rotation, radius, borderWidth, borderColor, blendMode, plateType, platePaddingX, platePaddingY, plateRadius } = logo
       const imgW = logo.imageElement.width
       const imgH = logo.imageElement.height
-      
-      const scaleFactorToFitContainer = Math.min(
-        containerWidth / imgW,
-        containerHeight / imgH
-      )
-      
+      const scaleFactorToFitContainer = Math.min(containerWidth / imgW, containerHeight / imgH)
       const finalLogoWidth = imgW * scaleFactorToFitContainer * (scale / 100)
       const finalLogoHeight = imgH * scaleFactorToFitContainer * (scale / 100)
 
       let posX = containerX + (containerWidth - finalLogoWidth) / 2
       let posY = containerY + (containerHeight - finalLogoHeight) / 2
-      
       posX += (x / 100) * containerWidth
       posY += (y / 100) * containerHeight
 
@@ -408,117 +316,69 @@ export default function ProPosterEditor() {
       ctx.translate(posX + finalLogoWidth/2, posY + finalLogoHeight/2)
       ctx.rotate((rotation * Math.PI) / 180)
       ctx.translate(-(posX + finalLogoWidth/2), -(posY + finalLogoHeight/2))
-      
       ctx.globalAlpha = opacity / 100
       ctx.globalCompositeOperation = blendMode
 
-      // Plate
       if (plateType !== 'none') {
         const hPadding = finalLogoWidth * (platePaddingX / 100)
         const vPadding = finalLogoHeight * (platePaddingY / 100)
         const plateW = finalLogoWidth + hPadding * 2
         const plateH = finalLogoHeight + vPadding * 2
-        const plateX = posX - hPadding
-        const plateY = posY - vPadding
-        
-        ctx.shadowColor = 'rgba(0,0,0,0.1)'
-        ctx.shadowBlur = 12
-        ctx.shadowOffsetY = 6
-
-        if (plateType === 'white') {
-          fillRoundedRect(ctx, plateX, plateY, plateW, plateH, plateRadius, '#ffffff')
-        }
-        ctx.shadowColor = 'transparent'
-        ctx.shadowBlur = 0
-        ctx.shadowOffsetY = 0
+        ctx.shadowColor = 'rgba(0,0,0,0.1)'; ctx.shadowBlur = 12; ctx.shadowOffsetY = 6
+        if (plateType === 'white') fillRoundedRect(ctx, posX - hPadding, posY - vPadding, plateW, plateH, plateRadius, '#ffffff')
+        ctx.shadowColor = 'transparent'; ctx.shadowBlur = 0; ctx.shadowOffsetY = 0
       }
-
-      // Image
-      const dX = posX
-      const dY = posY
 
       if (radius > 0) {
-        ctx.save()
-        clipRoundedRect(ctx, dX, dY, finalLogoWidth, finalLogoHeight, radius)
-        ctx.drawImage(logo.imageElement, dX, dY, finalLogoWidth, finalLogoHeight)
-        ctx.restore()
+        ctx.save(); clipRoundedRect(ctx, posX, posY, finalLogoWidth, finalLogoHeight, radius); ctx.drawImage(logo.imageElement, posX, posY, finalLogoWidth, finalLogoHeight); ctx.restore()
       } else {
-        ctx.drawImage(logo.imageElement, dX, dY, finalLogoWidth, finalLogoHeight)
+        ctx.drawImage(logo.imageElement, posX, posY, finalLogoWidth, finalLogoHeight)
       }
 
-      // Border
-      if (borderWidth > 0) {
-        strokeRoundedRect(ctx, dX, dY, finalLogoWidth, finalLogoHeight, radius, borderWidth, borderColor)
-      }
+      if (borderWidth > 0) strokeRoundedRect(ctx, posX, posY, finalLogoWidth, finalLogoHeight, radius, borderWidth, borderColor)
       
-      // Selection Indicator
       if (!renderForExport && logo.id === selectedLogoId) {
-        ctx.globalCompositeOperation = 'source-over'
-        ctx.strokeStyle = '#3b82f6' // Blue 500
-        ctx.lineWidth = 2
+        ctx.globalCompositeOperation = 'source-over'; ctx.strokeStyle = '#3b82f6'; ctx.lineWidth = 2
         const pad = 6
-        
-        const selX = (plateType !== 'none' ? posX - (finalLogoWidth * (platePaddingX/100)) : dX) - pad
-        const selY = (plateType !== 'none' ? posY - (finalLogoHeight * (platePaddingY/100)) : dY) - pad
+        const selX = (plateType !== 'none' ? posX - (finalLogoWidth * (platePaddingX/100)) : posX) - pad
+        const selY = (plateType !== 'none' ? posY - (finalLogoHeight * (platePaddingY/100)) : posY) - pad
         const selW = (plateType !== 'none' ? finalLogoWidth + (finalLogoWidth * (platePaddingX/100) * 2) : finalLogoWidth) + pad*2
         const selH = (plateType !== 'none' ? finalLogoHeight + (finalLogoHeight * (platePaddingY/100) * 2) : finalLogoHeight) + pad*2
-        
-        ctx.setLineDash([6, 4])
-        ctx.strokeRect(selX, selY, selW, selH)
-        ctx.setLineDash([])
-        
-        ctx.fillStyle = '#fff'
-        const handleSize = 8
-        const halfHandle = handleSize / 2
-        const corners = [[selX, selY], [selX + selW, selY], [selX, selY + selH], [selX + selW, selY + selH]]
-        corners.forEach(([cx, cy]) => {
-             ctx.fillRect(cx - halfHandle, cy - halfHandle, handleSize, handleSize)
-             ctx.strokeRect(cx - halfHandle, cy - halfHandle, handleSize, handleSize)
+        ctx.setLineDash([6, 4]); ctx.strokeRect(selX, selY, selW, selH); ctx.setLineDash([])
+        ctx.fillStyle = '#fff'; const handleSize = 8
+        ;[[selX, selY], [selX + selW, selY], [selX, selY + selH], [selX + selW, selY + selH]].forEach(([cx, cy]) => {
+           ctx.fillRect(cx - 4, cy - 4, handleSize, handleSize); ctx.strokeRect(cx - 4, cy - 4, handleSize, handleSize)
         })
       }
-
       ctx.restore()
     })
-
   }, [baseImage, logos, selectedLogoId])
 
   useEffect(() => {
     const canvas = canvasRef.current
     if (!canvas || !baseImage) return
-    
-    const internalW = 1920
-    const internalH = 1080
-    
-    canvas.width = internalW
-    canvas.height = internalH
-    
+    const internalW = 1920; const internalH = 1080
+    canvas.width = internalW; canvas.height = internalH
     const ctx = canvas.getContext('2d')
-    if (ctx) {
-      ctx.imageSmoothingEnabled = true
-      ctx.imageSmoothingQuality = 'high'
-      drawCanvas(ctx, internalW, internalH)
-    }
+    if (ctx) { ctx.imageSmoothingEnabled = true; ctx.imageSmoothingQuality = 'high'; drawCanvas(ctx, internalW, internalH) }
   }, [drawCanvas, baseImage])
 
   const handleLogoUpload = (e: ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0]
     if (!file) return
-
     const url = URL.createObjectURL(file)
     const img = new Image()
     img.src = url
     img.onload = () => {
       const newLogo: LogoLayer = {
-        id: crypto.randomUUID(),
-        file,
-        imageSrc: url,
-        imageElement: img,
+        id: crypto.randomUUID(), file, imageSrc: url, imageElement: img,
         x: 0, y: 0, scale: 100, opacity: 100, rotation: 0, blendMode: 'source-over',
         radius: 0, borderWidth: 0, borderColor: '#ffffff',
         plateType: 'none', platePaddingX: 10, platePaddingY: 10, plateRadius: 10
       }
       setLogos([...logos, newLogo])
       setSelectedLogoId(newLogo.id)
+      setActiveMobileTab('properties')
     }
   }
 
@@ -530,182 +390,148 @@ export default function ProPosterEditor() {
   const executeExport = async () => {
     if (!baseImage) return
     setExportStatus('generating')
-    
     const resSetting = RESOLUTIONS[exportSettings.resolutionIdx]
-    let w = resSetting.width
-    let h = resSetting.height
-    
-    if (w === 0) {
-      w = baseImage.naturalWidth
-      h = baseImage.naturalHeight
-    }
-
+    let w = resSetting.width, h = resSetting.height
+    if (w === 0) { w = baseImage.naturalWidth; h = baseImage.naturalHeight }
     const offCanvas = document.createElement('canvas')
-    offCanvas.width = w
-    offCanvas.height = h
+    offCanvas.width = w; offCanvas.height = h
     const ctx = offCanvas.getContext('2d')
     if (!ctx) return
-
-    ctx.imageSmoothingEnabled = true
-    ctx.imageSmoothingQuality = 'high'
+    ctx.imageSmoothingEnabled = true; ctx.imageSmoothingQuality = 'high'
     drawCanvas(ctx, w, h, true)
-
     await new Promise(r => setTimeout(r, 800)) 
-
     const mime = exportSettings.format === 'png' ? 'image/png' : 'image/jpeg'
     let dataUrl = offCanvas.toDataURL(mime, exportSettings.quality)
-
-    if (exportSettings.format === 'png') {
-      dataUrl = setPngDpi(dataUrl, exportSettings.dpi)
-    } else {
-      dataUrl = setJpegDpi(dataUrl, exportSettings.dpi)
-    }
-
+    if (exportSettings.format === 'png') dataUrl = setPngDpi(dataUrl, exportSettings.dpi)
+    else dataUrl = setJpegDpi(dataUrl, exportSettings.dpi)
     const link = document.createElement('a')
-    link.download = `proposter-export-${w}x${h}.${exportSettings.format}`
+    link.download = `ssi-poster-${w}x${h}.${exportSettings.format}`
     link.href = dataUrl
     link.click()
-
     setExportStatus('done')
-    setTimeout(() => {
-      setExportStatus('idle')
-      setIsExportModalOpen(false)
-    }, 1500)
+    setTimeout(() => { setExportStatus('idle'); setIsExportModalOpen(false) }, 1500)
   }
 
   const selectedLogo = logos.find(l => l.id === selectedLogoId)
 
   // --- RENDER ---
   return (
-    <div className="flex flex-col h-screen w-full bg-[#f3f4f6] font-sans overflow-hidden text-slate-800">
+    <div className="flex flex-col h-screen w-full bg-[#f8f9fc] font-sans overflow-hidden text-slate-800 selection:bg-indigo-100 selection:text-indigo-900">
       
       {/* BACKGROUND DECORATION */}
-      <div className="absolute inset-0 z-0 pointer-events-none opacity-40" 
-           style={{ 
-             backgroundImage: 'radial-gradient(circle at 50% 50%, #e0e7ff 0%, transparent 50%)',
-             backgroundSize: '100% 100%'
-           }} 
-      />
+      <div className="absolute inset-0 z-0 pointer-events-none opacity-60 bg-[radial-gradient(ellipse_at_top_left,_var(--tw-gradient-stops))] from-indigo-100/40 via-purple-50/20 to-transparent" />
+      <div className="absolute inset-0 z-0 pointer-events-none opacity-[0.03] bg-[url('https://grainy-gradients.vercel.app/noise.svg')] mix-blend-multiply" />
 
-      {/* --- FLOATING HEADER --- */}
-      <div className="z-50 w-full flex justify-center pt-5 pb-2 px-6">
-        <header className="bg-white/90 backdrop-blur-xl rounded-full shadow-lg shadow-indigo-100 border border-white/50 px-6 py-2.5 flex items-center justify-between min-w-[600px] max-w-4xl w-full">
-            <div className="flex items-center gap-4">
-                <div className="w-9 h-9 bg-slate-900 rounded-full flex items-center justify-center text-white font-bold text-sm shadow-md">
-                   S
+      {/* --- HEADER --- */}
+      <div className="z-50 w-full flex justify-center pt-6 px-6 shrink-0">
+        <header className="bg-white/70 backdrop-blur-xl rounded-full shadow-[0_4px_24px_-4px_rgba(0,0,0,0.08)] border border-white/60 px-5 py-2.5 flex items-center justify-between w-full max-w-[1600px] transition-all hover:shadow-[0_8px_30px_-6px_rgba(0,0,0,0.12)]">
+            <div className="flex items-center gap-4 cursor-default">
+                <div className="h-9 w-9 bg-gradient-to-tr from-slate-900 to-slate-700 rounded-xl flex items-center justify-center text-white shadow-lg shadow-slate-200">
+                    <span className="font-bold text-xs">SSI</span>
                 </div>
-                <div className="h-6 w-px bg-slate-200"></div>
-                <div>
-                   <h1 className="text-sm font-bold text-slate-800 leading-none">SSI Studio</h1>
-                   <span className="text-[10px] text-slate-400 font-medium uppercase tracking-widest">Poster Engine</span>
+                <div className="flex flex-col justify-center">
+                   <h1 className="text-sm font-bold text-slate-900 leading-tight">SSI Studio</h1>
+                   <span className="text-[10px] text-slate-400 font-semibold uppercase tracking-widest">Poster Engine</span>
                 </div>
             </div>
 
             <div className="flex items-center gap-3">
-               <button 
-                  onClick={() => setLogos([])}
-                  className="text-xs font-semibold text-slate-500 hover:text-slate-800 hover:bg-slate-100 px-4 py-2 rounded-full transition-all flex items-center gap-2"
+               <motion.button 
+                 whileHover={{ scale: 1.05, backgroundColor: '#f1f5f9' }} whileTap={{ scale: 0.95 }}
+                 onClick={() => setLogos([])} 
+                 className="cursor-pointer text-xs font-semibold text-slate-500 px-4 py-2.5 rounded-full transition-colors flex items-center gap-2"
                >
-                  <RotateCcw size={14} /> <span>Reset</span>
-               </button>
-               <button 
-                  onClick={() => setIsExportModalOpen(true)}
-                  className="bg-slate-900 hover:bg-slate-800 text-white px-5 py-2 rounded-full text-xs font-bold shadow-lg shadow-slate-300 transition-all flex items-center gap-2 hover:-translate-y-0.5 active:translate-y-0"
+                  <RotateCcw size={14} className="text-slate-400" /> <span className="hidden sm:inline">Reset</span>
+               </motion.button>
+               
+               <motion.button 
+                 whileHover={{ scale: 1.05, y: -1 }} whileTap={{ scale: 0.95, y: 0 }}
+                 onClick={() => setIsExportModalOpen(true)} 
+                 className="cursor-pointer bg-slate-900 text-white px-5 py-2.5 rounded-full text-xs font-bold shadow-lg shadow-slate-300 flex items-center gap-2"
                >
                   <Download size={14} /> Export
-               </button>
+               </motion.button>
             </div>
         </header>
       </div>
 
-      {/* --- MAIN WORKSPACE --- */}
-      <div className="flex flex-1 justify-center w-full max-w-[1600px] mx-auto gap-6 px-8 pb-8 min-h-0 z-10">
+      {/* --- WORKSPACE CONTAINER --- */}
+      <div className="flex flex-col lg:flex-row flex-1 w-full max-w-[1600px] mx-auto gap-6 px-6 pb-6 pt-4 min-h-0 z-10 relative justify-center">
         
-        {/* LEFT: ASSETS */}
-        <aside className="w-72 bg-white/80 backdrop-blur-xl rounded-[2rem] shadow-xl shadow-indigo-100/50 border border-white flex flex-col overflow-hidden transition-all">
-            <div className="p-6 border-b border-slate-100/50">
-                <h2 className="text-xs font-extrabold text-slate-400 uppercase tracking-widest mb-4 flex items-center gap-2">
-                    <ImageIcon size={14} /> Background
+        {/* --- LEFT PANEL: ASSETS --- */}
+        <aside className={`${activeMobileTab === 'layers' ? 'flex' : 'hidden'} lg:flex w-full lg:w-72 bg-white/70 backdrop-blur-2xl rounded-[2rem] shadow-[0_8px_30px_rgb(0,0,0,0.04)] border border-white/60 flex-col overflow-hidden transition-all absolute lg:relative inset-0 lg:inset-auto z-30 lg:z-auto h-full`}>
+            {/* Header */}
+            <div className="p-5 border-b border-slate-100/50 shrink-0 flex items-center justify-between">
+                <h2 className="text-[11px] font-extrabold text-slate-400 uppercase tracking-widest flex items-center gap-2">
+                    <Layers size={14} /> Layers
                 </h2>
-                
-                <div 
-                    onClick={() => baseInputRef.current?.click()}
-                    className="group relative w-full aspect-[16/9] bg-slate-100 rounded-2xl border-2 border-dashed border-slate-200 overflow-hidden cursor-pointer hover:border-slate-400 transition-all"
+                <motion.button 
+                    whileHover={{ scale: 1.1, rotate: 90 }} whileTap={{ scale: 0.9 }}
+                    onClick={() => fileInputRef.current?.click()} 
+                    className="cursor-pointer w-8 h-8 rounded-full bg-indigo-50 text-indigo-600 flex items-center justify-center hover:bg-indigo-100 transition-colors"
                 >
-                    {baseImage ? (
-                        <img src={baseImage.src} className="w-full h-full object-cover opacity-90 group-hover:opacity-100 transition-all group-hover:scale-105 duration-700" alt="Base" />
-                    ) : (
-                        <div className="flex flex-col items-center justify-center h-full text-slate-400 gap-2">
-                            <span className="text-xs font-medium">Upload Base</span>
-                        </div>
-                    )}
-                    <div className="absolute inset-0 bg-black/0 group-hover:bg-black/10 transition-all flex items-center justify-center">
-                         <div className="opacity-0 group-hover:opacity-100 bg-white/90 backdrop-blur text-slate-900 rounded-full p-2 shadow-sm transform translate-y-2 group-hover:translate-y-0 transition-all">
-                             <Upload size={14} />
-                         </div>
-                    </div>
-                </div>
-                <input ref={baseInputRef} type="file" accept="image/*" className="hidden" onChange={(e) => {
-                    if (e.target.files?.[0]) setBaseImageSrc(URL.createObjectURL(e.target.files[0]))
-                }}/>
+                    <Plus size={16}/>
+                </motion.button>
+                <input ref={fileInputRef} type="file" multiple accept="image/*" className="hidden" onChange={handleLogoUpload} />
             </div>
 
-            <div className="flex-1 flex flex-col min-h-0 bg-slate-50/50">
-                <div className="p-6 pb-2 flex items-center justify-between">
-                    <h2 className="text-xs font-extrabold text-slate-400 uppercase tracking-widest flex items-center gap-2">
-                        <Layers size={14} /> Layers
-                    </h2>
-                    <button 
-                        onClick={() => fileInputRef.current?.click()}
-                        className="bg-white hover:bg-slate-50 text-slate-700 hover:text-slate-900 p-2 rounded-xl shadow-sm border border-slate-100 transition-all group"
-                        title="Add Logo"
-                    >
-                        <Plus size={16} className="group-hover:scale-110 transition-transform"/>
-                    </button>
-                    <input ref={fileInputRef} type="file" multiple accept="image/*" className="hidden" onChange={handleLogoUpload} />
+            {/* Content */}
+            <div className="flex-1 flex flex-col min-h-0 overflow-y-auto p-4 custom-scrollbar">
+                
+                {/* Background Selector */}
+                <div className="mb-6">
+                     <h3 className="text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-3 pl-1">Base Poster</h3>
+                     <motion.div 
+                        whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.98 }}
+                        onClick={() => baseInputRef.current?.click()} 
+                        className="cursor-pointer group relative w-full aspect-[16/9] bg-slate-100 rounded-2xl border-2 border-dashed border-slate-200 overflow-hidden hover:border-indigo-300 transition-all shadow-sm"
+                     >
+                        {baseImage ? <img src={baseImage.src} className="w-full h-full object-cover opacity-90 group-hover:opacity-100 transition-opacity" alt="Base" /> : <div className="flex flex-col items-center justify-center h-full text-slate-400"><span className="text-xs font-medium">Click to Upload</span></div>}
+                        <div className="absolute inset-0 bg-black/0 group-hover:bg-black/5 transition-all flex items-center justify-center">
+                            <div className="opacity-0 group-hover:opacity-100 bg-white/90 backdrop-blur text-slate-700 p-2.5 rounded-full shadow-lg transform translate-y-2 group-hover:translate-y-0 transition-all"><Upload size={16}/></div>
+                        </div>
+                     </motion.div>
+                     <input ref={baseInputRef} type="file" accept="image/*" className="hidden" onChange={(e) => { if (e.target.files?.[0]) setBaseImageSrc(URL.createObjectURL(e.target.files[0])) }}/>
                 </div>
 
-                <div className="flex-1 overflow-y-auto px-4 pb-4 space-y-3 custom-scrollbar">
+                {/* Layer List */}
+                <h3 className="text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-3 pl-1">Overlays</h3>
+                <div className="space-y-2.5 pb-20 lg:pb-0">
                     {logos.length === 0 ? (
-                        <div className="flex flex-col items-center justify-center h-40 text-slate-400 border border-dashed border-slate-200 rounded-2xl m-2">
-                            <BoxSelect size={24} className="mb-2 opacity-30" />
-                            <p className="text-[10px] font-medium uppercase tracking-wide opacity-60">No Layers</p>
+                        <div className="flex flex-col items-center justify-center py-12 text-slate-300 border-2 border-dashed border-slate-100 rounded-2xl bg-slate-50/50">
+                            <BoxSelect size={32} className="mb-2 opacity-50" />
+                            <p className="text-[10px] font-bold uppercase tracking-wide">No Overlays Added</p>
                         </div>
                     ) : (
-                        <AnimatePresence>
+                        <AnimatePresence mode='popLayout'>
                             {logos.map((logo, idx) => (
-                                <motion.div
-                                    key={logo.id}
-                                    initial={{ opacity: 0, y: 10 }}
-                                    animate={{ opacity: 1, y: 0 }}
-                                    exit={{ opacity: 0, scale: 0.9 }}
+                                <motion.div 
+                                    key={logo.id} 
+                                    initial={{ opacity: 0, x: -20 }} 
+                                    animate={{ opacity: 1, x: 0 }} 
+                                    exit={{ opacity: 0, scale: 0.8 }} 
                                     onClick={() => setSelectedLogoId(logo.id)}
-                                    className={`relative flex items-center gap-3 p-3 rounded-2xl cursor-pointer transition-all border ${
-                                        selectedLogoId === logo.id 
-                                        ? 'bg-white border-slate-900 shadow-md scale-[1.02] z-10' 
-                                        : 'bg-white border-slate-100 hover:border-slate-300 hover:shadow-sm'
-                                    }`}
+                                    whileHover={{ scale: 1.02 }}
+                                    className={`cursor-pointer group relative flex items-center gap-3 p-2.5 pr-3 rounded-2xl transition-all border ${selectedLogoId === logo.id ? 'bg-white border-indigo-200 shadow-[0_4px_20px_-2px_rgba(99,102,241,0.15)] ring-1 ring-indigo-50 z-10' : 'bg-transparent border-transparent hover:bg-slate-50 hover:border-slate-100'}`}
                                 >
-                                    <div className="w-10 h-10 rounded-lg bg-slate-100 border border-slate-100 flex-shrink-0 p-1 overflow-hidden">
+                                    <div className="w-11 h-11 rounded-xl bg-white border border-slate-100 p-1 shadow-sm shrink-0 overflow-hidden">
                                         <img src={logo.imageSrc} className="w-full h-full object-contain" alt="Layer" />
                                     </div>
                                     <div className="flex-1 min-w-0">
-                                        <div className="text-xs font-bold text-slate-700 truncate">Logo Asset {idx + 1}</div>
-                                        <div className="text-[10px] text-slate-400 font-medium">
-                                            {logo.blendMode !== 'source-over' ? logo.blendMode : 'Normal'} • {Math.round(logo.opacity)}%
-                                        </div>
+                                        <div className={`text-xs font-bold truncate ${selectedLogoId === logo.id ? 'text-indigo-950' : 'text-slate-600'}`}>Layer {idx + 1}</div>
+                                        <div className="text-[10px] text-slate-400 font-medium truncate">{logo.blendMode} • {Math.round(logo.opacity)}%</div>
                                     </div>
-                                    {selectedLogoId === logo.id && (
-                                        <button 
-                                            onClick={(e) => {
-                                                e.stopPropagation()
-                                                setLogos(prev => prev.filter(l => l.id !== logo.id))
-                                                if (selectedLogoId === logo.id) setSelectedLogoId(null)
-                                            }}
-                                            className="text-slate-300 hover:text-red-500 transition-colors p-1"
+                                    
+                                    {selectedLogoId === logo.id ? (
+                                        <motion.button 
+                                            initial={{ opacity: 0, scale: 0 }} animate={{ opacity: 1, scale: 1 }}
+                                            onClick={(e) => { e.stopPropagation(); setLogos(prev => prev.filter(l => l.id !== logo.id)); if (selectedLogoId === logo.id) setSelectedLogoId(null) }} 
+                                            className="cursor-pointer w-7 h-7 flex items-center justify-center rounded-full bg-red-50 text-red-500 hover:bg-red-100 hover:text-red-600"
                                         >
-                                            <Trash2 size={14} />
-                                        </button>
+                                            <Trash2 size={13} />
+                                        </motion.button>
+                                    ) : (
+                                        <ChevronRight size={14} className="text-slate-200 group-hover:text-slate-300" />
                                     )}
                                 </motion.div>
                             ))}
@@ -715,141 +541,115 @@ export default function ProPosterEditor() {
             </div>
         </aside>
 
-        {/* CENTER: CANVAS */}
-        <main className="flex-1 bg-[#e2e4e9] rounded-[2rem] shadow-inner border border-slate-200/60 relative flex flex-col items-center justify-center overflow-hidden">
-            {/* Canvas Container */}
-            <div 
-                ref={containerRef}
-                className="relative shadow-2xl shadow-slate-400/20 bg-white transition-all duration-300 ease-out"
+        {/* --- CENTER: CANVAS --- */}
+        <main className={`${activeMobileTab === 'canvas' ? 'flex' : 'hidden'} lg:flex flex-1 bg-[#ebeef3] rounded-[2rem] shadow-inner border border-white/50 relative flex-col items-center justify-center overflow-hidden w-full h-full`}>
+            {/* Dot Pattern for Canvas Background */}
+            <div className="absolute inset-0 opacity-[0.4] bg-[radial-gradient(#cbd5e1_1px,transparent_1px)] [background-size:20px_20px]"></div>
+
+            <motion.div 
+                layout
+                ref={containerRef} 
+                // REMOVED bg-white and ring here to remove the "card" look
+                className="relative shadow-2xl shadow-slate-900/10 transition-all duration-300 ease-out" 
                 style={{ 
-                    aspectRatio: '16/9',
-                    height: `${zoomLevel}%`,
-                    maxHeight: '90%',
-                    maxWidth: '90%' 
+                    aspectRatio: '16/9', 
+                    // Changed width/height logic to ensure strict 16:9 box without internal padding issues
+                    width: `${zoomLevel}%`,
+                    maxWidth: '100%',
+                    maxHeight: '100%',
+                    // Ensure display block to prevent inline whitespace
+                    display: 'block'
                 }}
             >
-                <canvas 
-                    ref={canvasRef}
-                    onClick={() => {}}
-                    className="w-full h-full object-contain"
-                />
-            </div>
+                {/* Canvas is block level to fill container exactly */}
+                <canvas ref={canvasRef} onClick={() => {}} className="w-full h-full block cursor-crosshair" />
+            </motion.div>
 
-            {/* Bottom Tools */}
-            <div className="absolute bottom-6 flex items-center gap-3 bg-white/90 backdrop-blur-md shadow-[0_8px_30px_rgb(0,0,0,0.12)] rounded-full px-4 py-2 border border-white/50">
-                <button onClick={() => setZoomLevel(Math.max(20, zoomLevel - 10))} className="p-2 hover:bg-slate-100 rounded-full text-slate-500 transition-colors">
-                    <Minus size={14} />
-                </button>
-                <span className="text-xs font-bold text-slate-700 w-12 text-center">{zoomLevel}%</span>
-                <button onClick={() => setZoomLevel(Math.min(150, zoomLevel + 10))} className="p-2 hover:bg-slate-100 rounded-full text-slate-500 transition-colors">
-                    <Plus size={14} />
-                </button>
-                <div className="w-px h-4 bg-slate-200 mx-1"></div>
-                <button onClick={() => setZoomLevel(85)} className="p-2 hover:bg-slate-100 rounded-full text-slate-500 hover:text-slate-900 transition-colors" title="Fit">
-                    <Maximize2 size={14} />
-                </button>
+            {/* Zoom Controls */}
+            <div className="absolute bottom-6 flex items-center gap-1.5 bg-white/80 backdrop-blur-md shadow-[0_8px_30px_rgb(0,0,0,0.12)] rounded-full px-2 py-1.5 border border-white/60">
+                <button onClick={() => setZoomLevel(Math.max(20, zoomLevel - 10))} className="cursor-pointer p-2 hover:bg-slate-100 rounded-full text-slate-500 transition-colors"><Minus size={14} /></button>
+                <span className="text-xs font-bold text-slate-700 w-10 text-center select-none">{zoomLevel}%</span>
+                <button onClick={() => setZoomLevel(Math.min(150, zoomLevel + 10))} className="cursor-pointer p-2 hover:bg-slate-100 rounded-full text-slate-500 transition-colors"><Plus size={14} /></button>
+                <div className="w-px h-3 bg-slate-200 mx-1"></div>
+                <button onClick={() => setZoomLevel(85)} className="cursor-pointer p-2 hover:bg-slate-100 rounded-full text-slate-500 transition-colors" title="Fit"><Maximize2 size={14} /></button>
             </div>
         </main>
 
-        {/* RIGHT: PROPERTIES */}
-        <aside className="w-80 bg-white/80 backdrop-blur-xl rounded-[2rem] shadow-xl shadow-indigo-100/50 border border-white flex flex-col overflow-hidden">
+        {/* --- RIGHT PANEL: PROPERTIES --- */}
+        <aside className={`${activeMobileTab === 'properties' ? 'flex' : 'hidden'} lg:flex w-full lg:w-80 bg-white/70 backdrop-blur-2xl rounded-[2rem] shadow-[0_8px_30px_rgb(0,0,0,0.04)] border border-white/60 flex-col overflow-hidden absolute lg:relative inset-0 lg:inset-auto z-30 lg:z-auto h-full`}>
             {selectedLogo ? (
                 <div className="flex flex-col h-full overflow-y-auto custom-scrollbar">
-                    <div className="p-6 border-b border-slate-100 sticky top-0 bg-white/95 backdrop-blur z-20">
+                    {/* Header */}
+                    <div className="px-6 py-5 border-b border-slate-100/50 sticky top-0 bg-white/80 backdrop-blur z-20 flex justify-between items-center">
                         <div className="flex items-center gap-3">
-                             <div className="w-8 h-8 rounded-lg bg-slate-50 flex items-center justify-center text-slate-600 border border-slate-100">
-                                <Settings size={16} />
-                             </div>
+                             <div className="w-8 h-8 rounded-lg bg-indigo-50 flex items-center justify-center text-indigo-500 border border-indigo-100/50 shadow-sm"><Settings size={16} /></div>
                              <div>
                                  <h2 className="text-sm font-bold text-slate-800">Properties</h2>
-                                 <p className="text-[10px] text-slate-400 font-medium">Editing Selected Layer</p>
+                                 <p className="text-[10px] text-slate-400 font-medium">Customize Layer</p>
                              </div>
                         </div>
+                        <button className="cursor-pointer lg:hidden p-2 bg-slate-100 rounded-full hover:bg-slate-200" onClick={() => setActiveMobileTab('canvas')}><X size={16}/></button>
                     </div>
 
-                    <div className="p-6 space-y-8">
-                        {/* Transform */}
-                        <section>
-                            <div className="flex items-center gap-2 mb-4">
-                                <Move size={14} className="text-indigo-500"/>
-                                <h3 className="text-xs font-extrabold text-slate-700 uppercase tracking-widest">Position</h3>
+                    <div className="p-6 space-y-8 pb-24">
+                        {/* Position Section */}
+                        <section className="animate-in fade-in slide-in-from-bottom-4 duration-500">
+                            <div className="flex items-center gap-2 mb-5 opacity-80"><Move size={14} className="text-indigo-500"/><h3 className="text-[11px] font-extrabold text-slate-800 uppercase tracking-widest">Transform</h3></div>
+                            <div className="grid grid-cols-2 gap-x-4 gap-y-2 mb-2">
+                                <SmoothSlider label="X Position" value={selectedLogo.x} min={-50} max={50} onChange={(v:any) => updateLogo({x: v})} unit="%" />
+                                <SmoothSlider label="Y Position" value={selectedLogo.y} min={-50} max={50} onChange={(v:any) => updateLogo({y: v})} unit="%" />
                             </div>
-                            <div className="grid grid-cols-2 gap-4 mb-2">
-                                <SmoothSlider label="X Axis" value={selectedLogo.x} min={-50} max={50} onChange={(v) => updateLogo({x: v})} unit="%" />
-                                <SmoothSlider label="Y Axis" value={selectedLogo.y} min={-50} max={50} onChange={(v) => updateLogo({y: v})} unit="%" />
-                            </div>
-                            <SmoothSlider label="Scale" value={selectedLogo.scale} min={10} max={200} onChange={(v) => updateLogo({scale: v})} unit="%" />
-                            <SmoothSlider label="Rotate" value={selectedLogo.rotation} min={-180} max={180} onChange={(v) => updateLogo({rotation: v})} unit="°" />
+                            <SmoothSlider label="Scale" value={selectedLogo.scale} min={10} max={200} onChange={(v:any) => updateLogo({scale: v})} unit="%" />
+                            <SmoothSlider label="Rotation" value={selectedLogo.rotation} min={-180} max={180} onChange={(v:any) => updateLogo({rotation: v})} unit="°" />
                         </section>
 
-                        <hr className="border-slate-100" />
+                        <div className="h-px bg-slate-100" />
 
-                        {/* Style */}
+                        {/* Style Section */}
                         <section>
-                            <div className="flex items-center gap-2 mb-4">
-                                <Palette size={14} className="text-indigo-500"/>
-                                <h3 className="text-xs font-extrabold text-slate-700 uppercase tracking-widest">Style</h3>
-                            </div>
-
-                            <SmoothSlider label="Opacity" value={selectedLogo.opacity} min={0} max={100} onChange={(v) => updateLogo({opacity: v})} unit="%" />
-
-                            <div className="mb-5">
-                                <label className="text-xs font-semibold text-slate-600 tracking-wide mb-2 block">Blending</label>
-                                <div className="relative">
-                                    <select 
-                                        value={selectedLogo.blendMode}
-                                        onChange={(e) => updateLogo({blendMode: e.target.value as BlendMode})}
-                                        className="w-full bg-white border border-slate-200 text-slate-700 text-xs font-bold rounded-xl p-3 pr-8 focus:ring-2 focus:ring-slate-900 focus:outline-none appearance-none cursor-pointer shadow-sm"
-                                    >
-                                        {BLEND_MODES.map(m => (
-                                            <option key={m} value={m}>{m.charAt(0).toUpperCase() + m.slice(1).replace('-', ' ')}</option>
-                                        ))}
+                            <div className="flex items-center gap-2 mb-5 opacity-80"><Palette size={14} className="text-indigo-500"/><h3 className="text-[11px] font-extrabold text-slate-800 uppercase tracking-widest">Appearance</h3></div>
+                            <SmoothSlider label="Opacity" value={selectedLogo.opacity} min={0} max={100} onChange={(v:any) => updateLogo({opacity: v})} unit="%" />
+                            
+                            <div className="mb-6">
+                                <label className="text-[11px] font-bold text-slate-500 tracking-wide uppercase mb-2 block">Blend Mode</label>
+                                <div className="relative group">
+                                    <select value={selectedLogo.blendMode} onChange={(e) => updateLogo({blendMode: e.target.value as BlendMode})} className="cursor-pointer w-full bg-slate-50 hover:bg-slate-100 border border-slate-200 text-slate-700 text-xs font-bold rounded-xl p-3 pr-8 shadow-sm appearance-none transition-colors focus:ring-2 focus:ring-indigo-100 outline-none">
+                                        {BLEND_MODES.map(m => (<option key={m} value={m}>{m.charAt(0).toUpperCase() + m.slice(1).replace('-', ' ')}</option>))}
                                     </select>
-                                    <ChevronDown className="absolute right-3 top-3 text-slate-400 pointer-events-none" size={14} />
+                                    <ChevronDown className="absolute right-3 top-3.5 text-slate-400 pointer-events-none group-hover:text-slate-600" size={14} />
                                 </div>
                             </div>
                             
-                            <SmoothSlider label="Radius" value={selectedLogo.radius} min={0} max={100} onChange={(v) => updateLogo({radius: v})} unit="px" />
-                            <SmoothSlider label="Border" value={selectedLogo.borderWidth} min={0} max={20} step={0.5} onChange={(v) => updateLogo({borderWidth: v})} unit="px" />
+                            <SmoothSlider label="Corner Radius" value={selectedLogo.radius} min={0} max={100} onChange={(v:any) => updateLogo({radius: v})} unit="px" />
+                            <SmoothSlider label="Border Width" value={selectedLogo.borderWidth} min={0} max={20} step={0.5} onChange={(v:any) => updateLogo({borderWidth: v})} unit="px" />
                             {selectedLogo.borderWidth > 0 && (
-                                <ColorPicker label="Color" color={selectedLogo.borderColor} onChange={(c) => updateLogo({borderColor: c})} />
+                                <motion.div initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: 'auto' }}>
+                                    <ColorPicker label="Border Color" color={selectedLogo.borderColor} onChange={(c:any) => updateLogo({borderColor: c})} />
+                                </motion.div>
                             )}
                         </section>
 
-                        <hr className="border-slate-100" />
+                        <div className="h-px bg-slate-100" />
 
-                        {/* Plate */}
+                        {/* Container Section */}
                         <section>
-                            <div className="flex items-center gap-2 mb-4">
-                                <LayoutGrid size={14} className="text-indigo-500"/>
-                                <h3 className="text-xs font-extrabold text-slate-700 uppercase tracking-widest">Container</h3>
-                            </div>
-
-                            <div className="grid grid-cols-2 gap-3 bg-slate-100 p-1.5 rounded-xl mb-4">
+                            <div className="flex items-center gap-2 mb-5 opacity-80"><LayoutGrid size={14} className="text-indigo-500"/><h3 className="text-[11px] font-extrabold text-slate-800 uppercase tracking-widest">Background Plate</h3></div>
+                            <div className="grid grid-cols-2 gap-3 bg-slate-100/80 p-1.5 rounded-xl mb-5">
                                 {['none', 'white'].map((t) => (
-                                    <button
-                                        key={t}
-                                        onClick={() => updateLogo({ plateType: t as any })}
-                                        className={`py-2 text-[10px] font-bold uppercase tracking-wide rounded-lg transition-all ${
-                                            selectedLogo.plateType === t 
-                                            ? 'bg-white text-slate-900 shadow-sm' 
-                                            : 'text-slate-500 hover:text-slate-700'
-                                        }`}
-                                    >
-                                        {t}
+                                    <button key={t} onClick={() => updateLogo({ plateType: t as any })} className={`cursor-pointer py-2 text-[10px] font-bold uppercase tracking-wide rounded-lg transition-all flex items-center justify-center gap-2 ${selectedLogo.plateType === t ? 'bg-white text-indigo-600 shadow-sm ring-1 ring-slate-100' : 'text-slate-500 hover:text-slate-700'}`}>
+                                        {selectedLogo.plateType === t && <Check size={12} strokeWidth={3} />} {t}
                                     </button>
                                 ))}
                             </div>
-
                             <AnimatePresence>
                                 {selectedLogo.plateType !== 'none' && (
-                                    <motion.div initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: 'auto' }} exit={{ opacity: 0, height: 0 }}>
-                                        <div className="space-y-4 pt-2">
+                                    <motion.div initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: 'auto' }} exit={{ opacity: 0, height: 0 }} className="overflow-hidden">
+                                        <div className="space-y-2 pt-2">
                                             <div className="grid grid-cols-2 gap-4">
-                                                <SmoothSlider label="Pad X" value={selectedLogo.platePaddingX} min={0} max={50} onChange={(v) => updateLogo({platePaddingX: v})} unit="%" />
-                                                <SmoothSlider label="Pad Y" value={selectedLogo.platePaddingY} min={0} max={50} onChange={(v) => updateLogo({platePaddingY: v})} unit="%" />
+                                                <SmoothSlider label="Pad X" value={selectedLogo.platePaddingX} min={0} max={50} onChange={(v:any) => updateLogo({platePaddingX: v})} unit="%" />
+                                                <SmoothSlider label="Pad Y" value={selectedLogo.platePaddingY} min={0} max={50} onChange={(v:any) => updateLogo({platePaddingY: v})} unit="%" />
                                             </div>
-                                            <SmoothSlider label="Roundness" value={selectedLogo.plateRadius} min={0} max={100} onChange={(v) => updateLogo({plateRadius: v})} unit="px" />
+                                            <SmoothSlider label="Plate Roundness" value={selectedLogo.plateRadius} min={0} max={100} onChange={(v:any) => updateLogo({plateRadius: v})} unit="px" />
                                         </div>
                                     </motion.div>
                                 )}
@@ -858,134 +658,84 @@ export default function ProPosterEditor() {
                     </div>
                 </div>
             ) : (
-                <div className="h-full flex flex-col items-center justify-center p-8 text-center">
-                    <div className="w-24 h-24 bg-slate-50 rounded-full flex items-center justify-center mb-6 shadow-sm border border-slate-100">
-                        <MousePointer2 size={32} className="text-slate-300" />
-                    </div>
-                    <h3 className="text-sm font-bold text-slate-800 mb-2">No Selection</h3>
-                    <p className="text-xs text-slate-400 leading-relaxed max-w-[200px]">
-                        Select a layer to edit its properties
-                    </p>
+                <div className="h-full flex flex-col items-center justify-center p-8 text-center bg-slate-50/30">
+                    <motion.div 
+                        animate={{ y: [0, -10, 0] }} transition={{ repeat: Infinity, duration: 2, ease: "easeInOut" }}
+                        className="w-20 h-20 bg-white rounded-[20px] flex items-center justify-center mb-6 shadow-xl shadow-slate-200/50 border border-white"
+                    >
+                        <MousePointer2 size={32} className="text-indigo-200 fill-indigo-50" />
+                    </motion.div>
+                    <h3 className="text-sm font-bold text-slate-800 mb-2">No Layer Selected</h3>
+                    <p className="text-xs text-slate-400 leading-relaxed max-w-[200px]">Select a layer from the canvas or sidebar to edit its properties.</p>
                 </div>
             )}
         </aside>
-
       </div>
 
-      {/* EXPORT MODAL */}
+      {/* --- MOBILE DOCK (Floating Island Style) --- */}
+      <div className="lg:hidden fixed bottom-6 left-0 right-0 z-50 flex justify-center px-6">
+        <div className="bg-slate-900/90 backdrop-blur-xl border border-white/10 rounded-full px-6 py-3 flex items-center gap-8 shadow-2xl shadow-slate-900/40">
+             <button onClick={() => setActiveMobileTab('layers')} className={`cursor-pointer flex flex-col items-center gap-1 transition-colors ${activeMobileTab === 'layers' ? 'text-white' : 'text-slate-500'}`}>
+                <PanelLeftOpen size={20} />
+             </button>
+             <button onClick={() => setActiveMobileTab('canvas')} className={`cursor-pointer flex flex-col items-center gap-1 transition-all ${activeMobileTab === 'canvas' ? 'text-white bg-indigo-600 rounded-full p-2 -my-2 shadow-lg shadow-indigo-500/50' : 'text-slate-500'}`}>
+                <Smartphone size={activeMobileTab === 'canvas' ? 20 : 22} />
+             </button>
+             <button onClick={() => setActiveMobileTab('properties')} className={`cursor-pointer flex flex-col items-center gap-1 transition-colors ${activeMobileTab === 'properties' ? 'text-white' : 'text-slate-500'}`}>
+                <PanelRightOpen size={20} />
+             </button>
+        </div>
+      </div>
+
+      {/* --- EXPORT MODAL --- */}
       <AnimatePresence>
         {isExportModalOpen && (
-            <motion.div 
-                initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
-                className="fixed inset-0 z-[60] flex items-center justify-center bg-slate-900/60 backdrop-blur-sm p-4"
-                onClick={() => setIsExportModalOpen(false)}
-            >
+            <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="fixed inset-0 z-[60] flex items-center justify-center bg-slate-900/40 backdrop-blur-md p-4" onClick={() => setIsExportModalOpen(false)}>
                 <motion.div 
-                    initial={{ scale: 0.95, y: 10, opacity: 0 }} animate={{ scale: 1, y: 0, opacity: 1 }} exit={{ scale: 0.95, y: 10, opacity: 0 }}
-                    className="bg-white rounded-3xl shadow-2xl w-full max-w-xl overflow-hidden"
+                    initial={{ scale: 0.95, y: 20, opacity: 0 }} animate={{ scale: 1, y: 0, opacity: 1 }} exit={{ scale: 0.95, y: 20, opacity: 0 }} 
+                    className="bg-white rounded-3xl shadow-2xl w-full max-w-lg overflow-hidden ring-1 ring-black/5" 
                     onClick={e => e.stopPropagation()}
                 >
-                    <div className="p-8 border-b border-slate-100 flex justify-between items-center bg-white">
-                        <div>
-                             <h2 className="text-xl font-bold text-slate-800">Export Design</h2>
-                             <p className="text-xs text-slate-500 mt-1 font-medium">Ready to download your poster?</p>
-                        </div>
-                        <button onClick={() => setIsExportModalOpen(false)} className="p-2 hover:bg-slate-100 rounded-full text-slate-400 hover:text-slate-600 transition-colors">
-                            <X size={20}/>
-                        </button>
+                    <div className="p-8 border-b border-slate-100 flex justify-between items-center bg-white/50">
+                        <div><h2 className="text-xl font-bold text-slate-800 tracking-tight">Export Design</h2><p className="text-xs text-slate-400 font-medium mt-1">Ready to render your masterpiece?</p></div>
+                        <button onClick={() => setIsExportModalOpen(false)} className="cursor-pointer p-2 hover:bg-slate-100 rounded-full text-slate-400 transition-colors"><X size={20}/></button>
                     </div>
-
-                    <div className="p-8 space-y-8 bg-[#fafafa]">
-                        <div>
-                            <label className="block text-xs font-extrabold text-slate-400 uppercase tracking-widest mb-4">Format</label>
-                            <div className="grid grid-cols-2 gap-4">
-                                {['jpeg', 'png'].map(fmt => (
-                                    <button 
-                                        key={fmt}
-                                        onClick={() => setExportSettings(s => ({...s, format: fmt as ExportFormat}))}
-                                        className={`relative group p-4 border rounded-2xl text-left transition-all ${
-                                            exportSettings.format === fmt 
-                                            ? 'border-slate-900 bg-white shadow-md ring-1 ring-slate-900'
-                                            : 'border-slate-200 bg-white hover:border-slate-300'
-                                        }`}
-                                    >
-                                        <span className="block text-sm font-bold uppercase text-slate-800 mb-1">{fmt}</span>
-                                        <span className="block text-[11px] text-slate-500 leading-tight">
-                                            {fmt === 'jpeg' ? 'Small file size, good for web' : 'High quality, transparency supported'}
-                                        </span>
-                                        {exportSettings.format === fmt && (
-                                            <div className="absolute top-4 right-4 text-slate-900">
-                                                <CheckCircle2 size={18} />
-                                            </div>
-                                        )}
-                                    </button>
-                                ))}
+                    <div className="p-8 space-y-6 bg-slate-50/50">
+                        <div className="grid grid-cols-2 gap-4">
+                            {['jpeg', 'png'].map(fmt => (
+                                <button key={fmt} onClick={() => setExportSettings(s => ({...s, format: fmt as ExportFormat}))} className={`cursor-pointer p-4 border rounded-2xl text-left transition-all ${exportSettings.format === fmt ? 'border-indigo-600 bg-white shadow-lg shadow-indigo-100 ring-1 ring-indigo-600' : 'border-slate-200 bg-white hover:border-slate-300'}`}>
+                                    <span className="block text-sm font-bold uppercase text-slate-800 mb-1">{fmt}</span>
+                                    <span className="text-[10px] text-slate-400 font-medium">{fmt === 'png' ? 'Best for transparency' : 'Smaller file size'}</span>
+                                </button>
+                            ))}
+                        </div>
+                        <div className="space-y-6">
+                            <div className="relative group">
+                                <Monitor className="absolute left-4 top-3.5 text-slate-400 group-hover:text-indigo-500 transition-colors" size={16} />
+                                <select className="cursor-pointer w-full pl-12 bg-white border border-slate-200 hover:border-indigo-300 text-slate-700 text-sm font-bold rounded-xl p-3.5 shadow-sm outline-none focus:ring-2 focus:ring-indigo-100 transition-all appearance-none" value={exportSettings.resolutionIdx} onChange={(e) => setExportSettings(s => ({...s, resolutionIdx: parseInt(e.target.value)}))}>
+                                    {RESOLUTIONS.map((r, i) => (<option key={i} value={i}>{r.name}</option>))}
+                                </select>
+                                <ChevronDown className="absolute right-4 top-4 text-slate-400 pointer-events-none" size={14} />
                             </div>
-                        </div>
-
-                        <div className="grid grid-cols-2 gap-6">
-                             <div className="col-span-2">
-                                <label className="block text-xs font-extrabold text-slate-400 uppercase tracking-widest mb-3">Resolution</label>
-                                <div className="relative">
-                                    <Monitor className="absolute left-4 top-3.5 text-slate-400" size={16} />
-                                    <select 
-                                        className="w-full pl-12 bg-white border border-slate-200 text-slate-700 text-sm font-bold rounded-xl p-3.5 focus:ring-2 focus:ring-slate-900 focus:outline-none appearance-none cursor-pointer shadow-sm"
-                                        value={exportSettings.resolutionIdx}
-                                        onChange={(e) => setExportSettings(s => ({...s, resolutionIdx: parseInt(e.target.value)}))}
-                                    >
-                                        {RESOLUTIONS.map((r, i) => (
-                                            <option key={i} value={i}>{r.name}</option>
-                                        ))}
-                                    </select>
-                                    <ChevronDown className="absolute right-4 top-4 text-slate-400 pointer-events-none" size={14} />
-                                </div>
-                             </div>
-
-                             <div>
-                                  <SmoothSlider 
-                                     label="Quality" 
-                                     value={Math.round(exportSettings.quality * 100)} 
-                                     min={10} max={100} 
-                                     onChange={(v) => setExportSettings(s => ({...s, quality: v/100}))} 
-                                     unit="%"
-                                  />
-                             </div>
-                             <div>
-                                  <SmoothSlider 
-                                     label="DPI" 
-                                     value={exportSettings.dpi} 
-                                     min={72} max={600} 
-                                     onChange={(v) => setExportSettings(s => ({...s, dpi: v}))} 
-                                  />
-                             </div>
+                            <SmoothSlider label="Quality" value={Math.round(exportSettings.quality * 100)} min={10} max={100} onChange={(v:any) => setExportSettings(s => ({...s, quality: v/100}))} unit="%" />
+                            <SmoothSlider label="DPI (Print Density)" value={exportSettings.dpi} min={72} max={600} onChange={(v:any) => setExportSettings(s => ({...s, dpi: v}))} />
                         </div>
                     </div>
-
                     <div className="p-6 bg-white border-t border-slate-100 flex justify-end gap-3">
-                        <button 
-                            onClick={() => setIsExportModalOpen(false)}
-                            className="px-6 py-3 rounded-full text-sm font-bold text-slate-500 hover:text-slate-800 hover:bg-slate-100 transition-colors"
+                        <button onClick={() => setIsExportModalOpen(false)} className="cursor-pointer px-6 py-3 rounded-full text-sm font-bold text-slate-500 hover:bg-slate-100 transition-colors">Cancel</button>
+                        <motion.button 
+                            whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.98 }}
+                            onClick={executeExport} 
+                            disabled={exportStatus !== 'idle'} 
+                            className={`cursor-pointer px-8 py-3 rounded-full text-sm font-bold text-white shadow-xl shadow-indigo-200 flex items-center gap-2 transition-all ${exportStatus === 'generating' ? 'bg-slate-400' : exportStatus === 'done' ? 'bg-emerald-500' : 'bg-slate-900 hover:bg-slate-800'}`}
                         >
-                            Cancel
-                        </button>
-                        <button 
-                            onClick={executeExport}
-                            disabled={exportStatus !== 'idle'}
-                            className={`px-8 py-3 rounded-full text-sm font-bold text-white shadow-xl shadow-slate-200 flex items-center gap-2 transition-all transform active:scale-95 ${
-                                exportStatus === 'generating' ? 'bg-slate-400 cursor-wait' : 
-                                exportStatus === 'done' ? 'bg-green-500' : 'bg-slate-900 hover:bg-slate-800'
-                            }`}
-                        >
-                            {exportStatus === 'generating' && <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin"></div>}
-                            {exportStatus === 'done' && <CheckCircle2 size={16} />}
-                            {exportStatus === 'idle' ? 'Download Poster' : exportStatus === 'generating' ? 'Processing...' : 'Complete!'}
-                        </button>
+                            {exportStatus === 'idle' ? <><Download size={16} /> Download</> : exportStatus === 'generating' ? 'Rendering...' : <><Check size={16} /> Saved!</>}
+                        </motion.button>
                     </div>
                 </motion.div>
             </motion.div>
         )}
       </AnimatePresence>
-
     </div>
   )
 }
