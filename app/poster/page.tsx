@@ -14,27 +14,22 @@ import {
   Plus,
   RotateCcw,
   Settings,
-  Square,
   Trash2,
-  Type,
   Upload,
   X,
   CheckCircle2,
-  AlertCircle,
   Palette,
-  Eye,
-  Scan,
-  MoreHorizontal,
   ChevronDown,
   BoxSelect,
-  Monitor
+  Monitor,
+  Type,
+  Grid,
+  ZoomIn,
+  Wand2
 } from 'lucide-react'
 
 // --- HELPER FUNCTIONS & ALGORITHMS ---
 
-/**
- * Draws a rounded rectangle path.
- */
 function drawRoundedRect(
   ctx: CanvasRenderingContext2D,
   x: number,
@@ -56,9 +51,6 @@ function drawRoundedRect(
   ctx.closePath()
 }
 
-/**
- * Clips the canvas context to a rounded rectangle shape.
- */
 function clipRoundedRect(
   ctx: CanvasRenderingContext2D,
   x: number,
@@ -71,9 +63,6 @@ function clipRoundedRect(
   ctx.clip()
 }
 
-/**
- * Fills a rounded rectangle.
- */
 function fillRoundedRect(
   ctx: CanvasRenderingContext2D,
   x: number,
@@ -88,9 +77,6 @@ function fillRoundedRect(
   ctx.fill()
 }
 
-/**
- * Strokes a rounded rectangle (Border).
- */
 function strokeRoundedRect(
   ctx: CanvasRenderingContext2D,
   x: number,
@@ -184,15 +170,11 @@ function setJpegDpi(dataUrl: string, dpi: number) {
   const bytes = new Uint8Array(bin.length)
   for (let i = 0; i < bin.length; i++) bytes[i] = bin.charCodeAt(i)
 
-  // Verify JFIF
-  if (bytes[2] !== 0xFF || bytes[3] !== 0xE0) return dataUrl // No APP0
+  if (bytes[2] !== 0xFF || bytes[3] !== 0xE0) return dataUrl 
   
-  // Set density units to pixels per inch (1)
   bytes[13] = 1
-  // Set X density
   bytes[14] = (dpi >> 8) & 0xFF
   bytes[15] = dpi & 0xFF
-  // Set Y density
   bytes[16] = (dpi >> 8) & 0xFF
   bytes[17] = dpi & 0xFF
 
@@ -244,7 +226,6 @@ const RESOLUTIONS = [
 
 // --- COMPONENTS ---
 
-// 1. Smooth Slider Component
 const SmoothSlider = ({ 
   value, 
   min, 
@@ -267,16 +248,15 @@ const SmoothSlider = ({
     requestAnimationFrame(() => onChange(newVal))
   }
 
-  // Calculate percentage for background gradient
   const percentage = ((value - min) / (max - min)) * 100
 
   return (
-    <div className="flex flex-col gap-2 mb-4 group">
+    <div className="flex flex-col gap-2 mb-5 group">
       <div className="flex justify-between items-center">
-        <label className="text-[11px] font-bold text-slate-500 uppercase tracking-wider">{label}</label>
-        <span className="text-[10px] font-medium text-slate-600 font-mono bg-slate-100 px-1.5 py-0.5 rounded border border-slate-200 min-w-[32px] text-center">{value}{unit}</span>
+        <label className="text-xs font-semibold text-slate-600 tracking-wide">{label}</label>
+        <span className="text-[10px] font-bold text-slate-500 font-mono bg-white px-2 py-0.5 rounded-full border border-slate-200 shadow-sm min-w-[36px] text-center">{Math.round(value)}{unit}</span>
       </div>
-      <div className="relative h-4 flex items-center">
+      <div className="relative h-5 flex items-center">
         <input
           type="range"
           min={min}
@@ -284,30 +264,29 @@ const SmoothSlider = ({
           step={step}
           value={value}
           onChange={handleChange}
-          className="absolute z-10 w-full h-1.5 opacity-0 cursor-pointer"
+          className="absolute z-10 w-full h-full opacity-0 cursor-pointer"
         />
-        <div className="w-full h-1 bg-slate-200 rounded-full overflow-hidden relative">
+        <div className="w-full h-1.5 bg-slate-200 rounded-full overflow-hidden relative">
            <div 
-             className="h-full bg-indigo-500 rounded-full transition-all duration-75 ease-out"
+             className="h-full bg-slate-900 rounded-full transition-all duration-75 ease-out"
              style={{ width: `${percentage}%` }}
            />
         </div>
         <div 
-            className="absolute h-3 w-3 bg-white border border-slate-300 shadow-sm rounded-full pointer-events-none transition-all duration-75 ease-out group-hover:scale-110 group-hover:border-indigo-400 group-active:scale-95"
-            style={{ left: `calc(${percentage}% - 6px)` }}
+            className="absolute h-4 w-4 bg-white border-2 border-slate-900 shadow-md rounded-full pointer-events-none transition-all duration-75 ease-out group-hover:scale-110"
+            style={{ left: `calc(${percentage}% - 8px)` }}
         />
       </div>
     </div>
   )
 }
 
-// 2. Color Picker
 const ColorPicker = ({ color, onChange, label }: { color: string, onChange: (c: string) => void, label: string }) => (
-  <div className="flex items-center justify-between mb-4 p-2 bg-slate-50 rounded-lg border border-slate-100">
-    <label className="text-[11px] font-bold text-slate-500 uppercase tracking-wider pl-1">{label}</label>
+  <div className="flex items-center justify-between mb-4 p-3 bg-white rounded-xl border border-slate-100 shadow-sm">
+    <label className="text-xs font-semibold text-slate-600 pl-1">{label}</label>
     <div className="flex items-center gap-3">
       <span className="text-[10px] text-slate-400 font-mono uppercase">{color}</span>
-      <div className="relative w-6 h-6 rounded-md border border-slate-200 shadow-sm overflow-hidden cursor-pointer hover:scale-105 transition-transform">
+      <div className="relative w-8 h-8 rounded-full border-2 border-white shadow-md overflow-hidden cursor-pointer hover:scale-105 transition-transform ring-1 ring-slate-100">
         <input 
           type="color" 
           value={color} 
@@ -323,15 +302,12 @@ const ColorPicker = ({ color, onChange, label }: { color: string, onChange: (c: 
 // --- MAIN APPLICATION ---
 
 export default function ProPosterEditor() {
-  // --- STATE ---
-  // Updated: Mapped user local path to web-safe public path
   const [baseImageSrc, setBaseImageSrc] = useState('/posters/poster1.jpg') 
   const [baseImage, setBaseImage] = useState<HTMLImageElement | null>(null)
   
   const [logos, setLogos] = useState<LogoLayer[]>([])
   const [selectedLogoId, setSelectedLogoId] = useState<string | null>(null)
   
-  // UI State
   const [isExportModalOpen, setIsExportModalOpen] = useState(false)
   const [exportSettings, setExportSettings] = useState({
     format: 'jpeg' as ExportFormat,
@@ -340,18 +316,14 @@ export default function ProPosterEditor() {
     dpi: 300
   })
   const [exportStatus, setExportStatus] = useState<'idle' | 'generating' | 'done'>('idle')
-  const [zoomLevel, setZoomLevel] = useState(80) 
+  const [zoomLevel, setZoomLevel] = useState(85) 
 
-  // Refs
   const canvasRef = useRef<HTMLCanvasElement>(null)
   const fileInputRef = useRef<HTMLInputElement>(null)
   const baseInputRef = useRef<HTMLInputElement>(null)
   const containerRef = useRef<HTMLDivElement>(null)
 
-  // --- LOGIC: INITIALIZATION ---
-  
   useEffect(() => {
-    // Load Base Image
     if (!baseImageSrc) return;
 
     const img = new Image()
@@ -359,11 +331,9 @@ export default function ProPosterEditor() {
     img.crossOrigin = 'anonymous'
     img.onload = () => setBaseImage(img)
     img.onerror = () => {
-      console.error("Could not load base poster. Checked path: /posters/poster1.jpg")
+      console.error("Could not load base poster.")
     }
   }, [baseImageSrc])
-
-  // --- LOGIC: CANVAS RENDERING ---
 
   const drawCanvas = useCallback((
     ctx: CanvasRenderingContext2D, 
@@ -373,7 +343,7 @@ export default function ProPosterEditor() {
   ) => {
     ctx.clearRect(0, 0, width, height)
 
-    // 1. Draw Base
+    // Draw Base
     if (baseImage) {
       const imgRatio = baseImage.width / baseImage.height
       const canvasRatio = width / height
@@ -401,7 +371,6 @@ export default function ProPosterEditor() {
       ctx.stroke()
     }
 
-    // --- LOGO POSITIONING ---
     const containerConfig = { top: 0.62, bottom: 0.76, hPadding: 0.35 }
     
     const containerY = height * containerConfig.top
@@ -409,13 +378,6 @@ export default function ProPosterEditor() {
     const containerX = width * containerConfig.hPadding
     const containerWidth = width * (1 - 2 * containerConfig.hPadding)
 
-    // Debugging container rect (Optional, for dev only)
-    // if (!renderForExport) {
-    //   ctx.strokeStyle = 'rgba(255, 0, 0, 0.2)';
-    //   ctx.strokeRect(containerX, containerY, containerWidth, containerHeight);
-    // }
-
-    // 2. Draw Logos
     logos.forEach(logo => {
       if (!logo.imageElement) return
       
@@ -450,7 +412,7 @@ export default function ProPosterEditor() {
       ctx.globalAlpha = opacity / 100
       ctx.globalCompositeOperation = blendMode
 
-      // 2a. Draw Plate
+      // Plate
       if (plateType !== 'none') {
         const hPadding = finalLogoWidth * (platePaddingX / 100)
         const vPadding = finalLogoHeight * (platePaddingY / 100)
@@ -471,7 +433,7 @@ export default function ProPosterEditor() {
         ctx.shadowOffsetY = 0
       }
 
-      // 2b. Draw Image
+      // Image
       const dX = posX
       const dY = posY
 
@@ -484,19 +446,18 @@ export default function ProPosterEditor() {
         ctx.drawImage(logo.imageElement, dX, dY, finalLogoWidth, finalLogoHeight)
       }
 
-      // 2c. Draw Border
+      // Border
       if (borderWidth > 0) {
         strokeRoundedRect(ctx, dX, dY, finalLogoWidth, finalLogoHeight, radius, borderWidth, borderColor)
       }
       
-      // 2d. Draw Selection Indicator
+      // Selection Indicator
       if (!renderForExport && logo.id === selectedLogoId) {
         ctx.globalCompositeOperation = 'source-over'
-        ctx.strokeStyle = '#6366f1' // Indigo 500
+        ctx.strokeStyle = '#3b82f6' // Blue 500
         ctx.lineWidth = 2
         const pad = 6
         
-        // Bounding box for selection
         const selX = (plateType !== 'none' ? posX - (finalLogoWidth * (platePaddingX/100)) : dX) - pad
         const selY = (plateType !== 'none' ? posY - (finalLogoHeight * (platePaddingY/100)) : dY) - pad
         const selW = (plateType !== 'none' ? finalLogoWidth + (finalLogoWidth * (platePaddingX/100) * 2) : finalLogoWidth) + pad*2
@@ -506,16 +467,10 @@ export default function ProPosterEditor() {
         ctx.strokeRect(selX, selY, selW, selH)
         ctx.setLineDash([])
         
-        // Corner handles
         ctx.fillStyle = '#fff'
-        const handleSize = 10
+        const handleSize = 8
         const halfHandle = handleSize / 2
-        
-        // Four corners
-        const corners = [
-            [selX, selY], [selX + selW, selY], [selX, selY + selH], [selX + selW, selY + selH]
-        ]
-
+        const corners = [[selX, selY], [selX + selW, selY], [selX, selY + selH], [selX + selW, selY + selH]]
         corners.forEach(([cx, cy]) => {
              ctx.fillRect(cx - halfHandle, cy - halfHandle, handleSize, handleSize)
              ctx.strokeRect(cx - halfHandle, cy - halfHandle, handleSize, handleSize)
@@ -526,8 +481,6 @@ export default function ProPosterEditor() {
     })
 
   }, [baseImage, logos, selectedLogoId])
-
-  // --- LOGIC: EVENTS ---
 
   useEffect(() => {
     const canvas = canvasRef.current
@@ -560,19 +513,9 @@ export default function ProPosterEditor() {
         file,
         imageSrc: url,
         imageElement: img,
-        x: 0, 
-        y: 0, 
-        scale: 100, 
-        opacity: 100,
-        rotation: 0,
-        blendMode: 'source-over',
-        radius: 0,
-        borderWidth: 0,
-        borderColor: '#ffffff',
-        plateType: 'none',
-        platePaddingX: 10,
-        platePaddingY: 10,
-        plateRadius: 10
+        x: 0, y: 0, scale: 100, opacity: 100, rotation: 0, blendMode: 'source-over',
+        radius: 0, borderWidth: 0, borderColor: '#ffffff',
+        plateType: 'none', platePaddingX: 10, platePaddingY: 10, plateRadius: 10
       }
       setLogos([...logos, newLogo])
       setSelectedLogoId(newLogo.id)
@@ -584,12 +527,6 @@ export default function ProPosterEditor() {
     setLogos(prev => prev.map(l => l.id === selectedLogoId ? { ...l, ...updates } : l))
   }
 
-  const handleCanvasClick = (e: React.MouseEvent<HTMLCanvasElement>) => {
-     if (e.target === canvasRef.current) {
-        // Deselect logic could be here
-     }
-  }
-
   const executeExport = async () => {
     if (!baseImage) return
     setExportStatus('generating')
@@ -598,7 +535,7 @@ export default function ProPosterEditor() {
     let w = resSetting.width
     let h = resSetting.height
     
-    if (w === 0) { // Original
+    if (w === 0) {
       w = baseImage.naturalWidth
       h = baseImage.naturalHeight
     }
@@ -639,67 +576,73 @@ export default function ProPosterEditor() {
   const selectedLogo = logos.find(l => l.id === selectedLogoId)
 
   // --- RENDER ---
-  // Updated: Layout includes p-3 outer padding and gap-3 separation
   return (
-    <div className="flex flex-col h-screen w-full bg-[#f0f4f8] text-slate-800 font-sans overflow-hidden p-3 gap-3">
+    <div className="flex flex-col h-screen w-full bg-[#f3f4f6] font-sans overflow-hidden text-slate-800">
       
-      {/* 1. TOP NAV BAR - Now rounded and floating */}
-      <header className="h-14 bg-white rounded-2xl flex items-center justify-between px-4 z-40 shadow-sm border border-white/50">
-         <div className="flex items-center gap-3">
-             <div className="w-8 h-8 bg-indigo-600 rounded-lg flex items-center justify-center text-white font-bold text-lg shadow-indigo-200 shadow-sm">
-                S
-             </div>
-             <div>
-                <h1 className="text-sm font-bold text-slate-800 leading-tight tracking-tight">SSI Studio</h1>
-                <p className="text-[10px] text-slate-400 font-medium tracking-wide uppercase">Poster Engine</p>
-             </div>
-         </div>
+      {/* BACKGROUND DECORATION */}
+      <div className="absolute inset-0 z-0 pointer-events-none opacity-40" 
+           style={{ 
+             backgroundImage: 'radial-gradient(circle at 50% 50%, #e0e7ff 0%, transparent 50%)',
+             backgroundSize: '100% 100%'
+           }} 
+      />
 
-         <div className="flex items-center gap-2">
-            <button 
-                onClick={() => setLogos([])}
-                className="text-xs font-medium text-slate-500 hover:text-slate-800 hover:bg-slate-100 px-3 py-2 rounded-md transition-all flex items-center gap-2"
-            >
-                <RotateCcw size={14} /> <span className="hidden sm:inline">Reset</span>
-            </button>
-            <div className="h-6 w-px bg-slate-200 mx-1"></div>
-            <button 
-                onClick={() => setIsExportModalOpen(true)}
-                className="bg-slate-900 hover:bg-slate-800 text-white px-4 py-2 rounded-lg text-xs font-semibold shadow-sm transition-all flex items-center gap-2"
-            >
-                <Download size={14} /> Export
-            </button>
-         </div>
-      </header>
-
-      {/* 2. MAIN WORKSPACE */}
-      <div className="flex flex-1 overflow-hidden gap-3">
-        
-        {/* LEFT SIDEBAR: Layers & Assets - Rounded card */}
-        <aside className="w-64 bg-white rounded-2xl shadow-sm border border-white/50 flex flex-col z-20">
-            {/* Section: Base Image */}
-            <div className="p-4 border-b border-slate-100">
-                <div className="flex items-center justify-between mb-3">
-                    <h2 className="text-[11px] font-bold text-slate-400 uppercase tracking-wider">Base Poster</h2>
-                    <span className="text-[10px] text-indigo-600 bg-indigo-50 px-1.5 py-0.5 rounded font-medium">BG</span>
+      {/* --- FLOATING HEADER --- */}
+      <div className="z-50 w-full flex justify-center pt-5 pb-2 px-6">
+        <header className="bg-white/90 backdrop-blur-xl rounded-full shadow-lg shadow-indigo-100 border border-white/50 px-6 py-2.5 flex items-center justify-between min-w-[600px] max-w-4xl w-full">
+            <div className="flex items-center gap-4">
+                <div className="w-9 h-9 bg-slate-900 rounded-full flex items-center justify-center text-white font-bold text-sm shadow-md">
+                   S
                 </div>
+                <div className="h-6 w-px bg-slate-200"></div>
+                <div>
+                   <h1 className="text-sm font-bold text-slate-800 leading-none">SSI Studio</h1>
+                   <span className="text-[10px] text-slate-400 font-medium uppercase tracking-widest">Poster Engine</span>
+                </div>
+            </div>
+
+            <div className="flex items-center gap-3">
+               <button 
+                  onClick={() => setLogos([])}
+                  className="text-xs font-semibold text-slate-500 hover:text-slate-800 hover:bg-slate-100 px-4 py-2 rounded-full transition-all flex items-center gap-2"
+               >
+                  <RotateCcw size={14} /> <span>Reset</span>
+               </button>
+               <button 
+                  onClick={() => setIsExportModalOpen(true)}
+                  className="bg-slate-900 hover:bg-slate-800 text-white px-5 py-2 rounded-full text-xs font-bold shadow-lg shadow-slate-300 transition-all flex items-center gap-2 hover:-translate-y-0.5 active:translate-y-0"
+               >
+                  <Download size={14} /> Export
+               </button>
+            </div>
+        </header>
+      </div>
+
+      {/* --- MAIN WORKSPACE --- */}
+      <div className="flex flex-1 justify-center w-full max-w-[1600px] mx-auto gap-6 px-8 pb-8 min-h-0 z-10">
+        
+        {/* LEFT: ASSETS */}
+        <aside className="w-72 bg-white/80 backdrop-blur-xl rounded-[2rem] shadow-xl shadow-indigo-100/50 border border-white flex flex-col overflow-hidden transition-all">
+            <div className="p-6 border-b border-slate-100/50">
+                <h2 className="text-xs font-extrabold text-slate-400 uppercase tracking-widest mb-4 flex items-center gap-2">
+                    <ImageIcon size={14} /> Background
+                </h2>
                 
                 <div 
                     onClick={() => baseInputRef.current?.click()}
-                    className="group relative w-full aspect-[16/9] bg-slate-100 rounded-lg border border-slate-200 overflow-hidden cursor-pointer hover:border-indigo-300 hover:shadow-md transition-all"
+                    className="group relative w-full aspect-[16/9] bg-slate-100 rounded-2xl border-2 border-dashed border-slate-200 overflow-hidden cursor-pointer hover:border-slate-400 transition-all"
                 >
                     {baseImage ? (
-                        <img src={baseImage.src} className="w-full h-full object-cover transition-transform group-hover:scale-105 duration-700" alt="Base" />
+                        <img src={baseImage.src} className="w-full h-full object-cover opacity-90 group-hover:opacity-100 transition-all group-hover:scale-105 duration-700" alt="Base" />
                     ) : (
                         <div className="flex flex-col items-center justify-center h-full text-slate-400 gap-2">
-                            <ImageIcon size={24} className="opacity-50"/>
-                            <span className="text-xs font-medium">Select Image</span>
+                            <span className="text-xs font-medium">Upload Base</span>
                         </div>
                     )}
-                    <div className="absolute inset-0 bg-slate-900/0 group-hover:bg-slate-900/30 transition-colors flex items-center justify-center">
-                         <span className="opacity-0 group-hover:opacity-100 transform translate-y-2 group-hover:translate-y-0 transition-all bg-white text-slate-900 text-[10px] font-bold px-2 py-1 rounded shadow-sm flex items-center gap-1">
-                             <Upload size={10} /> Replace
-                         </span>
+                    <div className="absolute inset-0 bg-black/0 group-hover:bg-black/10 transition-all flex items-center justify-center">
+                         <div className="opacity-0 group-hover:opacity-100 bg-white/90 backdrop-blur text-slate-900 rounded-full p-2 shadow-sm transform translate-y-2 group-hover:translate-y-0 transition-all">
+                             <Upload size={14} />
+                         </div>
                     </div>
                 </div>
                 <input ref={baseInputRef} type="file" accept="image/*" className="hidden" onChange={(e) => {
@@ -707,64 +650,63 @@ export default function ProPosterEditor() {
                 }}/>
             </div>
 
-            {/* Section: Layers */}
-            <div className="flex-1 flex flex-col min-h-0 bg-slate-50/50 rounded-b-2xl">
-                <div className="p-4 flex items-center justify-between">
-                    <h2 className="text-[11px] font-bold text-slate-400 uppercase tracking-wider flex items-center gap-2">
-                        <Layers size={12} /> Layers ({logos.length})
+            <div className="flex-1 flex flex-col min-h-0 bg-slate-50/50">
+                <div className="p-6 pb-2 flex items-center justify-between">
+                    <h2 className="text-xs font-extrabold text-slate-400 uppercase tracking-widest flex items-center gap-2">
+                        <Layers size={14} /> Layers
                     </h2>
                     <button 
                         onClick={() => fileInputRef.current?.click()}
-                        className="text-indigo-600 hover:text-indigo-700 bg-indigo-50 hover:bg-indigo-100 p-1.5 rounded-md transition-colors"
+                        className="bg-white hover:bg-slate-50 text-slate-700 hover:text-slate-900 p-2 rounded-xl shadow-sm border border-slate-100 transition-all group"
                         title="Add Logo"
                     >
-                        <Plus size={14} />
+                        <Plus size={16} className="group-hover:scale-110 transition-transform"/>
                     </button>
                     <input ref={fileInputRef} type="file" multiple accept="image/*" className="hidden" onChange={handleLogoUpload} />
                 </div>
 
-                <div className="flex-1 overflow-y-auto px-3 pb-3 space-y-2 custom-scrollbar">
+                <div className="flex-1 overflow-y-auto px-4 pb-4 space-y-3 custom-scrollbar">
                     {logos.length === 0 ? (
-                        <div className="flex flex-col items-center justify-center h-48 text-slate-400 border-2 border-dashed border-slate-200 rounded-xl m-2 bg-slate-50">
-                            <BoxSelect size={32} className="mb-2 opacity-40" />
-                            <p className="text-xs font-medium">No layers yet</p>
-                            <p className="text-[10px] opacity-70">Add a logo to start editing</p>
+                        <div className="flex flex-col items-center justify-center h-40 text-slate-400 border border-dashed border-slate-200 rounded-2xl m-2">
+                            <BoxSelect size={24} className="mb-2 opacity-30" />
+                            <p className="text-[10px] font-medium uppercase tracking-wide opacity-60">No Layers</p>
                         </div>
                     ) : (
                         <AnimatePresence>
                             {logos.map((logo, idx) => (
                                 <motion.div
                                     key={logo.id}
-                                    initial={{ opacity: 0, x: -10 }}
-                                    animate={{ opacity: 1, x: 0 }}
+                                    initial={{ opacity: 0, y: 10 }}
+                                    animate={{ opacity: 1, y: 0 }}
                                     exit={{ opacity: 0, scale: 0.9 }}
                                     onClick={() => setSelectedLogoId(logo.id)}
-                                    className={`group flex items-center gap-3 p-2 rounded-lg border cursor-pointer transition-all ${
+                                    className={`relative flex items-center gap-3 p-3 rounded-2xl cursor-pointer transition-all border ${
                                         selectedLogoId === logo.id 
-                                        ? 'bg-white border-indigo-500 shadow-md ring-1 ring-indigo-500/20' 
-                                        : 'bg-white border-slate-200 hover:border-slate-300 hover:shadow-sm'
+                                        ? 'bg-white border-slate-900 shadow-md scale-[1.02] z-10' 
+                                        : 'bg-white border-slate-100 hover:border-slate-300 hover:shadow-sm'
                                     }`}
                                 >
-                                    <div className="w-10 h-10 rounded bg-[url('https://transparenttextures.com/patterns/cubes.png')] bg-slate-100 border border-slate-100 flex-shrink-0 p-1">
+                                    <div className="w-10 h-10 rounded-lg bg-slate-100 border border-slate-100 flex-shrink-0 p-1 overflow-hidden">
                                         <img src={logo.imageSrc} className="w-full h-full object-contain" alt="Layer" />
                                     </div>
                                     <div className="flex-1 min-w-0">
-                                        <div className="text-[12px] font-semibold text-slate-700 truncate">Logo {idx + 1}</div>
-                                        <div className="flex items-center gap-2 mt-0.5">
-                                            <span className="text-[10px] text-slate-400 font-mono bg-slate-100 px-1 rounded">X:{logo.x.toFixed(0)}</span>
-                                            <span className="text-[10px] text-slate-400 font-mono bg-slate-100 px-1 rounded">Y:{logo.y.toFixed(0)}</span>
+                                        <div className="text-xs font-bold text-slate-700 truncate">Logo Asset {idx + 1}</div>
+                                        <div className="text-[10px] text-slate-400 font-medium">
+                                            {logo.blendMode !== 'source-over' ? logo.blendMode : 'Normal'} • {Math.round(logo.opacity)}%
                                         </div>
                                     </div>
-                                    <button 
-                                        onClick={(e) => {
-                                            e.stopPropagation()
-                                            setLogos(prev => prev.filter(l => l.id !== logo.id))
-                                            if (selectedLogoId === logo.id) setSelectedLogoId(null)
-                                        }}
-                                        className="opacity-0 group-hover:opacity-100 p-1.5 text-slate-400 hover:text-red-600 hover:bg-red-50 rounded transition-all"
-                                    >
-                                        <Trash2 size={14} />
-                                    </button>
+                                    {selectedLogoId === logo.id && (
+                                        <button 
+                                            onClick={(e) => {
+                                                e.stopPropagation()
+                                                setLogos(prev => prev.filter(l => l.id !== logo.id))
+                                                if (selectedLogoId === logo.id) setSelectedLogoId(null)
+                                            }}
+                                            className="text-slate-300 hover:text-red-500 transition-colors p-1"
+                                        >
+                                            <Trash2 size={14} />
+                                        </button>
+                                    )}
                                 </motion.div>
                             ))}
                         </AnimatePresence>
@@ -773,134 +715,124 @@ export default function ProPosterEditor() {
             </div>
         </aside>
 
-        {/* CENTER CANVAS AREA - Maximized space, rounded card */}
-        <main className="flex-1 bg-white rounded-2xl shadow-sm border border-white/50 relative flex flex-col items-center justify-center overflow-hidden">
-            {/* Grid Pattern Background */}
-            <div className="absolute inset-0 pointer-events-none opacity-[0.3]" 
-                style={{ 
-                    backgroundImage: 'radial-gradient(#94a3b8 1px, transparent 1px)', 
-                    backgroundSize: '24px 24px' 
-                }} 
-            />
-            
-            {/* Optimized Canvas Container: increased size to 96% */}
+        {/* CENTER: CANVAS */}
+        <main className="flex-1 bg-[#e2e4e9] rounded-[2rem] shadow-inner border border-slate-200/60 relative flex flex-col items-center justify-center overflow-hidden">
+            {/* Canvas Container */}
             <div 
                 ref={containerRef}
-                className="relative shadow-2xl bg-white overflow-hidden transition-all duration-200 ease-out ring-1 ring-black/5"
+                className="relative shadow-2xl shadow-slate-400/20 bg-white transition-all duration-300 ease-out"
                 style={{ 
                     aspectRatio: '16/9',
                     height: `${zoomLevel}%`,
-                    maxHeight: '96%', // Maximized height
-                    maxWidth: '96%'   // Maximized width
+                    maxHeight: '90%',
+                    maxWidth: '90%' 
                 }}
             >
                 <canvas 
                     ref={canvasRef}
-                    onClick={handleCanvasClick}
+                    onClick={() => {}}
                     className="w-full h-full object-contain"
                 />
             </div>
 
-            {/* Floating Zoom Bar - Smaller and cleaner */}
-            <div className="absolute bottom-6 flex items-center gap-1.5 bg-slate-900/90 backdrop-blur-md shadow-xl rounded-full px-2 py-1.5 border border-white/10 ring-1 ring-black/20 z-30">
-                <button onClick={() => setZoomLevel(Math.max(20, zoomLevel - 10))} className="w-7 h-7 flex items-center justify-center rounded-full hover:bg-white/10 text-slate-200 transition-colors">
+            {/* Bottom Tools */}
+            <div className="absolute bottom-6 flex items-center gap-3 bg-white/90 backdrop-blur-md shadow-[0_8px_30px_rgb(0,0,0,0.12)] rounded-full px-4 py-2 border border-white/50">
+                <button onClick={() => setZoomLevel(Math.max(20, zoomLevel - 10))} className="p-2 hover:bg-slate-100 rounded-full text-slate-500 transition-colors">
                     <Minus size={14} />
                 </button>
-                <div className="w-10 text-center text-[10px] font-mono font-bold text-white">{zoomLevel}%</div>
-                <button onClick={() => setZoomLevel(Math.min(150, zoomLevel + 10))} className="w-7 h-7 flex items-center justify-center rounded-full hover:bg-white/10 text-slate-200 transition-colors">
+                <span className="text-xs font-bold text-slate-700 w-12 text-center">{zoomLevel}%</span>
+                <button onClick={() => setZoomLevel(Math.min(150, zoomLevel + 10))} className="p-2 hover:bg-slate-100 rounded-full text-slate-500 transition-colors">
                     <Plus size={14} />
                 </button>
-                <div className="w-px h-3 bg-white/20 mx-1"></div>
-                <button onClick={() => setZoomLevel(80)} className="w-7 h-7 flex items-center justify-center rounded-full hover:bg-white/10 text-slate-300 hover:text-white transition-colors" title="Fit to Screen">
+                <div className="w-px h-4 bg-slate-200 mx-1"></div>
+                <button onClick={() => setZoomLevel(85)} className="p-2 hover:bg-slate-100 rounded-full text-slate-500 hover:text-slate-900 transition-colors" title="Fit">
                     <Maximize2 size={14} />
                 </button>
             </div>
         </main>
 
-        {/* RIGHT PROPERTY PANEL - Rounded card */}
-        <aside className="w-72 bg-white rounded-2xl shadow-sm border border-white/50 flex flex-col z-20">
+        {/* RIGHT: PROPERTIES */}
+        <aside className="w-80 bg-white/80 backdrop-blur-xl rounded-[2rem] shadow-xl shadow-indigo-100/50 border border-white flex flex-col overflow-hidden">
             {selectedLogo ? (
-                <div className="flex flex-col h-full overflow-y-auto custom-scrollbar rounded-2xl">
-                    <div className="p-4 border-b border-slate-100 flex items-center justify-between sticky top-0 bg-white/95 backdrop-blur z-10">
-                        <div className="flex items-center gap-2">
-                             <div className="p-1.5 bg-indigo-50 text-indigo-600 rounded-md">
-                                <Settings size={14} />
+                <div className="flex flex-col h-full overflow-y-auto custom-scrollbar">
+                    <div className="p-6 border-b border-slate-100 sticky top-0 bg-white/95 backdrop-blur z-20">
+                        <div className="flex items-center gap-3">
+                             <div className="w-8 h-8 rounded-lg bg-slate-50 flex items-center justify-center text-slate-600 border border-slate-100">
+                                <Settings size={16} />
                              </div>
-                             <span className="text-sm font-bold text-slate-800">Properties</span>
+                             <div>
+                                 <h2 className="text-sm font-bold text-slate-800">Properties</h2>
+                                 <p className="text-[10px] text-slate-400 font-medium">Editing Selected Layer</p>
+                             </div>
                         </div>
                     </div>
 
-                    <div className="p-5 space-y-6">
-                        {/* Transform Group */}
+                    <div className="p-6 space-y-8">
+                        {/* Transform */}
                         <section>
                             <div className="flex items-center gap-2 mb-4">
-                                <Move size={14} className="text-slate-400"/>
-                                <h3 className="text-xs font-bold text-slate-800 uppercase tracking-wide">Transform</h3>
+                                <Move size={14} className="text-indigo-500"/>
+                                <h3 className="text-xs font-extrabold text-slate-700 uppercase tracking-widest">Position</h3>
                             </div>
-                            
-                            <div className="grid grid-cols-2 gap-3 mb-2">
-                                <SmoothSlider label="Horizontal" value={selectedLogo.x} min={-50} max={50} onChange={(v) => updateLogo({x: v})} unit="%" />
-                                <SmoothSlider label="Vertical" value={selectedLogo.y} min={-50} max={50} onChange={(v) => updateLogo({y: v})} unit="%" />
+                            <div className="grid grid-cols-2 gap-4 mb-2">
+                                <SmoothSlider label="X Axis" value={selectedLogo.x} min={-50} max={50} onChange={(v) => updateLogo({x: v})} unit="%" />
+                                <SmoothSlider label="Y Axis" value={selectedLogo.y} min={-50} max={50} onChange={(v) => updateLogo({y: v})} unit="%" />
                             </div>
                             <SmoothSlider label="Scale" value={selectedLogo.scale} min={10} max={200} onChange={(v) => updateLogo({scale: v})} unit="%" />
-                            <SmoothSlider label="Rotation" value={selectedLogo.rotation} min={-180} max={180} onChange={(v) => updateLogo({rotation: v})} unit="°" />
+                            <SmoothSlider label="Rotate" value={selectedLogo.rotation} min={-180} max={180} onChange={(v) => updateLogo({rotation: v})} unit="°" />
                         </section>
 
                         <hr className="border-slate-100" />
 
-                        {/* Style Group */}
+                        {/* Style */}
                         <section>
                             <div className="flex items-center gap-2 mb-4">
-                                <Palette size={14} className="text-slate-400"/>
-                                <h3 className="text-xs font-bold text-slate-800 uppercase tracking-wide">Appearance</h3>
+                                <Palette size={14} className="text-indigo-500"/>
+                                <h3 className="text-xs font-extrabold text-slate-700 uppercase tracking-widest">Style</h3>
                             </div>
 
                             <SmoothSlider label="Opacity" value={selectedLogo.opacity} min={0} max={100} onChange={(v) => updateLogo({opacity: v})} unit="%" />
 
-                            <div className="mb-4">
-                                <label className="text-[11px] font-bold text-slate-500 uppercase tracking-wider mb-1.5 block">Blend Mode</label>
-                                <div className="relative group">
+                            <div className="mb-5">
+                                <label className="text-xs font-semibold text-slate-600 tracking-wide mb-2 block">Blending</label>
+                                <div className="relative">
                                     <select 
                                         value={selectedLogo.blendMode}
                                         onChange={(e) => updateLogo({blendMode: e.target.value as BlendMode})}
-                                        className="w-full bg-slate-50 border border-slate-200 hover:border-indigo-300 text-slate-700 text-xs font-medium rounded-lg p-2.5 pr-8 focus:ring-2 focus:ring-indigo-500 focus:outline-none appearance-none cursor-pointer transition-all"
+                                        className="w-full bg-white border border-slate-200 text-slate-700 text-xs font-bold rounded-xl p-3 pr-8 focus:ring-2 focus:ring-slate-900 focus:outline-none appearance-none cursor-pointer shadow-sm"
                                     >
                                         {BLEND_MODES.map(m => (
                                             <option key={m} value={m}>{m.charAt(0).toUpperCase() + m.slice(1).replace('-', ' ')}</option>
                                         ))}
                                     </select>
-                                    <div className="absolute right-2.5 top-2.5 text-slate-400 pointer-events-none group-hover:text-indigo-500 transition-colors">
-                                        <ChevronDown size={14} />
-                                    </div>
+                                    <ChevronDown className="absolute right-3 top-3 text-slate-400 pointer-events-none" size={14} />
                                 </div>
                             </div>
                             
-                            <div className="space-y-4">
-                                <SmoothSlider label="Corner Radius" value={selectedLogo.radius} min={0} max={100} onChange={(v) => updateLogo({radius: v})} unit="px" />
-                                <SmoothSlider label="Border Width" value={selectedLogo.borderWidth} min={0} max={20} step={0.5} onChange={(v) => updateLogo({borderWidth: v})} unit="px" />
-                                {selectedLogo.borderWidth > 0 && (
-                                    <ColorPicker label="Border Color" color={selectedLogo.borderColor} onChange={(c) => updateLogo({borderColor: c})} />
-                                )}
-                            </div>
+                            <SmoothSlider label="Radius" value={selectedLogo.radius} min={0} max={100} onChange={(v) => updateLogo({radius: v})} unit="px" />
+                            <SmoothSlider label="Border" value={selectedLogo.borderWidth} min={0} max={20} step={0.5} onChange={(v) => updateLogo({borderWidth: v})} unit="px" />
+                            {selectedLogo.borderWidth > 0 && (
+                                <ColorPicker label="Color" color={selectedLogo.borderColor} onChange={(c) => updateLogo({borderColor: c})} />
+                            )}
                         </section>
 
                         <hr className="border-slate-100" />
 
-                        {/* Plate Group */}
+                        {/* Plate */}
                         <section>
                             <div className="flex items-center gap-2 mb-4">
-                                <LayoutGrid size={14} className="text-slate-400"/>
-                                <h3 className="text-xs font-bold text-slate-800 uppercase tracking-wide">Backplate</h3>
+                                <LayoutGrid size={14} className="text-indigo-500"/>
+                                <h3 className="text-xs font-extrabold text-slate-700 uppercase tracking-widest">Container</h3>
                             </div>
 
-                            <div className="grid grid-cols-2 gap-2 bg-slate-100 p-1 rounded-lg mb-4">
+                            <div className="grid grid-cols-2 gap-3 bg-slate-100 p-1.5 rounded-xl mb-4">
                                 {['none', 'white'].map((t) => (
                                     <button
                                         key={t}
                                         onClick={() => updateLogo({ plateType: t as any })}
-                                        className={`py-1.5 text-[10px] font-bold uppercase tracking-wide rounded-md transition-all ${
+                                        className={`py-2 text-[10px] font-bold uppercase tracking-wide rounded-lg transition-all ${
                                             selectedLogo.plateType === t 
-                                            ? 'bg-white text-indigo-600 shadow-sm' 
+                                            ? 'bg-white text-slate-900 shadow-sm' 
                                             : 'text-slate-500 hover:text-slate-700'
                                         }`}
                                     >
@@ -912,7 +844,7 @@ export default function ProPosterEditor() {
                             <AnimatePresence>
                                 {selectedLogo.plateType !== 'none' && (
                                     <motion.div initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: 'auto' }} exit={{ opacity: 0, height: 0 }}>
-                                        <div className="space-y-4">
+                                        <div className="space-y-4 pt-2">
                                             <div className="grid grid-cols-2 gap-4">
                                                 <SmoothSlider label="Pad X" value={selectedLogo.platePaddingX} min={0} max={50} onChange={(v) => updateLogo({platePaddingX: v})} unit="%" />
                                                 <SmoothSlider label="Pad Y" value={selectedLogo.platePaddingY} min={0} max={50} onChange={(v) => updateLogo({platePaddingY: v})} unit="%" />
@@ -926,13 +858,13 @@ export default function ProPosterEditor() {
                     </div>
                 </div>
             ) : (
-                <div className="h-full flex flex-col items-center justify-center p-8 text-center bg-slate-50/50 rounded-2xl">
-                    <div className="w-20 h-20 bg-white rounded-full flex items-center justify-center mb-6 shadow-sm border border-slate-100">
+                <div className="h-full flex flex-col items-center justify-center p-8 text-center">
+                    <div className="w-24 h-24 bg-slate-50 rounded-full flex items-center justify-center mb-6 shadow-sm border border-slate-100">
                         <MousePointer2 size={32} className="text-slate-300" />
                     </div>
                     <h3 className="text-sm font-bold text-slate-800 mb-2">No Selection</h3>
-                    <p className="text-xs text-slate-500 leading-relaxed max-w-[200px]">
-                        Select a logo layer from the sidebar or click directly on the canvas to edit its properties.
+                    <p className="text-xs text-slate-400 leading-relaxed max-w-[200px]">
+                        Select a layer to edit its properties
                     </p>
                 </div>
             )}
@@ -940,51 +872,50 @@ export default function ProPosterEditor() {
 
       </div>
 
-      {/* 3. EXPORT MODAL */}
+      {/* EXPORT MODAL */}
       <AnimatePresence>
         {isExportModalOpen && (
             <motion.div 
                 initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
-                className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/40 backdrop-blur-sm p-4"
+                className="fixed inset-0 z-[60] flex items-center justify-center bg-slate-900/60 backdrop-blur-sm p-4"
                 onClick={() => setIsExportModalOpen(false)}
             >
                 <motion.div 
                     initial={{ scale: 0.95, y: 10, opacity: 0 }} animate={{ scale: 1, y: 0, opacity: 1 }} exit={{ scale: 0.95, y: 10, opacity: 0 }}
-                    className="bg-white rounded-2xl shadow-2xl w-full max-w-lg overflow-hidden ring-1 ring-black/5"
+                    className="bg-white rounded-3xl shadow-2xl w-full max-w-xl overflow-hidden"
                     onClick={e => e.stopPropagation()}
                 >
-                    <div className="p-6 border-b border-slate-100 flex justify-between items-center bg-slate-50/50">
+                    <div className="p-8 border-b border-slate-100 flex justify-between items-center bg-white">
                         <div>
-                             <h2 className="text-lg font-bold text-slate-800">Export Final Poster</h2>
-                             <p className="text-xs text-slate-500 mt-0.5">Prepare your design for download</p>
+                             <h2 className="text-xl font-bold text-slate-800">Export Design</h2>
+                             <p className="text-xs text-slate-500 mt-1 font-medium">Ready to download your poster?</p>
                         </div>
                         <button onClick={() => setIsExportModalOpen(false)} className="p-2 hover:bg-slate-100 rounded-full text-slate-400 hover:text-slate-600 transition-colors">
                             <X size={20}/>
                         </button>
                     </div>
 
-                    <div className="p-8 space-y-8">
-                        {/* Format Selection */}
+                    <div className="p-8 space-y-8 bg-[#fafafa]">
                         <div>
-                            <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-3">Format</label>
+                            <label className="block text-xs font-extrabold text-slate-400 uppercase tracking-widest mb-4">Format</label>
                             <div className="grid grid-cols-2 gap-4">
                                 {['jpeg', 'png'].map(fmt => (
                                     <button 
                                         key={fmt}
                                         onClick={() => setExportSettings(s => ({...s, format: fmt as ExportFormat}))}
-                                        className={`relative group p-4 border rounded-xl text-left transition-all ${
+                                        className={`relative group p-4 border rounded-2xl text-left transition-all ${
                                             exportSettings.format === fmt 
-                                            ? 'border-indigo-600 bg-indigo-50/50 ring-1 ring-indigo-600'
-                                            : 'border-slate-200 hover:border-indigo-200 hover:bg-slate-50'
+                                            ? 'border-slate-900 bg-white shadow-md ring-1 ring-slate-900'
+                                            : 'border-slate-200 bg-white hover:border-slate-300'
                                         }`}
                                     >
                                         <span className="block text-sm font-bold uppercase text-slate-800 mb-1">{fmt}</span>
                                         <span className="block text-[11px] text-slate-500 leading-tight">
-                                            {fmt === 'jpeg' ? 'Best for social media & sharing' : 'Best for printing & high quality'}
+                                            {fmt === 'jpeg' ? 'Small file size, good for web' : 'High quality, transparency supported'}
                                         </span>
                                         {exportSettings.format === fmt && (
-                                            <div className="absolute top-4 right-4 text-indigo-600">
-                                                <CheckCircle2 size={16} />
+                                            <div className="absolute top-4 right-4 text-slate-900">
+                                                <CheckCircle2 size={18} />
                                             </div>
                                         )}
                                     </button>
@@ -992,14 +923,13 @@ export default function ProPosterEditor() {
                             </div>
                         </div>
 
-                        {/* Settings Grid */}
-                        <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-                             <div>
-                                <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-3">Dimensions</label>
+                        <div className="grid grid-cols-2 gap-6">
+                             <div className="col-span-2">
+                                <label className="block text-xs font-extrabold text-slate-400 uppercase tracking-widest mb-3">Resolution</label>
                                 <div className="relative">
-                                    <Monitor className="absolute left-3 top-3 text-slate-400" size={16} />
+                                    <Monitor className="absolute left-4 top-3.5 text-slate-400" size={16} />
                                     <select 
-                                        className="w-full pl-10 bg-slate-50 border border-slate-200 text-slate-700 text-sm font-medium rounded-lg p-3 focus:ring-2 focus:ring-indigo-500 focus:outline-none appearance-none cursor-pointer"
+                                        className="w-full pl-12 bg-white border border-slate-200 text-slate-700 text-sm font-bold rounded-xl p-3.5 focus:ring-2 focus:ring-slate-900 focus:outline-none appearance-none cursor-pointer shadow-sm"
                                         value={exportSettings.resolutionIdx}
                                         onChange={(e) => setExportSettings(s => ({...s, resolutionIdx: parseInt(e.target.value)}))}
                                     >
@@ -1007,50 +937,48 @@ export default function ProPosterEditor() {
                                             <option key={i} value={i}>{r.name}</option>
                                         ))}
                                     </select>
-                                    <ChevronDown className="absolute right-3 top-3.5 text-slate-400 pointer-events-none" size={14} />
+                                    <ChevronDown className="absolute right-4 top-4 text-slate-400 pointer-events-none" size={14} />
                                 </div>
                              </div>
 
                              <div>
-                                <div className="mb-4">
-                                     <SmoothSlider 
-                                        label="Quality" 
-                                        value={Math.round(exportSettings.quality * 100)} 
-                                        min={10} max={100} 
-                                        onChange={(v) => setExportSettings(s => ({...s, quality: v/100}))} 
-                                        unit="%"
-                                    />
-                                </div>
-                                <div>
-                                     <SmoothSlider 
-                                        label="DPI (Print Density)" 
-                                        value={exportSettings.dpi} 
-                                        min={72} max={600} 
-                                        onChange={(v) => setExportSettings(s => ({...s, dpi: v}))} 
-                                    />
-                                </div>
+                                  <SmoothSlider 
+                                     label="Quality" 
+                                     value={Math.round(exportSettings.quality * 100)} 
+                                     min={10} max={100} 
+                                     onChange={(v) => setExportSettings(s => ({...s, quality: v/100}))} 
+                                     unit="%"
+                                  />
+                             </div>
+                             <div>
+                                  <SmoothSlider 
+                                     label="DPI" 
+                                     value={exportSettings.dpi} 
+                                     min={72} max={600} 
+                                     onChange={(v) => setExportSettings(s => ({...s, dpi: v}))} 
+                                  />
                              </div>
                         </div>
                     </div>
 
-                    <div className="p-6 bg-slate-50 border-t border-slate-100 flex justify-end gap-3">
+                    <div className="p-6 bg-white border-t border-slate-100 flex justify-end gap-3">
                         <button 
                             onClick={() => setIsExportModalOpen(false)}
-                            className="px-5 py-2.5 rounded-lg text-sm font-medium text-slate-600 hover:text-slate-800 hover:bg-slate-200 transition-colors"
+                            className="px-6 py-3 rounded-full text-sm font-bold text-slate-500 hover:text-slate-800 hover:bg-slate-100 transition-colors"
                         >
                             Cancel
                         </button>
                         <button 
                             onClick={executeExport}
                             disabled={exportStatus !== 'idle'}
-                            className={`px-8 py-2.5 rounded-lg text-sm font-bold text-white shadow-lg shadow-indigo-200 flex items-center gap-2 transition-all transform active:scale-95 ${
-                                exportStatus === 'generating' ? 'bg-indigo-400 cursor-wait' : 
-                                exportStatus === 'done' ? 'bg-green-500' : 'bg-indigo-600 hover:bg-indigo-700 hover:-translate-y-0.5'
+                            className={`px-8 py-3 rounded-full text-sm font-bold text-white shadow-xl shadow-slate-200 flex items-center gap-2 transition-all transform active:scale-95 ${
+                                exportStatus === 'generating' ? 'bg-slate-400 cursor-wait' : 
+                                exportStatus === 'done' ? 'bg-green-500' : 'bg-slate-900 hover:bg-slate-800'
                             }`}
                         >
                             {exportStatus === 'generating' && <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin"></div>}
                             {exportStatus === 'done' && <CheckCircle2 size={16} />}
-                            {exportStatus === 'idle' ? 'Download Poster' : exportStatus === 'generating' ? 'Rendering...' : 'Saved!'}
+                            {exportStatus === 'idle' ? 'Download Poster' : exportStatus === 'generating' ? 'Processing...' : 'Complete!'}
                         </button>
                     </div>
                 </motion.div>
