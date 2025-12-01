@@ -111,9 +111,9 @@ export default function DashboardPage() {
 
   const heroFilters = [
     { label: "Assets", icon: <LayoutTemplate size={16} />, path: "/assets" },
-    { label: "Themes", icon: <Image size={16} />, path: "/themes" },
-    { label: "Rate Us", icon: <StarIcon size={16} />, path: "/rate-us" },
-    { label: "Report a Bug", icon: <BugIcon size={16} />, path: "/report-bug" },
+    { label: "Themes", icon: <Image size={16} />, path: "/theme" },
+    { label: "Rate Us", icon: <StarIcon size={16} />, path: "/reportbug" },
+    { label: "Report a Bug", icon: <BugIcon size={16} />, path: "/reportbug" },
   ];
 
   const filteredActions = quickActions.filter((action) => {
