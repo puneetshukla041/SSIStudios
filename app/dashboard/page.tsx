@@ -12,7 +12,7 @@ import {
 import { useAuth } from "@/contexts/AuthContext";
 import Header from "@/components/dashboard/Header";
 import Usernameheader from "@/components/dashboard/usernameheader";
-import Templates from "@/components/dashboard/Templates";
+
 
 // --- Types ---
 interface QuickAction {
@@ -284,9 +284,6 @@ export default function DashboardPage() {
             </button>
           </div>
 
-          <div className="w-full">
-            <Templates searchQuery={searchQuery} />
-          </div>
         </section>
 
       </div>
