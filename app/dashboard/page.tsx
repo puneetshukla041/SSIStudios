@@ -59,7 +59,7 @@ export default function DashboardPage() {
       subLabel: "Start scratch",
       icon: Plus,
       gradient: "from-blue-500 to-indigo-600",
-      path: "/poster/editor",
+      path: "/poster",
       keywords: ["marketing", "design", "canvas"],
     },
     {
@@ -68,7 +68,7 @@ export default function DashboardPage() {
       subLabel: "Issue Docs",
       icon: Layers2Icon,
       gradient: "from-orange-400 to-pink-500",
-      path: "/selector/visitingcard",
+      path: "/certificates/database",
       keywords: ["docs", "diploma", "award"],
     },
     {
@@ -86,7 +86,7 @@ export default function DashboardPage() {
       subLabel: "Identity",
       icon: LayoutGrid,
       gradient: "from-violet-500 to-purple-600",
-      path: "/selector/idcard",
+      path: "/visitingcards",
       keywords: ["id", "contact", "business"],
     },
     {
@@ -95,7 +95,7 @@ export default function DashboardPage() {
       subLabel: "Utilities",
       icon: CreditCard,
       gradient: "from-cyan-400 to-blue-500",
-      path: "/design-tools",
+      path: "/idcard",
       keywords: ["color", "draw", "kit"],
     },
     {
