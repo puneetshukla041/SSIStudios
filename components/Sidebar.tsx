@@ -25,6 +25,7 @@ import {
   LuSmartphone,      // Android
   LuMonitor,         // Desktop
   LuGitBranch,       // Versions
+  LuCode,           // Developer Icon
 } from 'react-icons/lu'
 
 import { useAuth } from '@/contexts/AuthContext'
@@ -42,12 +43,18 @@ type MenuItem = {
   children?: { name: string; path: string }[]
   onClick?: () => void
   mobileOnly?: boolean
-  requiredAccess?: keyof UserAccess;
+  // FIX: Allow string to support keys not yet added to UserAccess interface (fixes build error)
+  requiredAccess?: keyof UserAccess | string; 
   isUnderDevelopment?: boolean;
 }
 
 const menu: MenuItem[] = [
-  { name: 'Dashboard', icon: LuLayoutDashboard, path: '/dashboard' },
+  { 
+    name: 'Dashboard', 
+    icon: LuLayoutDashboard, 
+    path: '/dashboard',
+    requiredAccess: 'dashboard' // Now controlled by DB
+  },
 
   {
     name: 'Certificates',
@@ -68,13 +75,14 @@ const menu: MenuItem[] = [
     name: 'Visiting Cards',
     icon: LuContact,
     path: "/visitingcards",
-    requiredAccess: 'bgRemover',
+    requiredAccess: 'visitingCard', // Fixed key name to match DB
   },
 
   {
     name: 'Image Enhancer',
     icon: LuWand,
     path: '/imageenhancer',
+    requiredAccess: 'imageEnhancer', // Added access control
     isUnderDevelopment: true,
   },
   {
@@ -83,7 +91,7 @@ const menu: MenuItem[] = [
     path: "/idcard",
     requiredAccess: 'idCard',
   },
-    {
+  {
     name: 'Posters',
     icon: LuLayoutTemplate,
     path: "/poster",
@@ -102,16 +110,23 @@ const menu: MenuItem[] = [
   {
     name: 'Settings',
     icon: LuSettings,
+    requiredAccess: 'settings', // Now controlled by DB
     children: [
       { name: 'Theme', path: '/theme' },
       { name: 'Profile & Preferences', path: '/userprofile' },
     ],
   },
-    {
+  {
     name: 'Report a Bug',
     icon: LuBug,
     path: "/reportbug",
-    requiredAccess: 'idCard',
+    requiredAccess: 'bugReport', // Now controlled by DB
+  },
+  {
+    name: 'Developer',
+    icon: LuCode, 
+    path: "https://puneetportfolio.vercel.app/content",
+    requiredAccess: 'developer', // Now controlled by DB
   },
 
   { name: 'Logout', icon: LuLogOut, mobileOnly: true },
@@ -239,8 +254,12 @@ export default function Sidebar({ forceActive, isOpen, toggleSidebar }: SidebarP
       >
         {menu.map((item) => {
           // This is the access check logic.
-          const hasAccess = !item.requiredAccess || (user?.access?.[item.requiredAccess] ?? false);
-          const isRestricted = !hasAccess;
+          // FIX: Cast user.access to 'any' to allow indexing by dynamic strings (dashboard)
+          const hasAccess = !item.requiredAccess || ((user?.access as any)?.[item.requiredAccess] ?? false);
+          
+          // Special check: Developer button is always visible
+          const isRestricted = !hasAccess && item.name !== 'Developer';
+          
           // Check for development status
           const isDeveloping = item.isUnderDevelopment || isRestricted; 
           const tooltipContent = item.isUnderDevelopment ? "Feature under development" : "Take permission from admin";
@@ -260,6 +279,7 @@ export default function Sidebar({ forceActive, isOpen, toggleSidebar }: SidebarP
             ${isDeveloping ? 'opacity-30 cursor-not-allowed' : 'opacity-100 cursor-pointer'}
             ${active && !isDeveloping ? 'font-semibold bg-white/10' : 'font-medium hover:bg-white/5'}
             ${item.name === 'Logout' ? 'text-red-500 hover:bg-red-500/10 hover:text-red-400' : ''}
+            ${item.name === 'Developer' ? 'text-indigo-400 hover:bg-indigo-500/10 hover:text-indigo-300' : ''} 
           `;
 
           return (
@@ -267,10 +287,18 @@ export default function Sidebar({ forceActive, isOpen, toggleSidebar }: SidebarP
               <button
                 onClick={() => {
                   if (isDeveloping) return;
+                  
                   if (item.name === 'Logout') {
                     handleLogout();
                     return;
                   }
+
+                  // --- EXTERNAL LINK HANDLING ---
+                  if (item.path && item.path.startsWith('http')) {
+                    window.open(item.path, '_blank');
+                    return;
+                  }
+
                   if (item.children) {
                     toggle(item.name);
                   } else if (item.path && item.path !== pathname) {
@@ -293,7 +321,7 @@ export default function Sidebar({ forceActive, isOpen, toggleSidebar }: SidebarP
                   <Icon
                     size={20} // Slightly smaller size looks more elegant with these icons
                     strokeWidth={2} // Ensures they aren't too bold
-                    className={`transition-colors flex-shrink-0 text-white ${isDeveloping ? 'opacity-40' : 'opacity-100'}`}
+                    className={`transition-colors flex-shrink-0 ${item.name === 'Developer' ? 'text-indigo-400' : 'text-white'} ${isDeveloping ? 'opacity-40' : 'opacity-100'}`}
                   />
                   <span
                     className={`text-[14px] whitespace-nowrap transition-opacity duration-200 ${
