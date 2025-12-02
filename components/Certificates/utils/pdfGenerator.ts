@@ -18,7 +18,7 @@ const toTitleCase = (str: string) => {
   });
 };
 
-// 💡 MODIFIED SIGNATURE: Added `isBulk` flag and updated `setLoadingId` type.
+// 💡 MODIFIED: Generates PDF even if data is missing
 export const generateCertificatePDF = async (
   certData: ICertificateClient,
   onAlert: (message: string, isError: boolean) => void,
@@ -27,14 +27,15 @@ export const generateCertificatePDF = async (
   isBulk: boolean = false
 ): Promise<PdfFileResult | null | void> => { 
 
-  const { name: rawName, certificateNo, hospital: rawHospital, doi: doiDDMMYYYY } = certData;
+  // 1. SAFE DESTRUCTURING: Default to strings if values are missing
+  const rawName = certData.name || "Unknown Name";
+  const certificateNo = certData.certificateNo || "NO-ID";
+  const rawHospital = certData.hospital || "Unknown Hospital";
+  const doiDDMMYYYY = certData.doi || "01-01-2025"; 
 
-  // 1. FORMATTING: Apply Title Case to Name and Hospital
-  // This ensures "john doe" becomes "John Doe" on the PDF and Filename
+  // 2. FORMATTING
   const fullName = toTitleCase(rawName);
   const hospitalName = toTitleCase(rawHospital);
-
-  // Convert DD-MM-YYYY to DD/MM/YYYY for the PDF template logic
   const doi = doiDDMMYYYY.replace(/-/g, '/');
 
   // Hardcoded static text (only used for V2 template)
@@ -45,18 +46,16 @@ export const generateCertificatePDF = async (
   
   const isV2Template = template === 'certificate2.pdf';
 
-  if (!fullName || !certificateNo) {
-    if (!isBulk) onAlert('Missing essential data (Name or Certificate No) for PDF generation.', true);
-    return isBulk ? null : undefined;
-  }
+  // ❌ REMOVED THE BLOCKING VALIDATION CHECK
+  // We now allow generation to proceed even if specific fields were missing in DB
 
-  // Start loading state
+  // Start loading state (only for single)
   if (!isBulk) {
     (setLoadingId as React.Dispatch<React.SetStateAction<string | null>>)(certData._id);
   }
 
   try {
-    // 2. Fetch Resources
+    // 3. Fetch Resources
     const [existingPdfBytes, soraBytes, soraSemiBoldBytes] = await Promise.all([
       fetch(`/certificates/${template}`).then((res) => {
         if (!res.ok) throw new Error(`Failed to fetch certificate template: ${template}.`);
@@ -72,7 +71,7 @@ export const generateCertificatePDF = async (
       }),
     ]);
 
-    // 3. Setup PDF
+    // 4. Setup PDF
     const pdfDoc = await PDFDocument.load(existingPdfBytes);
     // @ts-ignore
     pdfDoc.registerFontkit(fontkit);
@@ -85,7 +84,7 @@ export const generateCertificatePDF = async (
     const pageWidth = firstPage.getWidth();
     const pageHeight = firstPage.getHeight();
 
-    // 4. Drawing Logic
+    // 5. Drawing Logic
     const yBase = pageHeight - 180;
     const x = 55;
     const margin = 40;
@@ -95,10 +94,10 @@ export const generateCertificatePDF = async (
     const colorGray = rgb(0.5, 0.5, 0.5);
     const colorBlack = rgb(0, 0, 0);
 
-    // Full Name (Title Cased)
+    // Full Name
     firstPage.drawText(fullName, { x, y: yBase, size: fontSizeLarge, font: soraFont, color: colorBlack, });
     
-    // Hospital Name (Title Cased)
+    // Hospital Name
     firstPage.drawText(hospitalName, { x, y: yBase - 20, size: fontSizeMedium, font: soraSemiBoldFont, color: colorBlack, });
     
     if (isV2Template) {
@@ -116,22 +115,18 @@ export const generateCertificatePDF = async (
     const certTextWidth = soraSemiBoldFont.widthOfTextAtSize(certificateNo, fontSizeSmall);
     firstPage.drawText(certificateNo, { x: pageWidth - certTextWidth - margin - 70, y: margin + 45, size: fontSizeSmall, font: soraSemiBoldFont, color: colorBlack, maxWidth: pageWidth - margin * 2, });
 
-    // 5. Save and Return/Download
+    // 6. Save and Return/Download
     const pdfBytes = await pdfDoc.save();
     const blob = new Blob([new Uint8Array(pdfBytes)], { type: "application/pdf" });
     
-    // 💡 FILENAME FORMAT: Name_Hospital.pdf
-    // We use the Title Cased variables. We do NOT replace spaces with underscores inside the name.
-    // We only put an underscore BETWEEN the name and the hospital.
-    const safeName = fullName.trim();
-    const safeHospital = hospitalName.trim();
+    // Filename Formatting
+    const safeName = fullName.trim() || "Unknown";
+    const safeHospital = hospitalName.trim() || "Hospital";
     const fileName = `${safeName}_${safeHospital}.pdf`;
 
     if (isBulk) {
-      // Return object for bulk zipping/processing
       return { filename: fileName, blob };
     } else {
-      // Single download logic
       const url = window.URL.createObjectURL(blob);
       const link = document.createElement("a");
       link.href = url;

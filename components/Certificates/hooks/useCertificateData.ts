@@ -29,12 +29,10 @@ interface UseCertificateDataResult {
     setIsLoading: React.Dispatch<React.SetStateAction<boolean>>;
 }
 
-// FIX: onRefresh signature updated to include uniqueHospitalsList
 export const useCertificateData = (
     refreshKey: number,
     onRefresh: (data: ICertificateClient[], totalCount: number, uniqueHospitalsList: string[]) => void,
     showNotification: (message: string, type: NotificationType) => void,
-    // PROPS: Received from the parent (CertificateDatabasePage)
     searchQuery: string,
     hospitalFilter: string,
     setSearchQuery: React.Dispatch<React.SetStateAction<string>>,
@@ -47,7 +45,6 @@ export const useCertificateData = (
     const [totalPages, setTotalPages] = useState(1);
     const [uniqueHospitals, setUniqueHospitals] = useState<string[]>([]);
     const [selectedIds, setSelectedIds] = useState<string[]>([]);
-    // 🚀 FIX 1: Set default sort to '_id' in 'desc' order (Newest First)
     const [sortConfig, setSortConfig] = useState<SortConfig | null>({ key: '_id', direction: 'desc' });
 
     // --- Fetch Data Logic (Paginated & Filtered) ---
@@ -81,7 +78,6 @@ export const useCertificateData = (
                 setTotalItems(result.total);
                 setTotalPages(result.totalPages);
                 setUniqueHospitals(result.filters.hospitals);
-                // FIX: Pass uniqueHospitals to onRefresh callback
                 onRefresh(result.data, result.total, result.filters.hospitals);
 
                 const message = `Data synced. Showing ${result.data.length} of ${result.total} items.`;
@@ -112,10 +108,14 @@ export const useCertificateData = (
 
             if (isBulkPdfExport && idsToFetch.length > 0) {
                 params.append('ids', idsToFetch.join(','));
-                params.delete('all');
+                
+                // 💡 FIX: Do NOT delete 'all'. 
+                // We want the backend to ignore pagination and give us exactly these IDs from the WHOLE db.
+                // params.delete('all');  <-- This line caused the bug
+                
+                // We still delete 'q' (search) because IDs are specific
                 params.delete('q');
             }
-
 
             const response = await fetch(`/api/certificates?${params.toString()}`);
             const result: FetchResponse & { success: boolean, message?: string } = await response.json();
@@ -133,13 +133,13 @@ export const useCertificateData = (
         }
     }, [searchQuery, hospitalFilter, showNotification]);
 
-    // Effect to fetch data on initial load, page change, or refreshKey change
+    // Effect to fetch data on initial load
     useEffect(() => {
         fetchCertificates();
         setSelectedIds([]);
     }, [fetchCertificates, refreshKey]);
 
-    // MODIFIED Effect: Only reset page when search/filter CHANGES, then fetch data
+    // Effect: Only reset page when search/filter CHANGES
     useEffect(() => {
         setSelectedIds([]);
         if (currentPage !== 1) {
@@ -150,9 +150,8 @@ export const useCertificateData = (
     }, [searchQuery, hospitalFilter]);
 
 
-    // --- Sort Functionality (UNCHANGED) ---
+    // --- Sort Functionality ---
     const sortedCertificates = useMemo(() => {
-        // This will now use the default sortConfig: { key: '_id', direction: 'desc' }
         return sortCertificates(certificates, sortConfig);
     }, [certificates, sortConfig]);
 

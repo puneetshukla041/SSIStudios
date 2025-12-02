@@ -67,14 +67,12 @@ interface UseCertificateActionsResult {
 }
 
 // --- HELPER: Format Filename (Title Case + Keep Spaces) ---
-// Input: "john doe" -> "John Doe"
-// Input: "apollo hospital" -> "Apollo Hospital"
-// Removes illegal filesystem characters like / \ : * ? " < > | but KEEPS spaces.
-const formatForFilename = (text: string) => {
-    if (!text) return 'Unknown';
+const formatForFilename = (text: string | undefined | null) => {
+    if (!text) return 'Unknown'; // 💡 Handle missing text safely
     
     // 1. Remove illegal characters
     const cleanText = text.replace(/[\\/:*?"<>|]/g, '').trim();
+    if (!cleanText) return 'Unknown';
 
     // 2. Convert to Title Case
     return cleanText.replace(/\w\S*/g, (txt) => {
@@ -292,11 +290,9 @@ export const useCertificateActions = ({
     const handleGeneratePDF_V2 = async (cert: ICertificateClient) => {
         if (generatingPdfId === cert._id) return;
         
-        // Pass 'true' to get the blob back manually
         const result = await generateCertificatePDFTyped(cert, oldOnAlert, 'certificate2.pdf', setGeneratingPdfId, true);
         
         if (result && result.blob) {
-            // Apply proper Title Case formatting without removing spaces
             const safeName = formatForFilename(cert.name);
             const safeHospital = formatForFilename(cert.hospital);
             const filename = `${safeName}_${safeHospital}.pdf`;
@@ -333,14 +329,12 @@ export const useCertificateActions = ({
         try {
             let selectedCertificates = await fetchCertificatesForExport(true, selectedIds);
             
-            // FAIL-SAFE: Filter again client-side
             selectedCertificates = selectedCertificates.filter(cert => selectedIds.includes(cert._id));
 
             if (selectedCertificates.length === 0) {
                 throw new Error('Could not retrieve selected data for bulk V1 export.');
             }
 
-            // Generate Blobs
             const pdfPromises = selectedCertificates.map(cert =>
                 generateCertificatePDFTyped(cert, oldOnAlert, 'certificate1.pdf', setIsBulkGeneratingV1 as any, true)
             );
@@ -353,14 +347,14 @@ export const useCertificateActions = ({
                 const certData = selectedCertificates[i]; 
 
                 if (result && result.blob) {
-                    const safeName = formatForFilename(certData.name);
-                    const safeHospital = formatForFilename(certData.hospital);
+                    // 💡 Updated to handle missing data gracefully
+                    const safeName = formatForFilename(certData.name || 'Unknown');
+                    const safeHospital = formatForFilename(certData.hospital || 'Hospital');
                     const filename = `${safeName}_${safeHospital}.pdf`;
 
                     triggerFileDownload(result.blob, filename);
                     successCount++;
 
-                    // Small delay to prevent browser blocking
                     await new Promise(resolve => setTimeout(resolve, 500));
                 }
             }
@@ -410,8 +404,9 @@ export const useCertificateActions = ({
                 const certData = selectedCertificates[i];
 
                 if (result && result.blob) {
-                    const safeName = formatForFilename(certData.name);
-                    const safeHospital = formatForFilename(certData.hospital);
+                    // 💡 Updated to handle missing data gracefully
+                    const safeName = formatForFilename(certData.name || 'Unknown');
+                    const safeHospital = formatForFilename(certData.hospital || 'Hospital');
                     const filename = `${safeName}_${safeHospital}.pdf`;
 
                     triggerFileDownload(result.blob, filename);
