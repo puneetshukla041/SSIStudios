@@ -122,13 +122,13 @@ const menu: MenuItem[] = [
     path: "/reportbug",
     requiredAccess: 'bugReport', // Now controlled by DB
   },
-  {
-    name: 'Developer',
-    icon: LuCode, 
-    path: "https://puneetportfolio.vercel.app/content",
-    requiredAccess: 'developer', // Now controlled by DB
-  },
-
+  //{
+   //name: 'Developer',
+    //icon: LuCode, 
+   /// path: "https://puneetportfolio.vercel.app/content",
+  //  requiredAccess: 'developer', // Now controlled by DB
+ // },
+//
   { name: 'Logout', icon: LuLogOut, mobileOnly: true },
 ]
 
