@@ -271,21 +271,7 @@ export default function DashboardPage() {
           </section>
         )}
 
-        {/* --- Templates Section --- */}
-        <section className="w-full relative">
-          <div className="flex flex-col sm:flex-row sm:items-center justify-between mb-6 sm:mb-8 px-1 gap-4">
-            <div>
-              <h2 className="text-2xl sm:text-3xl font-bold text-slate-800 tracking-tight">Templates</h2>
-              <p className="text-slate-500 mt-1 sm:mt-2 text-sm sm:text-base">Hand-picked recommendations</p>
-            </div>
-
-            <button className="group w-full sm:w-auto flex items-center justify-center gap-2 px-5 py-2.5 rounded-full bg-white border border-slate-200 text-slate-600 text-sm font-semibold hover:border-indigo-200 hover:text-indigo-600 hover:shadow-md transition-all cursor-pointer">
-              Explore all <ArrowRight size={16} className="transition-transform group-hover:translate-x-1" />
-            </button>
-          </div>
-
-        </section>
-
+    
       </div>
     </main>
   );
