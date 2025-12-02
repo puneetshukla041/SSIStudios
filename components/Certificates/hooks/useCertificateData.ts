@@ -132,13 +132,11 @@ export const useCertificateData = (
             return [];
         }
     }, [searchQuery, hospitalFilter, showNotification]);
-
     // Effect to fetch data on initial load
     useEffect(() => {
         fetchCertificates();
         setSelectedIds([]);
     }, [fetchCertificates, refreshKey]);
-
     // Effect: Only reset page when search/filter CHANGES
     useEffect(() => {
         setSelectedIds([]);
@@ -148,13 +146,10 @@ export const useCertificateData = (
             fetchCertificates();
         }
     }, [searchQuery, hospitalFilter]);
-
-
     // --- Sort Functionality ---
     const sortedCertificates = useMemo(() => {
         return sortCertificates(certificates, sortConfig);
     }, [certificates, sortConfig]);
-
     const requestSort = (key: SortKey) => {
         let direction: 'asc' | 'desc' = 'asc';
         if (sortConfig && sortConfig.key === key && sortConfig.direction === 'asc') {
@@ -162,7 +157,6 @@ export const useCertificateData = (
         }
         setSortConfig({ key, direction });
     };
-
     return {
         certificates,
         isLoading,
