@@ -66,11 +66,20 @@ interface UseCertificateActionsResult {
     handleBulkGeneratePDF_V2: () => Promise<void>;
 }
 
-// --- Helper: Sanitize Filename ---
-// Turns "John Doe" -> "john_doe" and removes special chars
-const sanitizeFilename = (name: string) => {
-    if (!name) return 'unknown';
-    return name.replace(/[^a-z0-9]/gi, '_').replace(/_{2,}/g, '_').toLowerCase();
+// --- HELPER: Format Filename (Title Case + Keep Spaces) ---
+// Input: "john doe" -> "John Doe"
+// Input: "apollo hospital" -> "Apollo Hospital"
+// Removes illegal filesystem characters like / \ : * ? " < > | but KEEPS spaces.
+const formatForFilename = (text: string) => {
+    if (!text) return 'Unknown';
+    
+    // 1. Remove illegal characters
+    const cleanText = text.replace(/[\\/:*?"<>|]/g, '').trim();
+
+    // 2. Convert to Title Case
+    return cleanText.replace(/\w\S*/g, (txt) => {
+        return txt.charAt(0).toUpperCase() + txt.substr(1).toLowerCase();
+    });
 };
 
 // --- Helper: Individual File Download ---
@@ -283,14 +292,15 @@ export const useCertificateActions = ({
     const handleGeneratePDF_V2 = async (cert: ICertificateClient) => {
         if (generatingPdfId === cert._id) return;
         
-        // Pass 'true' as the last argument to prevent auto-download inside the util
-        // so we can handle the naming manually here.
+        // Pass 'true' to get the blob back manually
         const result = await generateCertificatePDFTyped(cert, oldOnAlert, 'certificate2.pdf', setGeneratingPdfId, true);
         
         if (result && result.blob) {
-            const safeName = sanitizeFilename(cert.name);
-            const safeHospital = sanitizeFilename(cert.hospital);
+            // Apply proper Title Case formatting without removing spaces
+            const safeName = formatForFilename(cert.name);
+            const safeHospital = formatForFilename(cert.hospital);
             const filename = `${safeName}_${safeHospital}.pdf`;
+            
             triggerFileDownload(result.blob, filename);
         }
     };
@@ -299,13 +309,13 @@ export const useCertificateActions = ({
     const handleGeneratePDF_V1 = async (cert: ICertificateClient) => {
         if (generatingPdfV1Id === cert._id) return;
 
-        // Pass 'true' to get the blob back
         const result = await generateCertificatePDFTyped(cert, oldOnAlert, 'certificate1.pdf', setGeneratingPdfV1Id, true);
 
         if (result && result.blob) {
-            const safeName = sanitizeFilename(cert.name);
-            const safeHospital = sanitizeFilename(cert.hospital);
+            const safeName = formatForFilename(cert.name);
+            const safeHospital = formatForFilename(cert.hospital);
             const filename = `${safeName}_${safeHospital}.pdf`;
+            
             triggerFileDownload(result.blob, filename);
         }
     };
@@ -343,8 +353,8 @@ export const useCertificateActions = ({
                 const certData = selectedCertificates[i]; 
 
                 if (result && result.blob) {
-                    const safeName = sanitizeFilename(certData.name);
-                    const safeHospital = sanitizeFilename(certData.hospital);
+                    const safeName = formatForFilename(certData.name);
+                    const safeHospital = formatForFilename(certData.hospital);
                     const filename = `${safeName}_${safeHospital}.pdf`;
 
                     triggerFileDownload(result.blob, filename);
@@ -400,8 +410,8 @@ export const useCertificateActions = ({
                 const certData = selectedCertificates[i];
 
                 if (result && result.blob) {
-                    const safeName = sanitizeFilename(certData.name);
-                    const safeHospital = sanitizeFilename(certData.hospital);
+                    const safeName = formatForFilename(certData.name);
+                    const safeHospital = formatForFilename(certData.hospital);
                     const filename = `${safeName}_${safeHospital}.pdf`;
 
                     triggerFileDownload(result.blob, filename);
