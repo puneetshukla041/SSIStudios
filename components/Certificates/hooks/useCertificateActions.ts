@@ -60,15 +60,16 @@ interface UseCertificateActionsResult {
     handleAddCertificate: () => Promise<void>;
     handleNewCertChange: (field: keyof Omit<ICertificateClient, '_id'>, value: string) => void;
     handleDownload: (type: 'xlsx' | 'csv') => Promise<void>;
-    handleGeneratePDF_V1: (cert: ICertificateClient) => void;
-    handleGeneratePDF_V2: (cert: ICertificateClient) => void;
+    handleGeneratePDF_V1: (cert: ICertificateClient) => Promise<void>;
+    handleGeneratePDF_V2: (cert: ICertificateClient) => Promise<void>;
     handleBulkGeneratePDF_V1: () => Promise<void>;
     handleBulkGeneratePDF_V2: () => Promise<void>;
 }
 
 // --- Helper: Sanitize Filename ---
-// Removes special characters to prevent file system errors
+// Turns "John Doe" -> "john_doe" and removes special chars
 const sanitizeFilename = (name: string) => {
+    if (!name) return 'unknown';
     return name.replace(/[^a-z0-9]/gi, '_').replace(/_{2,}/g, '_').toLowerCase();
 };
 
@@ -278,18 +279,38 @@ export const useCertificateActions = ({
         setNewCertificateData(prev => ({ ...prev, [field]: value }));
     };
 
-    // --- PDF Generation Handlers ---
-    const handleGeneratePDF_V2 = (cert: ICertificateClient) => {
+    // --- UPDATED: Single PDF Generation (V2) ---
+    const handleGeneratePDF_V2 = async (cert: ICertificateClient) => {
         if (generatingPdfId === cert._id) return;
-        generateCertificatePDF(cert, oldOnAlert, 'certificate2.pdf', setGeneratingPdfId);
+        
+        // Pass 'true' as the last argument to prevent auto-download inside the util
+        // so we can handle the naming manually here.
+        const result = await generateCertificatePDFTyped(cert, oldOnAlert, 'certificate2.pdf', setGeneratingPdfId, true);
+        
+        if (result && result.blob) {
+            const safeName = sanitizeFilename(cert.name);
+            const safeHospital = sanitizeFilename(cert.hospital);
+            const filename = `${safeName}_${safeHospital}.pdf`;
+            triggerFileDownload(result.blob, filename);
+        }
     };
 
-    const handleGeneratePDF_V1 = (cert: ICertificateClient) => {
+    // --- UPDATED: Single PDF Generation (V1) ---
+    const handleGeneratePDF_V1 = async (cert: ICertificateClient) => {
         if (generatingPdfV1Id === cert._id) return;
-        generateCertificatePDF(cert, oldOnAlert, 'certificate1.pdf', setGeneratingPdfV1Id);
+
+        // Pass 'true' to get the blob back
+        const result = await generateCertificatePDFTyped(cert, oldOnAlert, 'certificate1.pdf', setGeneratingPdfV1Id, true);
+
+        if (result && result.blob) {
+            const safeName = sanitizeFilename(cert.name);
+            const safeHospital = sanitizeFilename(cert.hospital);
+            const filename = `${safeName}_${safeHospital}.pdf`;
+            triggerFileDownload(result.blob, filename);
+        }
     };
 
-    // --- UPDATED: Bulk PDF Generation (V1) - Individual Files ---
+    // --- Bulk PDF Generation (V1) ---
     const handleBulkGeneratePDF_V1 = async () => {
         if (selectedIds.length === 0 || isBulkGeneratingV1) {
             showNotification('Select certificates for bulk export (V1).', 'info');
@@ -302,8 +323,7 @@ export const useCertificateActions = ({
         try {
             let selectedCertificates = await fetchCertificatesForExport(true, selectedIds);
             
-            // FAIL-SAFE: Filter again client-side to ensure we ONLY have what was selected.
-            // This prevents the issue where the fetch might return ALL records if passing IDs fails.
+            // FAIL-SAFE: Filter again client-side
             selectedCertificates = selectedCertificates.filter(cert => selectedIds.includes(cert._id));
 
             if (selectedCertificates.length === 0) {
@@ -318,14 +338,11 @@ export const useCertificateActions = ({
             const results = await Promise.all(pdfPromises);
             let successCount = 0;
 
-            // Sequential Download Loop to avoid browser blocking
             for (let i = 0; i < results.length; i++) {
                 const result = results[i];
-                // Match result to the original certificate to get correct name data
                 const certData = selectedCertificates[i]; 
 
                 if (result && result.blob) {
-                    // FORMAT: name_hospitalname.pdf
                     const safeName = sanitizeFilename(certData.name);
                     const safeHospital = sanitizeFilename(certData.hospital);
                     const filename = `${safeName}_${safeHospital}.pdf`;
@@ -333,7 +350,7 @@ export const useCertificateActions = ({
                     triggerFileDownload(result.blob, filename);
                     successCount++;
 
-                    // Small delay between downloads to prevent browser from blocking multiple popups
+                    // Small delay to prevent browser blocking
                     await new Promise(resolve => setTimeout(resolve, 500));
                 }
             }
@@ -352,7 +369,7 @@ export const useCertificateActions = ({
         }
     };
 
-    // --- UPDATED: Bulk PDF Generation (V2) - Individual Files ---
+    // --- Bulk PDF Generation (V2) ---
     const handleBulkGeneratePDF_V2 = async () => {
         if (selectedIds.length === 0 || isBulkGeneratingV2) {
             showNotification('Select certificates for bulk export (V2).', 'info');
@@ -365,14 +382,12 @@ export const useCertificateActions = ({
         try {
             let selectedCertificates = await fetchCertificatesForExport(true, selectedIds);
             
-            // FAIL-SAFE: Filter again client-side to ensure we ONLY have what was selected.
             selectedCertificates = selectedCertificates.filter(cert => selectedIds.includes(cert._id));
 
             if (selectedCertificates.length === 0) {
                 throw new Error('Could not retrieve selected data for bulk V2 export.');
             }
 
-            // Generate Blobs
             const pdfPromises = selectedCertificates.map(cert =>
                 generateCertificatePDFTyped(cert, oldOnAlert, 'certificate2.pdf', setIsBulkGeneratingV2 as any, true)
             );
@@ -380,21 +395,17 @@ export const useCertificateActions = ({
             const results = await Promise.all(pdfPromises);
             let successCount = 0;
 
-            // Sequential Download Loop
             for (let i = 0; i < results.length; i++) {
                 const result = results[i];
                 const certData = selectedCertificates[i];
 
                 if (result && result.blob) {
-                    // FORMAT: name_hospitalname.pdf
                     const safeName = sanitizeFilename(certData.name);
                     const safeHospital = sanitizeFilename(certData.hospital);
                     const filename = `${safeName}_${safeHospital}.pdf`;
 
                     triggerFileDownload(result.blob, filename);
                     successCount++;
-
-                    // Small delay between downloads
                     await new Promise(resolve => setTimeout(resolve, 500));
                 }
             }
@@ -424,7 +435,6 @@ export const useCertificateActions = ({
             return;
         }
 
-        // Sort by Newest First
         const sortedExportData = sortCertificates(allCertificates, { key: '_id', direction: 'desc' });
 
         const dataToExport = sortedExportData.map((cert, index) => ({
