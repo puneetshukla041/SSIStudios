@@ -54,3 +54,21 @@ export const initialNewCertificateState: Omit<ICertificateClient, '_id'> = {
     hospital: '',
     doi: '', // Will be set to today's date in helpers
 };
+
+// --- Dropdown Options for Certificate Actions ---
+
+export const CERTIFICATE_TYPES = [
+    { label: 'External', value: 'external' },
+    { label: 'Internal', value: 'internal' },
+];
+
+export const CERTIFICATE_TEMPLATES = {
+    external: [
+        { label: 'Proctorship', value: 'proctorship', color: 'blue' },
+        { label: 'Training', value: 'training', color: 'teal' },
+    ],
+    internal: [
+        { label: 'Employee of Month', value: 'eom', color: 'purple' },
+        { label: 'Others', value: 'others', color: 'amber' },
+    ],
+};
