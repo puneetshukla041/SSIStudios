@@ -45,6 +45,11 @@ const QuickActionBar: React.FC<QuickActionBarProps> = ({
     const isInternal = certTypeMode === 'internal';
     const isOthers100 = certTypeMode === 'others_100';
 
+    // ✅ ADDED: Force default to 'external' when component mounts
+    useEffect(() => {
+        setCertTypeMode('external');
+    }, []); 
+
     useEffect(() => {
         const handleClickOutside = (event: MouseEvent) => {
             if (dropdownRef.current && !dropdownRef.current.contains(event.target as Node)) {
