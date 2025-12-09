@@ -388,4 +388,5 @@ const CertificateTable: React.FC<CertificateTableExtendedProps> = ({
     );
 };
 
+
 export default CertificateTable;
