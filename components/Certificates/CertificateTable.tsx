@@ -23,9 +23,11 @@ import TableHeader from './ui/TableHeader';
 import TableRow from './ui/TableRow';
 import MailComposer from './ui/MailComposer';
 import FloatingNotification from './ui/FloatingNotification';
-import SuccessAnimation from './ui/SuccessAnimation';
+import SuccessAnimation from './ui/SuccessAnimation'; 
 
 // --- Components ---
+
+// 1. Modern Skeleton Loader
 const SkeletonLoader = () => (
     <div className="w-full space-y-6">
         <div className="h-16 bg-slate-100/50 rounded-2xl border border-slate-200/60 animate-pulse" />
@@ -48,6 +50,7 @@ const SkeletonLoader = () => (
     </div>
 );
 
+// --- Extended Props Interface ---
 interface CertificateTableExtendedProps extends CertificateTableProps {
     searchQuery: string;
     setSearchQuery: React.Dispatch<React.SetStateAction<string>>;
@@ -70,7 +73,7 @@ const CertificateTable: React.FC<CertificateTableExtendedProps> = ({
     uniqueHospitals: _propUniqueHospitals 
 }) => {
     
-    // Default to 'internal' as requested, so buttons will start disabled
+    // ✅ 1. ADDED: State for Certificate Type Mode (External/Internal/Others)
     const [certTypeMode, setCertTypeMode] = useState('internal');
 
     // --- Notification State Management ---
@@ -93,7 +96,8 @@ const CertificateTable: React.FC<CertificateTableExtendedProps> = ({
         showNotification(message, isError ? 'error' : 'info');
     }, [showNotification]);
 
-    // --- 1. Data Hooks ---
+
+    // --- Data Hooks ---
     const {
         certificates,
         isLoading,
@@ -120,7 +124,7 @@ const CertificateTable: React.FC<CertificateTableExtendedProps> = ({
         setHospitalFilter
     ); 
 
-    // --- 2. Action Hooks ---
+    // --- Action Hooks ---
     const {
         editingId,
         editFormData,
@@ -131,9 +135,10 @@ const CertificateTable: React.FC<CertificateTableExtendedProps> = ({
         generatingPdfId,
         generatingPdfV1Id,
         isBulkGeneratingV1, 
-        isBulkGeneratingV2, 
-        showSuccessAnimation, 
-        successMessage, 
+        isBulkGeneratingV2,
+        isBulkGeneratingV3, // ✅ 2. ADDED: V3 State
+        showSuccessAnimation,
+        successMessage,
         setEditingId,
         setEditFormData,
         setNewCertificateData,
@@ -152,6 +157,7 @@ const CertificateTable: React.FC<CertificateTableExtendedProps> = ({
         handleGeneratePDF_V2,
         handleBulkGeneratePDF_V1, 
         handleBulkGeneratePDF_V2, 
+        handleBulkGeneratePDF_V3, // ✅ 3. ADDED: V3 Handler
     } = useCertificateActions({
         certificates,
         selectedIds,
@@ -163,7 +169,7 @@ const CertificateTable: React.FC<CertificateTableExtendedProps> = ({
         setIsLoading,
     });
     
-    // --- 3. Mail Hooks ---
+    // --- Mail Hooks ---
     const {
         isMailComposerOpen,
         mailComposerCert,
@@ -174,16 +180,7 @@ const CertificateTable: React.FC<CertificateTableExtendedProps> = ({
         handleCloseMailComposer,
     } = useMailCertificate(pdfOnAlert); 
 
-    const isAnyActionLoading = isMailComposerOpen || isSending || isBulkGeneratingV1 || isBulkGeneratingV2;
-
-    // --- Placeholder Bulk Mail Handlers ---
-    const handleBulkMail_V1 = () => {
-        showNotification("Bulk Mail (Proctorship) feature coming soon!", "info");
-    };
-
-    const handleBulkMail_V2 = () => {
-        showNotification("Bulk Mail (Training) feature coming soon!", "info");
-    };
+    const isAnyActionLoading = isMailComposerOpen || isSending || isBulkGeneratingV1 || isBulkGeneratingV2 || isBulkGeneratingV3;
 
     useEffect(() => {
         if (flashId) {
@@ -191,6 +188,11 @@ const CertificateTable: React.FC<CertificateTableExtendedProps> = ({
             return () => clearTimeout(timer);
         }
     }, [flashId, setFlashId]);
+
+    // ✅ 4. ADDED: Bulk Mail Handlers (Placeholders)
+    const handleBulkMail_V1 = () => showNotification("Bulk Mail (Proctorship) feature coming soon!", "info");
+    const handleBulkMail_V2 = () => showNotification("Bulk Mail (Training) feature coming soon!", "info");
+    const handleBulkMail_V3 = () => showNotification("Bulk Mail (100+) feature coming soon!", "info");
 
 
     // --- Render Logic ---
@@ -226,18 +228,26 @@ const CertificateTable: React.FC<CertificateTableExtendedProps> = ({
                     selectedIds={selectedIds}
                     uniqueHospitals={uniqueHospitals}
                     hospitalFilter={hospitalFilter}
-                    certTypeMode={certTypeMode}
-                    setCertTypeMode={setCertTypeMode}
                     setIsAddFormVisible={setIsAddFormVisible}
                     setHospitalFilter={setHospitalFilter}
                     handleBulkDelete={handleBulkDelete}
                     handleDownload={handleDownload}
+                    
+                    // ✅ 5. ADDED: Pass State & Handlers to QuickActionBar
+                    certTypeMode={certTypeMode}
+                    setCertTypeMode={setCertTypeMode}
+                    
                     isBulkGeneratingV1={isBulkGeneratingV1}
                     isBulkGeneratingV2={isBulkGeneratingV2}
+                    isBulkGeneratingV3={isBulkGeneratingV3}
+                    
                     handleBulkGeneratePDF_V1={handleBulkGeneratePDF_V1}
                     handleBulkGeneratePDF_V2={handleBulkGeneratePDF_V2}
+                    handleBulkGeneratePDF_V3={handleBulkGeneratePDF_V3}
+
                     handleBulkMail_V1={handleBulkMail_V1}
                     handleBulkMail_V2={handleBulkMail_V2}
+                    handleBulkMail_V3={handleBulkMail_V3}
                 />
             </motion.div>
 
@@ -368,7 +378,7 @@ const CertificateTable: React.FC<CertificateTableExtendedProps> = ({
                                                     {page}
                                                 </button>
                                             </React.Fragment>
-                                        ))}
+                                    ))}
                                 </div>
 
                                 <button

@@ -1,27 +1,18 @@
-import React, { useState, useRef, useEffect } from 'react';
+import React from 'react';
 import {
     Save,
     X,
     Edit3,
     Trash2,
-    Loader2,
     Check,
     FileText,
     Calendar,
     Building2,
     User,
-    Download,
-    Mail,
-    ChevronDown,
-    Shield,
-    Award,
-    Star,
-    Layout
 } from 'lucide-react';
-import { ICertificateClient, PAGE_LIMIT, CERTIFICATE_TEMPLATES, CERTIFICATE_TYPES } from '../utils/constants';
+import { ICertificateClient, PAGE_LIMIT } from '../utils/constants';
 import { getHospitalColor, doiToDateInput, dateInputToDoi } from '../utils/helpers';
 import clsx from 'clsx';
-import { motion, AnimatePresence } from 'framer-motion';
 
 interface TableRowProps {
     cert: ICertificateClient;
@@ -41,210 +32,11 @@ interface TableRowProps {
     handleDelete: (id: string) => Promise<void>;
     handleChange: (field: keyof ICertificateClient, value: string) => void;
     setEditingId: React.Dispatch<React.SetStateAction<string | null>>;
+    // These props are no longer used in the row, but kept in interface to avoid breaking parent
     handleGeneratePDF_V1: (cert: ICertificateClient) => void;
     handleGeneratePDF_V2: (cert: ICertificateClient) => void;
     handleMailCertificate: (cert: ICertificateClient, template: 'certificate1.pdf' | 'certificate2.pdf') => void;
 }
-
-// --- Internal Component: Smart Action Menu ---
-const SmartActionMenu = ({
-    cert,
-    isDisabled,
-    isLoading,
-    onGenerateV1,
-    onGenerateV2,
-    onMailV1,
-    onMailV2
-}: {
-    cert: ICertificateClient;
-    isDisabled: boolean;
-    isLoading: boolean;
-    onGenerateV1: () => void;
-    onGenerateV2: () => void;
-    onMailV1: () => void;
-    onMailV2: () => void;
-}) => {
-    const [isOpen, setIsOpen] = useState(false);
-    const [certType, setCertType] = useState<string>('');
-    const [template, setTemplate] = useState<string>('');
-    const menuRef = useRef<HTMLDivElement>(null);
-
-    useEffect(() => {
-        const handleClickOutside = (event: MouseEvent) => {
-            if (menuRef.current && !menuRef.current.contains(event.target as Node)) {
-                setIsOpen(false);
-            }
-        };
-        document.addEventListener('mousedown', handleClickOutside);
-        return () => document.removeEventListener('mousedown', handleClickOutside);
-    }, []);
-
-    useEffect(() => {
-        if (!isOpen) {
-            const t = setTimeout(() => {
-                setCertType('');
-                setTemplate('');
-            }, 300);
-            return () => clearTimeout(t);
-        }
-    }, [isOpen]);
-
-    const handleDownload = () => {
-        if (certType === 'external') {
-            if (template === 'proctorship') onGenerateV1();
-            if (template === 'training') onGenerateV2();
-        } else {
-            alert('Templates for Internal certificates will be added in a future update.');
-        }
-    };
-
-    const handleMail = () => {
-        if (certType === 'external') {
-            if (template === 'proctorship') onMailV1();
-            if (template === 'training') onMailV2();
-        } else {
-            alert('Mail feature for Internal certificates will be added in a future update.');
-        }
-    };
-
-    const getThemeColor = () => {
-        if (certType === 'internal') {
-            if (template === 'eom') return 'bg-purple-600 hover:bg-purple-700 text-white shadow-purple-200';
-            return 'bg-amber-600 hover:bg-amber-700 text-white shadow-amber-200';
-        }
-        if (template === 'training') return 'bg-teal-600 hover:bg-teal-700 text-white shadow-teal-200';
-        return 'bg-blue-600 hover:bg-blue-700 text-white shadow-blue-200';
-    };
-
-    return (
-        <div className="relative w-full md:w-auto" ref={menuRef}>
-            <button
-                onClick={(e) => { e.stopPropagation(); setIsOpen(!isOpen); }}
-                disabled={isDisabled}
-                className={clsx(
-                    "flex items-center justify-between md:justify-center gap-2 px-3 py-2 md:py-1.5 rounded-lg text-xs font-medium transition-all duration-200 border shadow-sm select-none w-full md:w-auto",
-                    isOpen
-                        ? "bg-slate-800 text-white border-slate-800"
-                        : "bg-white text-slate-700 border-slate-200 hover:border-blue-300 hover:text-blue-600",
-                    isDisabled ? "opacity-50 cursor-not-allowed" : "cursor-pointer active:scale-95"
-                )}
-            >
-                <div className="flex items-center gap-2">
-                    {isLoading ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Layout className="w-3.5 h-3.5" />}
-                    <span>Actions</span>
-                </div>
-                <ChevronDown className={clsx("w-3 h-3 transition-transform duration-200", isOpen && "rotate-180")} />
-            </button>
-
-            <AnimatePresence>
-                {isOpen && (
-                    <motion.div
-                        initial={{ opacity: 0, y: 10, scale: 0.95 }}
-                        animate={{ opacity: 1, y: 0, scale: 1 }}
-                        exit={{ opacity: 0, y: 10, scale: 0.95 }}
-                        transition={{ duration: 0.15 }}
-                        // Changed positioning for better mobile handling: 
-                        // On mobile (default), it aligns left. On md, it aligns right.
-                        // Added z-index to ensure it floats above other rows.
-                        className="absolute left-0 md:left-auto md:right-0 bottom-full md:bottom-auto md:top-full mb-2 md:mt-2 w-64 p-4 bg-white rounded-xl shadow-xl border border-slate-100 z-[100] origin-bottom-left md:origin-top-right ring-1 ring-slate-900/5"
-                        onClick={(e) => e.stopPropagation()}
-                    >
-                        <div className="space-y-4">
-                            <div className="space-y-1.5">
-                                <label className="text-[10px] font-bold text-slate-400 uppercase tracking-wider pl-1">
-                                    Certificate Type
-                                </label>
-                                <div className="relative group">
-                                    <select
-                                        value={certType}
-                                        onChange={(e) => {
-                                            setCertType(e.target.value);
-                                            setTemplate('');
-                                        }}
-                                        className="w-full text-sm bg-slate-50 border border-slate-200 text-slate-700 rounded-lg px-3 py-2.5 focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 outline-none appearance-none cursor-pointer hover:bg-slate-100 transition-all"
-                                    >
-                                        <option value="" disabled>Select Type...</option>
-                                        {CERTIFICATE_TYPES.map(t => (
-                                            <option key={t.value} value={t.value}>{t.label}</option>
-                                        ))}
-                                    </select>
-                                    <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-slate-400 pointer-events-none" />
-                                </div>
-                            </div>
-
-                            <AnimatePresence mode='wait'>
-                                {certType && (
-                                    <motion.div
-                                        initial={{ opacity: 0, height: 0 }}
-                                        animate={{ opacity: 1, height: 'auto' }}
-                                        exit={{ opacity: 0, height: 0 }}
-                                        className="space-y-1.5 overflow-hidden"
-                                    >
-                                        <label className="text-[10px] font-bold text-slate-400 uppercase tracking-wider pl-1">
-                                            Select Template
-                                        </label>
-                                        <div className="relative group">
-                                            <select
-                                                value={template}
-                                                onChange={(e) => setTemplate(e.target.value)}
-                                                className="w-full text-sm bg-slate-50 border border-slate-200 text-slate-700 rounded-lg px-3 py-2.5 focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 outline-none appearance-none cursor-pointer hover:bg-slate-100 transition-all"
-                                            >
-                                                <option value="" disabled>Select Template...</option>
-                                                {/* @ts-ignore */}
-                                                {CERTIFICATE_TEMPLATES[certType as keyof typeof CERTIFICATE_TEMPLATES]?.map((t: any) => (
-                                                    <option key={t.value} value={t.value}>{t.label}</option>
-                                                ))}
-                                            </select>
-
-                                            <div className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none">
-                                                {template === 'proctorship' && <Shield className="w-3.5 h-3.5 text-blue-500" />}
-                                                {template === 'training' && <Award className="w-3.5 h-3.5 text-teal-500" />}
-                                                {template === 'eom' && <Star className="w-3.5 h-3.5 text-purple-500" />}
-                                                {!template && <ChevronDown className="w-3.5 h-3.5" />}
-                                            </div>
-                                        </div>
-                                    </motion.div>
-                                )}
-                            </AnimatePresence>
-
-                            <AnimatePresence>
-                                {template && (
-                                    <motion.div
-                                        initial={{ opacity: 0, y: 5 }}
-                                        animate={{ opacity: 1, y: 0 }}
-                                        exit={{ opacity: 0, y: 5 }}
-                                        className="grid grid-cols-2 gap-2 pt-2 border-t border-slate-100"
-                                    >
-                                        <button
-                                            onClick={handleDownload}
-                                            className={clsx(
-                                                "flex items-center justify-center gap-1.5 px-3 py-2.5 rounded-lg text-xs font-semibold shadow-sm transition-all duration-200 cursor-pointer active:scale-95",
-                                                getThemeColor()
-                                            )}
-                                        >
-                                            <Download className="w-3.5 h-3.5" />
-                                            Download
-                                        </button>
-                                        <button
-                                            onClick={handleMail}
-                                            className={clsx(
-                                                "flex items-center justify-center gap-1.5 px-3 py-2.5 rounded-lg text-xs font-semibold shadow-sm transition-all duration-200 cursor-pointer active:scale-95",
-                                                getThemeColor()
-                                            )}
-                                        >
-                                            <Mail className="w-3.5 h-3.5" />
-                                            Mail
-                                        </button>
-                                    </motion.div>
-                                )}
-                            </AnimatePresence>
-                        </div>
-                    </motion.div>
-                )}
-            </AnimatePresence>
-        </div>
-    );
-};
 
 const TableRow: React.FC<TableRowProps> = ({
     cert,
@@ -264,9 +56,6 @@ const TableRow: React.FC<TableRowProps> = ({
     handleDelete,
     handleChange,
     setEditingId,
-    handleGeneratePDF_V1,
-    handleGeneratePDF_V2,
-    handleMailCertificate,
 }) => {
 
     const serialNumber = (currentPage - 1) * PAGE_LIMIT + index + 1;
@@ -422,9 +211,6 @@ const TableRow: React.FC<TableRowProps> = ({
 
             {/* ACTION BUTTONS */}
             <td className="block md:table-cell p-3 md:px-4 md:py-4 bg-slate-50 md:bg-transparent rounded-b-xl md:rounded-none border-t border-slate-200 md:border-0">
-                {/* MOBILE: CSS GRID for better button spacing 
-                    [   Smart Menu (Flexible)   ] [ Edit ] [ Delete ]
-                */}
                 <div className="w-full md:w-auto relative">
                     {isEditing ? (
                         <div className="flex items-center gap-2 animate-in fade-in zoom-in duration-200 w-full justify-end">
@@ -444,23 +230,10 @@ const TableRow: React.FC<TableRowProps> = ({
                             </button>
                         </div>
                     ) : (
-                        <div className="grid grid-cols-[1fr_auto_auto] md:flex items-center justify-end gap-2 md:gap-2">
-
-                            {/* Column 1: Smart Action Menu (Takes available width on mobile) */}
-                            <SmartActionMenu
-                                cert={cert}
-                                isDisabled={isDisabled}
-                                isLoading={isPdfGenerating}
-                                onGenerateV1={() => handleGeneratePDF_V1(cert)}
-                                onGenerateV2={() => handleGeneratePDF_V2(cert)}
-                                onMailV1={() => handleMailCertificate(cert, 'certificate1.pdf')}
-                                onMailV2={() => handleMailCertificate(cert, 'certificate2.pdf')}
-                            />
-
-                            {/* Divider only on Desktop */}
-                            <div className="hidden md:block w-px h-5 bg-slate-200 mx-1" />
-
-                            {/* Column 2: Edit Button */}
+                        <div className="flex items-center justify-end gap-2">
+                            {/* Removed SmartActionMenu and Divider */}
+                            
+                            {/* Edit Button */}
                             <button
                                 onClick={() => handleEdit(cert)}
                                 disabled={isDisabled}
@@ -475,7 +248,7 @@ const TableRow: React.FC<TableRowProps> = ({
                                 <Edit3 className="w-4 h-4" />
                             </button>
 
-                            {/* Column 3: Delete Button */}
+                            {/* Delete Button */}
                             <button
                                 onClick={() => handleDelete(cert._id)}
                                 disabled={isDisabled}

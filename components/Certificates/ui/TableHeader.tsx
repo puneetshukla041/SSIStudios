@@ -76,7 +76,8 @@ const TableHeader: React.FC<TableHeaderProps> = ({
                         </th>
                     );
                 })}
-                <th scope="col" className="px-4 py-3.5 text-right text-xs font-semibold uppercase tracking-wider text-gray-500 border-b border-gray-200/80 w-32">
+                {/* Reduced Width for cleaner look */}
+                <th scope="col" className="px-4 py-3.5 text-right text-xs font-semibold uppercase tracking-wider text-gray-500 border-b border-gray-200/80 w-24">
                     Actions
                 </th>
             </tr>

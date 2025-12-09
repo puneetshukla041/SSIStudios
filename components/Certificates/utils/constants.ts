@@ -21,9 +21,8 @@ export interface FetchResponse {
 
 export interface CertificateTableProps {
     refreshKey: number;
-    // 💡 FIX: Updated onRefresh to include uniqueHospitalsList
     onRefresh: (data: ICertificateClient[], totalCount: number, uniqueHospitalsList: string[]) => void;
-    onAlert: (message: string, isError: boolean) => void; // Kept for legacy compatibility (pdfGenerator)
+    onAlert: (message: string, isError: boolean) => void;
 }
 
 export type SortKey = keyof ICertificateClient;
@@ -33,7 +32,6 @@ export interface SortConfig {
     direction: 'asc' | 'desc';
 }
 
-// 💡 NEW: Notification Types
 export type NotificationType = "success" | "error" | "info";
 export interface NotificationState {
     message: string;
@@ -41,18 +39,15 @@ export interface NotificationState {
     active: boolean;
 }
 
-
 // --- Constants ---
 
-// Default limit for pagination
 export const PAGE_LIMIT = 10;
 
-// Initial State for New Certificate Form
 export const initialNewCertificateState: Omit<ICertificateClient, '_id'> = {
     certificateNo: '',
     name: '',
     hospital: '',
-    doi: '', // Will be set to today's date in helpers
+    doi: '',
 };
 
 // --- Dropdown Options for Certificate Actions ---
@@ -60,6 +55,7 @@ export const initialNewCertificateState: Omit<ICertificateClient, '_id'> = {
 export const CERTIFICATE_TYPES = [
     { label: 'External', value: 'external' },
     { label: 'Internal', value: 'internal' },
+    { label: 'Others (100+)', value: 'others_100' }, // ✅ Added New Option
 ];
 
 export const CERTIFICATE_TEMPLATES = {
@@ -71,4 +67,7 @@ export const CERTIFICATE_TEMPLATES = {
         { label: 'Employee of Month', value: 'eom', color: 'purple' },
         { label: 'Others', value: 'others', color: 'amber' },
     ],
+    others_100: [
+        { label: 'Standard 100+', value: 'standard_100', color: 'rose' } // ✅ Added Config
+    ]
 };
