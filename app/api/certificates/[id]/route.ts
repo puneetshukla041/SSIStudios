@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import dbConnect from '@/lib/dbconnect';
-import Certificate, { ICertificate, ICertificateDocument } from '@/models/Certificate';
+import Certificate, { ICertificate } from '@/models/Certificate';
 
 export const dynamic = 'force-dynamic';
 
@@ -11,12 +11,10 @@ const isValidDOI = (doi: string): boolean => {
     return regex.test(doi);
 };
 
-
 // PUT handler for updating a single certificate
-// Using 'any' for the context type is a necessary workaround to prevent Next.js type checker conflicts
 export async function PUT(
     req: NextRequest, 
-    context: any // Changed to 'any' to resolve Next.js type checking conflict
+    context: { params: Promise<{ id: string }> } // FIX: Correct Type
 ) {
     try {
         const connection = await dbConnect();
@@ -24,8 +22,8 @@ export async function PUT(
             return NextResponse.json({ success: false, message: 'Database connection failed.' }, { status: 500 });
         }
         
-        // Destructuring params is still correct at runtime
-        const { id } = context.params;
+        // --- FIX: Await params here ---
+        const { id } = await context.params;
         const body: Partial<ICertificate> = await req.json();
 
         const updateData: Partial<ICertificate> = {};
@@ -76,10 +74,9 @@ export async function PUT(
 }
 
 // DELETE handler for deleting a single certificate
-// Using 'any' for the context type is a necessary workaround to prevent Next.js type checker conflicts
 export async function DELETE(
     req: NextRequest, 
-    context: any // Changed to 'any' to resolve Next.js type checking conflict
+    context: { params: Promise<{ id: string }> } // FIX: Correct Type
 ) {
     try {
         const connection = await dbConnect();
@@ -87,11 +84,15 @@ export async function DELETE(
             return NextResponse.json({ success: false, message: 'Database connection failed.' }, { status: 500 });
         }
         
-        const { id } = context.params;
+        // --- FIX: Await params here ---
+        const { id } = await context.params;
+
+        console.log(`Attempting to delete Certificate ID: ${id}`); // Debug log
 
         const deletedCertificate = await Certificate.findByIdAndDelete(id).lean();
 
         if (!deletedCertificate) {
+            // If ID is valid but not found in DB, we still return 404
             return NextResponse.json({ success: false, message: 'Certificate not found.' }, { status: 404 });
         }
 
