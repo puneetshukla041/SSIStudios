@@ -23,11 +23,9 @@ import TableHeader from './ui/TableHeader';
 import TableRow from './ui/TableRow';
 import MailComposer from './ui/MailComposer';
 import FloatingNotification from './ui/FloatingNotification';
-import SuccessAnimation from './ui/SuccessAnimation'; // Import Success Animation
+import SuccessAnimation from './ui/SuccessAnimation';
 
 // --- Components ---
-
-// 1. Modern Skeleton Loader with Shimmer Effect
 const SkeletonLoader = () => (
     <div className="w-full space-y-6">
         <div className="h-16 bg-slate-100/50 rounded-2xl border border-slate-200/60 animate-pulse" />
@@ -50,7 +48,6 @@ const SkeletonLoader = () => (
     </div>
 );
 
-// --- Extended Props Interface ---
 interface CertificateTableExtendedProps extends CertificateTableProps {
     searchQuery: string;
     setSearchQuery: React.Dispatch<React.SetStateAction<string>>;
@@ -73,6 +70,9 @@ const CertificateTable: React.FC<CertificateTableExtendedProps> = ({
     uniqueHospitals: _propUniqueHospitals 
 }) => {
     
+    // Default to 'internal' as requested, so buttons will start disabled
+    const [certTypeMode, setCertTypeMode] = useState('internal');
+
     // --- Notification State Management ---
     const [notification, setNotification] = useState<NotificationState | null>(null);
 
@@ -86,14 +86,12 @@ const CertificateTable: React.FC<CertificateTableExtendedProps> = ({
         }, 3500);
     }, []);
 
-    // Notification Proxy for hooks
     const pdfOnAlert = useCallback((message: string, isError: boolean) => {
         if (!isError && (message.includes('synchronized') || message.includes('loaded'))) {
             return;
         }
         showNotification(message, isError ? 'error' : 'info');
     }, [showNotification]);
-
 
     // --- 1. Data Hooks ---
     const {
@@ -134,8 +132,8 @@ const CertificateTable: React.FC<CertificateTableExtendedProps> = ({
         generatingPdfV1Id,
         isBulkGeneratingV1, 
         isBulkGeneratingV2, 
-        showSuccessAnimation, // Destructure Success State
-        successMessage,       // Destructure Success Message
+        showSuccessAnimation, 
+        successMessage, 
         setEditingId,
         setEditFormData,
         setNewCertificateData,
@@ -178,6 +176,15 @@ const CertificateTable: React.FC<CertificateTableExtendedProps> = ({
 
     const isAnyActionLoading = isMailComposerOpen || isSending || isBulkGeneratingV1 || isBulkGeneratingV2;
 
+    // --- Placeholder Bulk Mail Handlers ---
+    const handleBulkMail_V1 = () => {
+        showNotification("Bulk Mail (Proctorship) feature coming soon!", "info");
+    };
+
+    const handleBulkMail_V2 = () => {
+        showNotification("Bulk Mail (Training) feature coming soon!", "info");
+    };
+
     useEffect(() => {
         if (flashId) {
             const timer = setTimeout(() => setFlashId(null), 1000); 
@@ -219,6 +226,8 @@ const CertificateTable: React.FC<CertificateTableExtendedProps> = ({
                     selectedIds={selectedIds}
                     uniqueHospitals={uniqueHospitals}
                     hospitalFilter={hospitalFilter}
+                    certTypeMode={certTypeMode}
+                    setCertTypeMode={setCertTypeMode}
                     setIsAddFormVisible={setIsAddFormVisible}
                     setHospitalFilter={setHospitalFilter}
                     handleBulkDelete={handleBulkDelete}
@@ -227,6 +236,8 @@ const CertificateTable: React.FC<CertificateTableExtendedProps> = ({
                     isBulkGeneratingV2={isBulkGeneratingV2}
                     handleBulkGeneratePDF_V1={handleBulkGeneratePDF_V1}
                     handleBulkGeneratePDF_V2={handleBulkGeneratePDF_V2}
+                    handleBulkMail_V1={handleBulkMail_V1}
+                    handleBulkMail_V2={handleBulkMail_V2}
                 />
             </motion.div>
 
