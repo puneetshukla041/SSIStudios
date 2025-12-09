@@ -45,14 +45,14 @@ interface UseCertificateActionsResult {
     generatingPdfV1Id: string | null;
     isBulkGeneratingV1: boolean;
     isBulkGeneratingV2: boolean;
-    showSuccessAnimation: boolean; // New State
-    successMessage: string; // New State
+    showSuccessAnimation: boolean; 
+    successMessage: string; 
     setEditingId: React.Dispatch<React.SetStateAction<string | null>>;
     setEditFormData: React.Dispatch<React.SetStateAction<Partial<ICertificateClient>>>;
     setIsAddFormVisible: React.Dispatch<React.SetStateAction<boolean>>;
     setNewCertificateData: React.Dispatch<React.SetStateAction<Omit<ICertificateClient, '_id'>>>;
     setFlashId: React.Dispatch<React.SetStateAction<string | null>>;
-    setShowSuccessAnimation: React.Dispatch<React.SetStateAction<boolean>>; // New Setter
+    setShowSuccessAnimation: React.Dispatch<React.SetStateAction<boolean>>; 
     handleSelectOne: (id: string, checked: boolean) => void;
     handleSelectAll: (checked: boolean) => void;
     handleBulkDelete: () => Promise<void>;
@@ -196,18 +196,20 @@ export const useCertificateActions = ({
         setTimeout(async () => {
             try {
                 const response = await fetch(`/api/certificates/${id}`, { method: 'DELETE' });
-                const result = await response.json();
-
-                if (!response.ok || !result.success) {
+                
+                // Allow 404 (Already Deleted) to pass as success
+                if (response.ok || response.status === 404) {
+                     showNotification('Certificate deleted successfully!', 'success');
+                     fetchCertificates();
+                } else {
+                    const result = await response.json();
                     throw new Error(result.message || 'Failed to delete certificate.');
                 }
 
-                showNotification('Certificate deleted successfully!', 'success');
             } catch (error: any) {
                 showNotification(error.message || 'Network error during delete.', 'error');
             } finally {
                 setDeletingId(null);
-                fetchCertificates();
             }
         }, 300);
     };
