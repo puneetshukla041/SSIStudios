@@ -42,7 +42,7 @@ const QuickActionBar: React.FC<QuickActionBarProps> = ({
     const dropdownRef = useRef<HTMLDivElement>(null);
 
     // Is Internal Mode?
-    const isInternal = certTypeMode === 'internal';
+    const isInternal = certTypeMode === 'external';
     const isOthers100 = certTypeMode === 'others_100';
 
     useEffect(() => {
