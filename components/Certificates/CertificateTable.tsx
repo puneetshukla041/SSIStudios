@@ -23,6 +23,7 @@ import TableHeader from './ui/TableHeader';
 import TableRow from './ui/TableRow';
 import MailComposer from './ui/MailComposer';
 import FloatingNotification from './ui/FloatingNotification';
+import SuccessAnimation from './ui/SuccessAnimation'; // Import Success Animation
 
 // --- Components ---
 
@@ -133,7 +134,10 @@ const CertificateTable: React.FC<CertificateTableExtendedProps> = ({
         generatingPdfV1Id,
         isBulkGeneratingV1, 
         isBulkGeneratingV2, 
+        showSuccessAnimation, // Destructure Success State
+        successMessage,       // Destructure Success Message
         setEditingId,
+        setEditFormData,
         setNewCertificateData,
         setFlashId,
         handleSelectOne,
@@ -191,11 +195,17 @@ const CertificateTable: React.FC<CertificateTableExtendedProps> = ({
     return (
         <div className="relative flex flex-col gap-6 font-sans">
             
+            {/* Global Overlays */}
             <FloatingNotification 
                 message={notification?.message || ''}
                 type={notification?.type || 'info'}
                 isVisible={!!notification?.active}
                 onClose={() => setNotification(prev => prev ? { ...prev, active: false } : null)}
+            />
+
+            <SuccessAnimation 
+                isVisible={showSuccessAnimation} 
+                message={successMessage} 
             />
             
             {/* Action Bar */}
@@ -220,26 +230,18 @@ const CertificateTable: React.FC<CertificateTableExtendedProps> = ({
                 />
             </motion.div>
 
-            {/* Form Section */}
+            {/* Modal Form Section */}
             <AnimatePresence>
                 {isAddFormVisible && (
-                    <motion.div
-                        initial={{ height: 0, opacity: 0, marginBottom: 0 }}
-                        animate={{ height: 'auto', opacity: 1, marginBottom: 24 }}
-                        exit={{ height: 0, opacity: 0, marginBottom: 0 }}
-                        transition={{ duration: 0.4, ease: [0.04, 0.62, 0.23, 0.98] }}
-                        className="overflow-hidden"
-                    >
-                        <AddCertificateForm
-                            newCertificateData={newCertificateData}
-                            isAdding={isAdding}
-                            uniqueHospitals={uniqueHospitals}
-                            handleNewCertChange={handleNewCertChange}
-                            handleAddCertificate={handleAddCertificate}
-                            setIsAddFormVisible={setIsAddFormVisible}
-                            setNewCertificateData={setNewCertificateData}
-                        />
-                    </motion.div>
+                    <AddCertificateForm
+                        newCertificateData={newCertificateData}
+                        isAdding={isAdding}
+                        uniqueHospitals={uniqueHospitals}
+                        handleNewCertChange={handleNewCertChange}
+                        handleAddCertificate={handleAddCertificate}
+                        setIsAddFormVisible={setIsAddFormVisible}
+                        setNewCertificateData={setNewCertificateData}
+                    />
                 )}
             </AnimatePresence>
 
@@ -387,6 +389,5 @@ const CertificateTable: React.FC<CertificateTableExtendedProps> = ({
         </div>
     );
 };
-
 
 export default CertificateTable;

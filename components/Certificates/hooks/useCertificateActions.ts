@@ -45,11 +45,14 @@ interface UseCertificateActionsResult {
     generatingPdfV1Id: string | null;
     isBulkGeneratingV1: boolean;
     isBulkGeneratingV2: boolean;
+    showSuccessAnimation: boolean; // New State
+    successMessage: string; // New State
     setEditingId: React.Dispatch<React.SetStateAction<string | null>>;
     setEditFormData: React.Dispatch<React.SetStateAction<Partial<ICertificateClient>>>;
     setIsAddFormVisible: React.Dispatch<React.SetStateAction<boolean>>;
     setNewCertificateData: React.Dispatch<React.SetStateAction<Omit<ICertificateClient, '_id'>>>;
     setFlashId: React.Dispatch<React.SetStateAction<string | null>>;
+    setShowSuccessAnimation: React.Dispatch<React.SetStateAction<boolean>>; // New Setter
     handleSelectOne: (id: string, checked: boolean) => void;
     handleSelectAll: (checked: boolean) => void;
     handleBulkDelete: () => Promise<void>;
@@ -68,13 +71,9 @@ interface UseCertificateActionsResult {
 
 // --- HELPER: Format Filename (Title Case + Keep Spaces) ---
 const formatForFilename = (text: string | undefined | null) => {
-    if (!text) return 'Unknown'; // 💡 Handle missing text safely
-    
-    // 1. Remove illegal characters
+    if (!text) return 'Unknown';
     const cleanText = text.replace(/[\\/:*?"<>|]/g, '').trim();
     if (!cleanText) return 'Unknown';
-
-    // 2. Convert to Title Case
     return cleanText.replace(/\w\S*/g, (txt) => {
         return txt.charAt(0).toUpperCase() + txt.substr(1).toLowerCase();
     });
@@ -116,11 +115,21 @@ export const useCertificateActions = ({
     const [deletingId, setDeletingId] = useState<string | null>(null);
     const [generatingPdfId, setGeneratingPdfId] = useState<string | null>(null);
     const [generatingPdfV1Id, setGeneratingPdfV1Id] = useState<string | null>(null);
+    
+    // Success Animation States
+    const [showSuccessAnimation, setShowSuccessAnimation] = useState(false);
+    const [successMessage, setSuccessMessage] = useState('');
 
     // For Bulk PDF Generation
     const [isBulkGeneratingV1, setIsBulkGeneratingV1] = useState(false);
     const [isBulkGeneratingV2, setIsBulkGeneratingV2] = useState(false);
 
+    // Helper to trigger success animation
+    const triggerSuccess = (msg: string) => {
+        setSuccessMessage(msg);
+        setShowSuccessAnimation(true);
+        setTimeout(() => setShowSuccessAnimation(false), 2000); // Hide after 2s
+    };
 
     // --- Selection Handlers ---
     const handleSelectOne = (id: string, checked: boolean) => {
@@ -149,7 +158,7 @@ export const useCertificateActions = ({
         if (!window.confirm(`Are you sure you want to delete ${selectedIds.length} certificate(s)?`)) return;
 
         const idsToDelete = [...selectedIds];
-        setDeletingId(idsToDelete[0]);
+        setDeletingId(idsToDelete[0]); // Visually start deleting
 
         setTimeout(async () => {
             setIsLoading(true);
@@ -166,7 +175,7 @@ export const useCertificateActions = ({
                     throw new Error(result.message || 'Failed to perform bulk delete.');
                 }
 
-                showNotification(`${idsToDelete.length} certificate(s) deleted successfully!`, 'success');
+                triggerSuccess(`${idsToDelete.length} Deleted`);
                 setSelectedIds([]);
 
             } catch (error: any) {
@@ -228,7 +237,8 @@ export const useCertificateActions = ({
                 throw new Error(result.message || 'Failed to update certificate.');
             }
 
-            showNotification('Certificate updated successfully!', 'success');
+            // Success Action
+            triggerSuccess('Update Successful');
             setEditingId(null);
             setEditFormData({});
             setFlashId(id);
@@ -249,7 +259,7 @@ export const useCertificateActions = ({
         if (isAdding) return;
 
         if (!newCertificateData.certificateNo || !newCertificateData.name || !newCertificateData.hospital || !newCertificateData.doi) {
-            showNotification('All fields are required for the new certificate.', 'error');
+            showNotification('All fields are required.', 'error');
             return;
         }
 
@@ -269,10 +279,11 @@ export const useCertificateActions = ({
                 throw new Error(result.message || 'Failed to create certificate.');
             }
 
-            showNotification(`Certificate ${newCertificateData.certificateNo} added successfully!`, 'success');
+            // Success Actions
+            triggerSuccess('Certificate Added');
             setFlashId(result.data._id || newIdPlaceholder);
             setNewCertificateData(initialNewCertificate);
-            setIsAddFormVisible(false);
+            setIsAddFormVisible(false); // Close Modal
             fetchCertificates(true);
 
         } catch (error: any) {
@@ -347,7 +358,6 @@ export const useCertificateActions = ({
                 const certData = selectedCertificates[i]; 
 
                 if (result && result.blob) {
-                    // 💡 Updated to handle missing data gracefully
                     const safeName = formatForFilename(certData.name || 'Unknown');
                     const safeHospital = formatForFilename(certData.hospital || 'Hospital');
                     const filename = `${safeName}_${safeHospital}.pdf`;
@@ -360,7 +370,7 @@ export const useCertificateActions = ({
             }
 
             if (successCount > 0) {
-                showNotification(`Downloaded ${successCount} certificates individually.`, 'success');
+                triggerSuccess(`${successCount} Downloaded`);
                 setSelectedIds([]);
             } else {
                 showNotification('PDF generation failed.', 'error');
@@ -404,7 +414,6 @@ export const useCertificateActions = ({
                 const certData = selectedCertificates[i];
 
                 if (result && result.blob) {
-                    // 💡 Updated to handle missing data gracefully
                     const safeName = formatForFilename(certData.name || 'Unknown');
                     const safeHospital = formatForFilename(certData.hospital || 'Hospital');
                     const filename = `${safeName}_${safeHospital}.pdf`;
@@ -416,7 +425,7 @@ export const useCertificateActions = ({
             }
 
             if (successCount > 0) {
-                showNotification(`Downloaded ${successCount} certificates individually.`, 'success');
+                triggerSuccess(`${successCount} Downloaded`);
                 setSelectedIds([]);
             } else {
                 showNotification('PDF generation failed.', 'error');
@@ -469,7 +478,7 @@ export const useCertificateActions = ({
         const fileName = `certificates_export.${type}`;
         XLSX.writeFile(workbook, fileName);
 
-        showNotification(`Successfully exported ${allCertificates.length} records to ${fileName}.`, 'success');
+        triggerSuccess('Export Complete');
     };
 
 
@@ -485,11 +494,14 @@ export const useCertificateActions = ({
         generatingPdfV1Id,
         isBulkGeneratingV1,
         isBulkGeneratingV2,
+        showSuccessAnimation,
+        successMessage,
         setEditingId,
         setEditFormData,
         setIsAddFormVisible,
         setNewCertificateData,
         setFlashId,
+        setShowSuccessAnimation,
         handleSelectOne,
         handleSelectAll,
         handleBulkDelete,
