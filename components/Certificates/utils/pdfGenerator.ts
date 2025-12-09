@@ -46,9 +46,6 @@ export const generateCertificatePDF = async (
   
   const isV2Template = template === 'certificate2.pdf';
 
-  // ❌ REMOVED THE BLOCKING VALIDATION CHECK
-  // We now allow generation to proceed even if specific fields were missing in DB
-
   // Start loading state (only for single)
   if (!isBulk) {
     (setLoadingId as React.Dispatch<React.SetStateAction<string | null>>)(certData._id);
@@ -73,11 +70,14 @@ export const generateCertificatePDF = async (
 
     // 4. Setup PDF
     const pdfDoc = await PDFDocument.load(existingPdfBytes);
-    // @ts-ignore
+    
+    // Register fontkit (Required for subsetting)
     pdfDoc.registerFontkit(fontkit);
 
-    const soraFont = await pdfDoc.embedFont(soraBytes);
-    const soraSemiBoldFont = await pdfDoc.embedFont(soraSemiBoldBytes);
+    // 🔥 OPTIMIZATION: subset: true 
+    // This dramatically reduces file size by only including used characters
+    const soraFont = await pdfDoc.embedFont(soraBytes, { subset: true });
+    const soraSemiBoldFont = await pdfDoc.embedFont(soraSemiBoldBytes, { subset: true });
 
     const pages = pdfDoc.getPages();
     const firstPage = pages[0];
