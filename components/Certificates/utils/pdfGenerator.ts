@@ -33,7 +33,7 @@ export const generateCertificatePDF = async (
   }
 
   try {
-    // 1. Fetch Resources (REVERTED back to fetching Poppins-Medium)
+    // 1. Fetch Resources
     const [existingPdfBytes, soraBytes, soraSemiBoldBytes, poppinsMediumBytes] = await Promise.all([
       fetch(`/certificates/${template}`).then((res) => {
         if (!res.ok) throw new Error(`Failed to fetch certificate template: ${template}.`);
@@ -47,7 +47,6 @@ export const generateCertificatePDF = async (
         if (!res.ok) throw new Error('Failed to fetch Sora-SemiBold font.');
         return res.arrayBuffer();
       }),
-      // REVERTED: Fetch Poppins Medium again
       fetch("/fonts/Poppins-Medium.ttf").then((res) => {
         if (!res.ok) throw new Error('Failed to fetch Poppins-Medium font.');
         return res.arrayBuffer();
@@ -60,8 +59,6 @@ export const generateCertificatePDF = async (
 
     const soraFont = await pdfDoc.embedFont(soraBytes, { subset: true });
     const soraSemiBoldFont = await pdfDoc.embedFont(soraSemiBoldBytes, { subset: true });
-    
-    // REVERTED: Embed Poppins Medium
     const poppinsMediumFont = await pdfDoc.embedFont(poppinsMediumBytes, { subset: true });
 
     const pages = pdfDoc.getPages();
@@ -69,27 +66,25 @@ export const generateCertificatePDF = async (
     const pageWidth = firstPage.getWidth();
     const pageHeight = firstPage.getHeight();
 
-    // --- TEMPLATE 3 LOGIC (100+ Others) ---
+    // --- TEMPLATE 3 LOGIC (Fortis / 100+) ---
     if (template === 'certificate3.pdf') {
         const fontSizeLarge = 24;
-        // CHANGED: Use a soft charcoal gray instead of pure black for a "cuter"/softer look
         const colorSoftCharcoal = rgb(0.25, 0.25, 0.25); 
 
-        // Position: Slightly above center (+45 offset) - kept from previous version
+        // Position: Slightly above center (+30 offset)
         const yCenter = (pageHeight / 2) + 30; 
         const xLeftMargin = 80; 
 
-        // Draw Name Only using Poppins Medium with softer color
         firstPage.drawText(fullName, { 
             x: xLeftMargin, 
             y: yCenter, 
             size: fontSizeLarge, 
-            font: poppinsMediumFont, // ✅ Reverted font
-            color: colorSoftCharcoal, // ✅ Softer color
+            font: poppinsMediumFont, 
+            color: colorSoftCharcoal,
         });
 
     } 
-    // --- TEMPLATE 1 & 2 LOGIC (Standard - Unchanged) ---
+    // --- TEMPLATE 1 & 2 LOGIC (Standard) ---
     else {
         const rawHospital = certData.hospital || "Unknown Hospital";
         const doiDDMMYYYY = certData.doi || "01-01-2025"; 
@@ -104,7 +99,7 @@ export const generateCertificatePDF = async (
         const fontSizeMedium = 8;
         const fontSizeLarge = 18;
         const colorGray = rgb(0.5, 0.5, 0.5);
-        const colorBlack = rgb(0, 0, 0); // Keep standard certificates black
+        const colorBlack = rgb(0, 0, 0); 
         const isV2Template = template === 'certificate2.pdf';
 
         // Full Name
@@ -140,7 +135,13 @@ export const generateCertificatePDF = async (
     
     const safeName = fullName.trim() || "Unknown";
     const safeHospital = certData.hospital ? toTitleCase(certData.hospital) : "Hospital"; 
-    const fileName = `${safeName}_${safeHospital}.pdf`;
+    
+    // ✅ MODIFIED: Filename logic
+    // If it's the Fortis template (certificate3), use ONLY the name.
+    // Otherwise, use Name_Hospital.pdf
+    const fileName = template === 'certificate3.pdf' 
+        ? `${safeName}.pdf` 
+        : `${safeName}_${safeHospital}.pdf`;
 
     if (isBulk) {
       return { filename: fileName, blob };
