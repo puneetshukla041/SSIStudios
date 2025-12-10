@@ -51,6 +51,7 @@ const TableRow: React.FC<TableRowProps> = ({
     isAnyActionLoading,
     editFormData,
     handleSelectOne,
+    
     handleEdit,
     handleSave,
     handleDelete,
@@ -79,7 +80,7 @@ const TableRow: React.FC<TableRowProps> = ({
                 isDeleting && "opacity-0 -translate-x-4 pointer-events-none transition-all duration-300",
                 isEditing && "bg-amber-50/50"
             )}
-            style={isFlashing ? { backgroundColor: 'rgba(240, 253, 244, 1)', transition: 'background-color 0.5s ease' } : {}}
+            style={isFlashing ? { backgroundColor: 'rgba(240, 253, 244, 1)', transition: 'background-color 0.5s ease' } : {}}                                                          
         >
             {/* CHECKBOX */}
             <td className="flex md:table-cell items-center justify-between p-3 md:px-4 md:py-4 border-b border-slate-100 md:border-0">
@@ -137,7 +138,6 @@ const TableRow: React.FC<TableRowProps> = ({
                     )}
                 </div>
             </td>
-
             {/* Name */}
             <td className="flex md:table-cell items-center justify-between p-3 md:px-4 md:py-4 border-b border-slate-100 md:border-0">
                 <MobileLabel>Name</MobileLabel>
@@ -150,6 +150,7 @@ const TableRow: React.FC<TableRowProps> = ({
                             className="w-full md:w-auto px-3 py-1.5 text-sm bg-white border border-amber-300 rounded-md focus:outline-none focus:ring-2 focus:ring-amber-500/30 shadow-sm cursor-text text-right md:text-left"
                             placeholder="Name"
                         />
+
                     ) : (
                         <div className="flex items-center justify-end md:justify-start gap-2.5">
                             <div className="w-8 h-8 rounded-full bg-slate-100 hidden md:flex items-center justify-center text-slate-400 shrink-0">
