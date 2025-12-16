@@ -9,31 +9,40 @@ import { AnimatePresence, motion } from 'framer-motion';
 import HelpCard from '@/components/Certificates/ui/HelpCard'; 
 import UploadButton from '@/components/UploadButton';
 import CertificateTable from '@/components/Certificates/CertificateTable';
-import { ICertificateClient } from '@/components/Certificates/utils/constants';
 import HospitalPieChart from '@/components/Certificates/analysis/HospitalPieChart';
+import AddCertificateForm from '@/components/Certificates/ui/AddCertificateForm';
+
+// Import Constants
+import { 
+  ICertificateClient, 
+  initialNewCertificateState 
+} from '@/components/Certificates/utils/constants';
 
 const CertificateDatabasePage: React.FC = () => {
+  // --- Global State ---
   const [refreshKey, setRefreshKey] = useState(0);
   const [certificateData, setCertificateData] = useState<ICertificateClient[]>([]);
-  const [totalRecords, setTotalRecords] = useState(0); // From Table (for pagination)
+  const [totalRecords, setTotalRecords] = useState(0); 
   const [isRefreshing, setIsRefreshing] = useState(false);
-  
-  // State for unique hospitals
   const [uniqueHospitals, setUniqueHospitals] = useState<string[]>([]);
 
-  // State for Database-wide Stats
-  const [dbTotalRecords, setDbTotalRecords] = useState(0); // Total in DB
+  // --- Stats State ---
+  const [dbTotalRecords, setDbTotalRecords] = useState(0); 
   const [doctorsCount, setDoctorsCount] = useState(0);
   const [staffCount, setStaffCount] = useState(0);
 
-  // --- State for Search and Filter ---
+  // --- Search & UI State ---
   const [inputQuery, setInputQuery] = useState('');
   const [searchQuery, setSearchQuery] = useState('');
   const [hospitalFilter, setHospitalFilter] = useState('');
-  const [isAddFormVisible, setIsAddFormVisible] = useState(false);
   const [isHelpCardVisible, setIsHelpCardVisible] = useState(false); 
 
-  // --- State for Animated Counts ---
+  // --- ADD FORM STATE ---
+  const [isAddFormVisible, setIsAddFormVisible] = useState(false);
+  const [isAdding, setIsAdding] = useState(false);
+  const [newCertificateData, setNewCertificateData] = useState<Omit<ICertificateClient, '_id'>>(initialNewCertificateState);
+
+  // --- Animated Counts State ---
   const [animatedTotalRecords, setAnimatedTotalRecords] = useState(0);
   const [animatedHospitalCount, setAnimatedHospitalCount] = useState(0);
   const [animatedDoctors, setAnimatedDoctors] = useState(0);
@@ -47,14 +56,11 @@ const CertificateDatabasePage: React.FC = () => {
     return () => clearTimeout(delayDebounceFn);
   }, [inputQuery]);
 
-
-  // --- NEW LOGIC: Fetch Whole Database Stats ---
-  // We fetch this separately so it counts everything in MongoDB, 
-  // not just what is currently shown in the table.
+  // --- Fetch Global Stats ---
   useEffect(() => {
     const fetchGlobalStats = async () => {
       try {
-        const res = await fetch('/api/analytics/stats'); // Calls the API created in Step 1
+        const res = await fetch('/api/analytics/stats');
         if (res.ok) {
           const data = await res.json();
           setDoctorsCount(data.doctorsCount || 0);
@@ -65,22 +71,18 @@ const CertificateDatabasePage: React.FC = () => {
         console.error("Failed to fetch global stats:", error);
       }
     };
-
     fetchGlobalStats();
-  }, [refreshKey]); // Refetch when user clicks "Sync"
+  }, [refreshKey]);
 
-
-  // --- Helper: Number Animation Hook ---
+  // --- Helper: Number Animation ---
   const useCounterAnimation = (targetValue: number, setter: React.Dispatch<React.SetStateAction<number>>, duration = 2000) => {
     useEffect(() => {
       let start = 0; 
       const end = targetValue;
       if (start === end) return;
-
       const steps = 50;
       const stepTime = duration / steps;
       const increment = (end - start) / steps; 
-
       let currentStep = 0;
       const timer = setInterval(() => {
         currentStep++;
@@ -96,21 +98,16 @@ const CertificateDatabasePage: React.FC = () => {
     }, [targetValue, duration, setter]);
   };
 
-  // Apply animations (Use dbTotalRecords instead of totalRecords for the card)
   useCounterAnimation(dbTotalRecords, setAnimatedTotalRecords);
   useCounterAnimation(uniqueHospitals.length, setAnimatedHospitalCount);
   useCounterAnimation(doctorsCount, setAnimatedDoctors, 1500);
   useCounterAnimation(staffCount, setAnimatedStaff, 1500);
 
-
-  // --- Alerts ---
+  // --- Alerts & Refresh Logic ---
   const handleAlert = useCallback(
     (message: string, isError: boolean) => {
-       if (isError) {
-         console.error("Alert (ERROR):", message);
-       } else {
-         console.log("Alert (INFO):", message);
-       }
+       if (isError) console.error("Alert (ERROR):", message);
+       else console.log("Alert (INFO):", message);
     },
     []
   );
@@ -142,18 +139,78 @@ const CertificateDatabasePage: React.FC = () => {
   const handleTableDataUpdate = useCallback(
     (data: ICertificateClient[], totalCount: number, uniqueHospitalsList: string[]) => {
        setCertificateData(data);
-       setTotalRecords(totalCount); // This handles table pagination
+       setTotalRecords(totalCount);
        setUniqueHospitals(uniqueHospitalsList); 
        setIsRefreshing(false);
     },
     []
   );
 
+  const handleNewCertChange = (field: keyof Omit<ICertificateClient, '_id'>, value: string) => {
+    setNewCertificateData(prev => ({
+        ...prev,
+        [field]: value
+    }));
+  };
+
+  // --- ✅ UPDATED: Submit Data to API ---
+  const handleAddCertificate = async (): Promise<boolean> => {
+    try {
+        if (!newCertificateData.certificateNo || !newCertificateData.name || !newCertificateData.hospital || !newCertificateData.doi) {
+            alert("Please fill in all fields.");
+            return false;
+        }
+
+        setIsAdding(true);
+
+        const response = await fetch('/api/certificates', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify(newCertificateData),
+        });
+
+        const result = await response.json();
+
+        if (!response.ok) {
+            throw new Error(result.message || "Failed to add certificate");
+        }
+
+        handleAlert("Certificate saved successfully!", false);
+        setRefreshKey(prev => prev + 1); 
+        
+        // ✅ Return true to signal success, but DO NOT close the form yet.
+        // The Form component will handle showing the success card.
+        return true; 
+
+    } catch (error: any) {
+        console.error("Error saving:", error);
+        handleAlert(error.message, true);
+        alert(error.message); 
+        return false;
+    } finally {
+        setIsAdding(false);
+    }
+  };
+
   return (
     <div className="min-h-screen bg-[#F8FAFC] text-slate-800 font-sans selection:bg-indigo-500/10 selection:text-indigo-700">
       
       <AnimatePresence>
         {isHelpCardVisible && <HelpCard onClose={() => setIsHelpCardVisible(false)} />}
+        
+        {isAddFormVisible && (
+            <AddCertificateForm 
+                newCertificateData={newCertificateData}
+                isAdding={isAdding}
+                uniqueHospitals={uniqueHospitals}
+                handleNewCertChange={handleNewCertChange}
+                handleAddCertificate={handleAddCertificate}
+                setIsAddFormVisible={setIsAddFormVisible}
+                setNewCertificateData={setNewCertificateData}
+            />
+        )}
       </AnimatePresence>
 
       <main className="mx-auto w-full max-w-[1600px] px-6 py-10 space-y-8">
@@ -190,7 +247,6 @@ const CertificateDatabasePage: React.FC = () => {
 
         {/* --- DASHBOARD STATS GRID --- */}
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
-          
           {/* 1. TOTAL CERTIFICATES */}
           <motion.div 
             initial={{ opacity: 0, y: 5 }}
@@ -209,7 +265,6 @@ const CertificateDatabasePage: React.FC = () => {
               </div>
               <div className="flex items-baseline gap-1">
                 <span className="text-3xl font-bold text-slate-900 tracking-tight">
-                  {/* Using Animated DB Total */}
                   {animatedTotalRecords.toLocaleString()}
                 </span>
                 <span className="text-sm font-medium text-slate-400">entries</span>
@@ -273,7 +328,6 @@ const CertificateDatabasePage: React.FC = () => {
               </div>
               <div className="flex items-baseline gap-1">
                 <span className="text-3xl font-bold text-slate-900 tracking-tight">
-                  {/* Using Animated DB Doctors */}
                   {animatedDoctors.toLocaleString()}
                 </span>
                 <span className="text-sm font-medium text-slate-400">identified</span>
@@ -303,7 +357,6 @@ const CertificateDatabasePage: React.FC = () => {
               </div>
               <div className="flex items-baseline gap-1">
                 <span className="text-3xl font-bold text-slate-900 tracking-tight">
-                  {/* Using Animated DB Staff */}
                   {animatedStaff.toLocaleString()}
                 </span>
                 <span className="text-sm font-medium text-slate-400">others</span>
@@ -313,7 +366,6 @@ const CertificateDatabasePage: React.FC = () => {
                 <FiUsers className="w-6 h-6 text-amber-500" />
             </div>
           </motion.div>
-
         </div>
 
         {/* --- ACTION TOOLBAR --- */}

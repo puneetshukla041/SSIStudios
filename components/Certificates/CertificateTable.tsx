@@ -17,7 +17,6 @@ import { useMailCertificate } from './hooks/useMailCertificate';
 import { CertificateTableProps, PAGE_LIMIT, NotificationState, NotificationType } from './utils/constants';
 
 // Import UI Components
-import AddCertificateForm from './ui/AddCertificateForm';
 import QuickActionBar from './ui/QuickActionBar';
 import TableHeader from './ui/TableHeader';
 import TableRow from './ui/TableRow';
@@ -73,7 +72,7 @@ const CertificateTable: React.FC<CertificateTableExtendedProps> = ({
     uniqueHospitals: _propUniqueHospitals 
 }) => {
     
-    // ✅ 1. ADDED: State for Certificate Type Mode (External/Internal/Others)
+    // ✅ State for Certificate Type Mode (External/Internal/Others)
     const [certTypeMode, setCertTypeMode] = useState('internal');
 
     // --- Notification State Management ---
@@ -125,23 +124,21 @@ const CertificateTable: React.FC<CertificateTableExtendedProps> = ({
     ); 
 
     // --- Action Hooks ---
+    // ✅ REMOVED: isAddFormVisible, handleAddCertificate etc. from here to prevent conflict
     const {
         editingId,
         editFormData,
-        newCertificateData,
-        isAdding,
         flashId,
         deletingId,
         generatingPdfId,
         generatingPdfV1Id,
         isBulkGeneratingV1, 
         isBulkGeneratingV2,
-        isBulkGeneratingV3, // ✅ 2. ADDED: V3 State
+        isBulkGeneratingV3,
         showSuccessAnimation,
         successMessage,
         setEditingId,
         setEditFormData,
-        setNewCertificateData,
         setFlashId,
         handleSelectOne,
         handleSelectAll,
@@ -150,14 +147,12 @@ const CertificateTable: React.FC<CertificateTableExtendedProps> = ({
         handleSave,
         handleDelete,
         handleChange,
-        handleAddCertificate,
-        handleNewCertChange,
         handleDownload,
         handleGeneratePDF_V1,
         handleGeneratePDF_V2,
         handleBulkGeneratePDF_V1, 
         handleBulkGeneratePDF_V2, 
-        handleBulkGeneratePDF_V3, // ✅ 3. ADDED: V3 Handler
+        handleBulkGeneratePDF_V3,
     } = useCertificateActions({
         certificates,
         selectedIds,
@@ -189,7 +184,7 @@ const CertificateTable: React.FC<CertificateTableExtendedProps> = ({
         }
     }, [flashId, setFlashId]);
 
-    // ✅ 4. ADDED: Bulk Mail Handlers (Placeholders)
+    // ✅ Bulk Mail Handlers (Placeholders)
     const handleBulkMail_V1 = () => showNotification("Bulk Mail (Proctorship) feature coming soon!", "info");
     const handleBulkMail_V2 = () => showNotification("Bulk Mail (Training) feature coming soon!", "info");
     const handleBulkMail_V3 = () => showNotification("Bulk Mail (100+) feature coming soon!", "info");
@@ -228,12 +223,12 @@ const CertificateTable: React.FC<CertificateTableExtendedProps> = ({
                     selectedIds={selectedIds}
                     uniqueHospitals={uniqueHospitals}
                     hospitalFilter={hospitalFilter}
-                    setIsAddFormVisible={setIsAddFormVisible}
+                    setIsAddFormVisible={setIsAddFormVisible} // ✅ Passes Parent Trigger
                     setHospitalFilter={setHospitalFilter}
                     handleBulkDelete={handleBulkDelete}
                     handleDownload={handleDownload}
                     
-                    // ✅ 5. ADDED: Pass State & Handlers to QuickActionBar
+                    // ✅ State & Handlers
                     certTypeMode={certTypeMode}
                     setCertTypeMode={setCertTypeMode}
                     
@@ -251,20 +246,7 @@ const CertificateTable: React.FC<CertificateTableExtendedProps> = ({
                 />
             </motion.div>
 
-            {/* Modal Form Section */}
-            <AnimatePresence>
-                {isAddFormVisible && (
-                    <AddCertificateForm
-                        newCertificateData={newCertificateData}
-                        isAdding={isAdding}
-                        uniqueHospitals={uniqueHospitals}
-                        handleNewCertChange={handleNewCertChange}
-                        handleAddCertificate={handleAddCertificate}
-                        setIsAddFormVisible={setIsAddFormVisible}
-                        setNewCertificateData={setNewCertificateData}
-                    />
-                )}
-            </AnimatePresence>
+            {/* ✅ REMOVED: Internal AddCertificateForm. The Parent Page now handles this. */}
 
             {/* Main Content Area */}
             <motion.div 
@@ -378,7 +360,7 @@ const CertificateTable: React.FC<CertificateTableExtendedProps> = ({
                                                     {page}
                                                 </button>
                                             </React.Fragment>
-                                    ))}
+                                        ))}
                                 </div>
 
                                 <button

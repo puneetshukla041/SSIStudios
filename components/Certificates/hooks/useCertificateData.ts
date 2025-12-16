@@ -14,6 +14,7 @@ import { sortCertificates } from '../utils/helpers';
 interface UseCertificateDataResult {
     certificates: ICertificateClient[];
     isLoading: boolean;
+    isCreating: boolean; // <--- NEW
     totalItems: number;
     currentPage: number;
     totalPages: number;
@@ -22,6 +23,7 @@ interface UseCertificateDataResult {
     selectedIds: string[];
     fetchCertificates: (resetPage?: boolean) => Promise<void>;
     fetchCertificatesForExport: (isBulkPdfExport?: boolean, idsToFetch?: string[]) => Promise<ICertificateClient[]>;
+    createCertificate: (data: Omit<ICertificateClient, '_id'>) => Promise<boolean>; // <--- NEW
     setCurrentPage: React.Dispatch<React.SetStateAction<number>>;
     setSelectedIds: React.Dispatch<React.SetStateAction<string[]>>;
     requestSort: (key: SortKey) => void;
@@ -38,19 +40,22 @@ export const useCertificateData = (
     setSearchQuery: React.Dispatch<React.SetStateAction<string>>,
     setHospitalFilter: React.Dispatch<React.SetStateAction<string>>
 ): UseCertificateDataResult => {
+    // Data State
     const [certificates, setCertificates] = useState<ICertificateClient[]>([]);
-    const [isLoading, setIsLoading] = useState(true);
     const [totalItems, setTotalItems] = useState(0);
     const [currentPage, setCurrentPage] = useState(1);
     const [totalPages, setTotalPages] = useState(1);
     const [uniqueHospitals, setUniqueHospitals] = useState<string[]>([]);
+    
+    // UI State
+    const [isLoading, setIsLoading] = useState(true);
+    const [isCreating, setIsCreating] = useState(false); // <--- NEW
     const [selectedIds, setSelectedIds] = useState<string[]>([]);
     const [sortConfig, setSortConfig] = useState<SortConfig | null>({ key: '_id', direction: 'desc' });
 
-    // --- Fetch Data Logic (Paginated & Filtered) ---
+    // --- 1. Fetch Data Logic ---
     const fetchCertificates = useCallback(async (resetPage: boolean = false) => {
         setIsLoading(true);
-
         let pageToFetch = currentPage;
         if (resetPage) {
             setCurrentPage(1);
@@ -58,17 +63,13 @@ export const useCertificateData = (
         }
 
         const start = Date.now();
-
         try {
             const params = new URLSearchParams({
                 page: pageToFetch.toString(),
                 limit: PAGE_LIMIT.toString(),
                 q: searchQuery,
             });
-
-            if (hospitalFilter) {
-                params.append('hospital', hospitalFilter);
-            }
+            if (hospitalFilter) params.append('hospital', hospitalFilter);
 
             const response = await fetch(`/api/certificates?${params.toString()}`);
             const result: FetchResponse & { success: boolean, message?: string } = await response.json();
@@ -79,9 +80,6 @@ export const useCertificateData = (
                 setTotalPages(result.totalPages);
                 setUniqueHospitals(result.filters.hospitals);
                 onRefresh(result.data, result.total, result.filters.hospitals);
-
-                const message = `Data synced. Showing ${result.data.length} of ${result.total} items.`;
-                showNotification(message, 'success');
             } else {
                 showNotification(result.message || 'Failed to fetch certificates.', 'error');
             }
@@ -94,72 +92,77 @@ export const useCertificateData = (
         }
     }, [currentPage, searchQuery, hospitalFilter, onRefresh, showNotification]);
 
-    // --- Fetch ALL Data Logic (For Export) ---
+    // --- 2. CREATE Logic (Moved Here) ---
+    const createCertificate = useCallback(async (newData: Omit<ICertificateClient, '_id'>): Promise<boolean> => {
+        setIsCreating(true);
+        try {
+            const response = await fetch('/api/certificates', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(newData),
+            });
+            const result = await response.json();
+
+            if (!response.ok) {
+                throw new Error(result.message || "Failed to add certificate");
+            }
+
+            showNotification("Certificate added successfully!", "success");
+            
+            // Refresh data immediately
+            await fetchCertificates(false); 
+            return true;
+        } catch (error: any) {
+            console.error("Create error:", error);
+            showNotification(error.message || "Failed to create certificate", "error");
+            return false;
+        } finally {
+            setIsCreating(false);
+        }
+    }, [fetchCertificates, showNotification]);
+
+    // --- 3. Export Logic ---
     const fetchCertificatesForExport = useCallback(async (isBulkPdfExport = false, idsToFetch: string[] = []) => {
         try {
-            const params = new URLSearchParams({
-                q: searchQuery,
-                all: 'true'
-            });
-
-            if (hospitalFilter) {
-                params.append('hospital', hospitalFilter);
-            }
-
+            const params = new URLSearchParams({ q: searchQuery, all: 'true' });
+            if (hospitalFilter) params.append('hospital', hospitalFilter);
             if (isBulkPdfExport && idsToFetch.length > 0) {
                 params.append('ids', idsToFetch.join(','));
-                
-                // 💡 FIX: Do NOT delete 'all'. 
-                // We want the backend to ignore pagination and give us exactly these IDs from the WHOLE db.
-                // params.delete('all');  <-- This line caused the bug
-                
-                // We still delete 'q' (search) because IDs are specific
                 params.delete('q');
             }
-
             const response = await fetch(`/api/certificates?${params.toString()}`);
-            const result: FetchResponse & { success: boolean, message?: string } = await response.json();
-
-            if (response.ok && result.success) {
-                return result.data;
-            } else {
-                showNotification(result.message || 'Failed to fetch all certificates for export.', 'error');
-                return [];
-            }
+            const result = await response.json();
+            return response.ok && result.success ? result.data : [];
         } catch (error) {
-            console.error('Export fetch error:', error);
-            showNotification('Network error while fetching data for export.', 'error');
+            console.error('Export error:', error);
             return [];
         }
-    }, [searchQuery, hospitalFilter, showNotification]);
-    // Effect to fetch data on initial load
+    }, [searchQuery, hospitalFilter]);
+
+    // --- Effects ---
     useEffect(() => {
         fetchCertificates();
         setSelectedIds([]);
     }, [fetchCertificates, refreshKey]);
-    // Effect: Only reset page when search/filter CHANGES
+
     useEffect(() => {
         setSelectedIds([]);
-        if (currentPage !== 1) {
-            setCurrentPage(1);
-        } else {
-            fetchCertificates();
-        }
+        if (currentPage !== 1) setCurrentPage(1);
     }, [searchQuery, hospitalFilter]);
-    // --- Sort Functionality ---
-    const sortedCertificates = useMemo(() => {
-        return sortCertificates(certificates, sortConfig);
-    }, [certificates, sortConfig]);
+
+    // --- Sorting ---
+    const sortedCertificates = useMemo(() => sortCertificates(certificates, sortConfig), [certificates, sortConfig]);
     const requestSort = (key: SortKey) => {
         let direction: 'asc' | 'desc' = 'asc';
-        if (sortConfig && sortConfig.key === key && sortConfig.direction === 'asc') {
-            direction = 'desc';
-        }
+        if (sortConfig && sortConfig.key === key && sortConfig.direction === 'asc') direction = 'desc';
         setSortConfig({ key, direction });
     };
+
     return {
         certificates,
         isLoading,
+        isCreating, // Export this
+        createCertificate, // Export this
         totalItems,
         currentPage,
         totalPages,
