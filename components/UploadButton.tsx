@@ -1,11 +1,11 @@
-// components/UploadButton.tsx
 'use client';
 
 import React, { useRef, useState } from 'react';
-import LoadingSpinner from './ui/LoadingSpinner';
+import { FiUpload, FiLoader } from 'react-icons/fi'; // Using react-icons for consistency
 
 interface UploadButtonProps {
-  onUploadSuccess: (message: string) => void;
+  // Updated signature to accept the list of IDs
+  onUploadSuccess: (message: string, uploadedIds?: string[]) => void;
   onUploadError: (message: string) => void;
 }
 
@@ -30,7 +30,7 @@ const UploadButton: React.FC<UploadButtonProps> = ({ onUploadSuccess, onUploadEr
     }
 
     setIsUploading(true);
-    onUploadError(''); // Clear previous error
+    onUploadError(''); 
 
     try {
       const formData = new FormData();
@@ -44,7 +44,10 @@ const UploadButton: React.FC<UploadButtonProps> = ({ onUploadSuccess, onUploadEr
       const result = await response.json();
 
       if (response.ok && result.success) {
-        onUploadSuccess(result.message || 'File uploaded successfully!');
+        // ✅ CRITICAL CHANGE: Passing result.ids (or result.data) to the parent
+        // Ensure your API returns the key "ids" or "data" containing the array of new ObjectIds
+        const newIds = result.ids || result.data || [];
+        onUploadSuccess(result.message || 'File uploaded successfully!', newIds);
       } else {
         onUploadError(result.message || 'An unknown error occurred during upload.');
       }
@@ -65,21 +68,24 @@ const UploadButton: React.FC<UploadButtonProps> = ({ onUploadSuccess, onUploadEr
       <button
         onClick={() => fileInputRef.current?.click()}
         disabled={isUploading}
-        className={`px-4 py-2 text-sm font-semibold rounded-lg shadow-md transition-all duration-200 
+        className={`
+          flex items-center justify-center gap-2 px-4 py-2.5 
+          text-sm font-semibold rounded-lg shadow-sm transition-all duration-200 
           ${isUploading
-            ? 'bg-gray-400 text-gray-700 cursor-not-allowed'
-            : 'bg-indigo-600 hover:bg-indigo-700 text-white hover:shadow-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2'
-          }`}
+            ? 'bg-slate-100 text-slate-400 cursor-not-allowed border border-slate-200'
+            : 'bg-indigo-600 hover:bg-indigo-700 text-white hover:shadow-md focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2'
+          }
+        `}
       >
         {isUploading ? (
-          <div className="flex items-center space-x-2">
-            <LoadingSpinner />
+          <>
+            <FiLoader className="animate-spin w-4 h-4" />
             <span>Uploading...</span>
-          </div>
+          </>
         ) : (
           <>
-            <i className="lucide-upload mr-2"></i>
-            Upload Excel Sheet
+            <FiUpload className="w-4 h-4" />
+            <span>Upload Excel</span>
           </>
         )}
       </button>

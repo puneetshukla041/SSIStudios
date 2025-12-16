@@ -7,19 +7,6 @@ import * as XLSX from 'xlsx';
 // Maximum file size of 10MB
 const MAX_FILE_SIZE = 10 * 1024 * 1024; // 10MB
 
-// Define the expected shape of the raw result from insertMany with rawResult: true
-interface InsertManyRawResult {
-    insertedCount: number;
-    writeErrors?: Array<any>; // Contains details about documents that failed to insert
-}
-
-// Helper function to validate DOI format (DD-MM-YYYY) - UNUSED FOR STRING DATES NOW
-const isValidDOI = (doi: string): boolean => {
-    if (!doi || typeof doi !== 'string' || doi.length !== 10) return false;
-    const regex = /^\d{2}-\d{2}-\d{4}$/;
-    return regex.test(doi);
-};
-
 // Helper function to convert XLSX date number to DD-MM-YYYY string safely
 const safeXlsxDateToDoi = (excelSerial: number): string | null => {
     try {
@@ -31,12 +18,10 @@ const safeXlsxDateToDoi = (excelSerial: number): string | null => {
             }
         }
     } catch (e) {
-        // Parsing failed (e.g., invalid input)
         return null;
     }
     return null;
 };
-
 
 export async function POST(req: NextRequest) {
     try {
@@ -66,8 +51,6 @@ export async function POST(req: NextRequest) {
         
         // 3. Read file into buffer
         const buffer = Buffer.from(await file.arrayBuffer());
-        // Use raw: true to prevent XLSX.js from auto-formatting date strings,
-        // which helps us keep the original text formats like "31st August 2023"
         const workbook = XLSX.read(buffer, { type: 'buffer', cellDates: false, raw: true });
         
         const sheetName = workbook.SheetNames[0];
@@ -121,37 +104,24 @@ export async function POST(req: NextRequest) {
                     let rawValue = row[index];
                     let value: string = '';
 
-                    // Handle other string fields (certificateNo, name, hospital) first
+                    // Handle other string fields first
                     if (dbField !== 'doi') {
                         value = rawValue !== undefined && rawValue !== null ? String(rawValue).trim() : '';
                     } else {
-                        // --- MODIFIED DOI HANDLING (Step 1 & 2 combined) ---
+                        // DOI Handling
                         if (typeof rawValue === 'number') {
-                            // If it's a number (Excel serial date), try to convert it to the standardized format
                             const doiString = safeXlsxDateToDoi(rawValue);
-                            if (doiString) {
-                                value = doiString;
-                            } else {
-                                // Numeric date failed to parse (e.g., 0 or bad serial number)
-                                console.warn(`Row ${processedCount}: Unparsable numeric date value (${rawValue}) for DOI. Treating as empty string.`);
-                                value = ''; 
-                            }
+                            value = doiString ? doiString : ''; 
                         } else {
-                            // If it's a string, accept the raw string value as is, no format validation.
                             value = rawValue !== undefined && rawValue !== null ? String(rawValue).trim() : '';
                         }
-
-                        // ❌ REMOVED: The strict isValidDOI check for non-empty strings is removed here.
-                        // All non-empty strings (including "31st August 2023" and "2/13/2024") are now allowed to pass.
-                        // --- END MODIFIED DOI HANDLING ---
                     }
 
-                    // Enforce presence ONLY for 'certificateNo' (the unique key)
+                    // Enforce presence ONLY for 'certificateNo'
                     if (dbField === 'certificateNo' && value === '') {
                         throw new Error(`Missing required unique field: ${header}.`);
                     }
 
-                    // For all other fields (name, hospital, doi), an empty string is now allowed.
                     // @ts-ignore
                     certificate[dbField] = value;
                 });
@@ -161,7 +131,6 @@ export async function POST(req: NextRequest) {
                 }
                 
             } catch (e: any) {
-                // Log and count rows that failed internal processing (e.g., missing Certificate No.)
                 console.error(`Row processing failed (row ${processedCount}): ${e.message}`);
                 failedCount++;
             }
@@ -174,42 +143,52 @@ export async function POST(req: NextRequest) {
             return NextResponse.json({ success: false, message }, { status: 400 });
         }
 
-        // --- Insert into MongoDB, handling duplicates ---
-        let insertResult: InsertManyRawResult = { insertedCount: 0 };
+        // --- Insert into MongoDB & Capture IDs ---
+        
+        
+        let insertedIds: string[] = [];
+        let insertedCount = 0;
         let dbErrors = 0;
 
         try {
-            // Use ordered: false to ensure valid documents are inserted even if duplicates exist
-            insertResult = (await Certificate.insertMany(certificatesToInsert, {
+            // We REMOVE 'rawResult: true' here to get the actual documents back easily.
+            // 'ordered: false' allows continuing even if duplicates are found.
+            const resultDocs = await Certificate.insertMany(certificatesToInsert, {
                 ordered: false, 
-                lean: true,
-                rawResult: true,
-            })) as InsertManyRawResult;
-            dbErrors = insertResult.writeErrors?.length || 0; 
+                lean: true
+            });
+
+            // If we reach here, all documents were inserted successfully
+            insertedCount = resultDocs.length;
+            insertedIds = resultDocs.map((doc: any) => doc._id.toString());
 
         } catch (e: any) {
-            // If the bulk write fails completely (e.g., all are duplicates, connection error)
-            if (e.code === 11000 || (e.writeErrors && e.writeErrors.length > 0)) { 
-                dbErrors = e.writeErrors?.length || 0;
+            // Handle "Partial Success" (e.g., duplicates existed, but some were new)
+            if (e.writeErrors && e.writeErrors.length > 0) { 
+                dbErrors = e.writeErrors.length;
+                
+                // Mongoose attaches successful documents to 'insertedDocs' in the error object
+                if (Array.isArray(e.insertedDocs)) {
+                    insertedCount = e.insertedDocs.length;
+                    insertedIds = e.insertedDocs.map((doc: any) => doc._id.toString());
+                }
             } else {
-                 throw e; // Re-throw any non-duplicate related error (e.g., connection issue)
+                 throw e; // Non-duplicate fatal error
             }
         }
         
-        const insertedCount = insertResult.insertedCount || 0;
         const totalRows = dataRows.length; 
-        
-        // Final skipped count combines processing errors and database (duplicate) errors
         const finalFailedCount = totalRows - insertedCount; 
 
         let responseMessage = `${insertedCount} unique certificates successfully uploaded.`;
         if (finalFailedCount > 0) {
-            responseMessage += ` ${finalFailedCount} rows were skipped due to errors (e.g., duplicate Certificate No. or processing failures).`;
+            responseMessage += ` ${finalFailedCount} rows were skipped due to errors (e.g., duplicate Certificate No.).`;
         }
 
         return NextResponse.json({
             success: true,
             message: responseMessage,
+            ids: insertedIds, // ✅ THIS IS WHAT THE FRONTEND NEEDS
             summary: {
                 totalRows: totalRows,
                 successfullyInserted: insertedCount,
@@ -220,13 +199,9 @@ export async function POST(req: NextRequest) {
 
     } catch (error: any) {
         console.error('Upload error (FATAL):', error);
-
-        // Catch-all for fatal server-side errors
-        return NextResponse.json({ success: false, message: `Server error during file processing or database operation: ${error.message || 'Unknown error'}` }, { status: 500 });
+        return NextResponse.json({ success: false, message: `Server error: ${error.message}` }, { status: 500 });
     }
 }
 
-// Set runtime for higher memory/time limits for large file processing
 export const runtime = 'nodejs';
-// Ensure the route is executed dynamically
 export const dynamic = 'force-dynamic';

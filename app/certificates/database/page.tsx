@@ -2,15 +2,16 @@
 
 import React, { useState, useCallback, useEffect } from 'react';
 import Image from 'next/image'; 
-import { FiRefreshCw, FiSearch, FiHelpCircle, FiGrid, FiUserCheck, FiUsers } from 'react-icons/fi';
+import { FiRefreshCw, FiSearch, FiHelpCircle, FiGrid, FiUserCheck, FiUsers, FiDownload, FiCheckCircle, FiX } from 'react-icons/fi';
 import { AnimatePresence, motion } from 'framer-motion';
 
 // --- IMPORTS ---
 import HelpCard from '@/components/Certificates/ui/HelpCard'; 
-import UploadButton from '@/components/UploadButton';
+import UploadButton from '@/components/UploadButton'; // Ensure this path is correct
 import CertificateTable from '@/components/Certificates/CertificateTable';
 import HospitalPieChart from '@/components/Certificates/analysis/HospitalPieChart';
 import AddCertificateForm from '@/components/Certificates/ui/AddCertificateForm';
+import { useCertificateActions } from '@/components/Certificates/hooks/useCertificateActions';
 
 // Import Constants
 import { 
@@ -25,6 +26,43 @@ const CertificateDatabasePage: React.FC = () => {
   const [totalRecords, setTotalRecords] = useState(0); 
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [uniqueHospitals, setUniqueHospitals] = useState<string[]>([]);
+    
+  // --- NEW: Batch Upload State (With Persistence) ---
+  const [newBatchIds, setNewBatchIds] = useState<string[]>([]);
+  const [isBatchLoaded, setIsBatchLoaded] = useState(false);
+
+  // Load Batch IDs from LocalStorage on mount
+  useEffect(() => {
+    let mounted = true;
+    try {
+        if (typeof window !== 'undefined') {
+            const saved = localStorage.getItem('cert_db_new_batch');
+            if (saved && mounted) {
+                const parsed = JSON.parse(saved);
+                if (Array.isArray(parsed)) {
+                    setNewBatchIds(parsed);
+                }
+            }
+        }
+    } catch (e) {
+        console.error("Failed to load saved batch", e);
+    } finally {
+        if (mounted) setIsBatchLoaded(true);
+    }
+    return () => { mounted = false; };
+  }, []);
+
+  // Save Batch IDs to LocalStorage whenever they change
+  useEffect(() => {
+    // Prevent saving/clearing until we have confirmed load status to avoid overwriting with empty on init
+    if (!isBatchLoaded) return; 
+
+    if (newBatchIds.length > 0) {
+        localStorage.setItem('cert_db_new_batch', JSON.stringify(newBatchIds));
+    } else {
+        localStorage.removeItem('cert_db_new_batch');
+    }
+  }, [newBatchIds, isBatchLoaded]);
 
   // --- Stats State ---
   const [dbTotalRecords, setDbTotalRecords] = useState(0); 
@@ -36,6 +74,7 @@ const CertificateDatabasePage: React.FC = () => {
   const [searchQuery, setSearchQuery] = useState('');
   const [hospitalFilter, setHospitalFilter] = useState('');
   const [isHelpCardVisible, setIsHelpCardVisible] = useState(false); 
+  const [dummyLoading, setDummyLoading] = useState(false);
 
   // --- ADD FORM STATE ---
   const [isAddFormVisible, setIsAddFormVisible] = useState(false);
@@ -112,28 +151,100 @@ const CertificateDatabasePage: React.FC = () => {
     []
   );
 
+  const handleRefresh = useCallback(() => {
+    setRefreshKey((prev) => prev + 1);
+    setIsRefreshing(true);
+  }, []);
+
+  // Safety timeout for refresh spinner
   useEffect(() => {
     if (isRefreshing) {
       const timeout = setTimeout(() => {
         setIsRefreshing(false);
-      }, 1000);
+      }, 2000); 
       return () => clearTimeout(timeout);
     }
   }, [isRefreshing]);
 
-  const handleUploadSuccess = (message: string) => {
+  // --- Fetch Function for Actions Hook (Page Level) ---
+  const fetchCertificatesForExportPageSide = useCallback(async (isBulkPdfExport = false, idsToFetch: string[] = []) => {
+      try {
+          const params = new URLSearchParams({ all: 'true' });
+          if (isBulkPdfExport && idsToFetch.length > 0) {
+              params.append('ids', idsToFetch.join(','));
+          }
+          const response = await fetch(`/api/certificates?${params.toString()}`);
+          const result = await response.json();
+          return response.ok && result.success ? result.data : [];
+      } catch (error) {
+          console.error('Export error:', error);
+          return [];
+      }
+  }, []);
+
+  // --- Dummies for Hook ---
+  const [dummySelectedIds, setDummySelectedIds] = useState<string[]>([]);
+    
+  // ✅ DELETE Function
+  const deleteCertificate = useCallback(async (id: string): Promise<boolean> => {
+      try {
+          const response = await fetch(`/api/certificates/${id}`, {
+              method: 'DELETE',
+          });
+            
+          const result = await response.json();
+
+          if (!response.ok) {
+              throw new Error(result.message || "Failed to delete certificate");
+          }
+          return true;
+      } catch (error: any) {
+          console.error("Delete error:", error);
+          handleAlert(error.message || "Failed to delete certificate", true);
+          return false;
+      }
+  }, [handleAlert]);
+
+  // --- Initialize Actions Hook ---
+  const { 
+    handleBulkGeneratePDF_V1, 
+    handleBulkGeneratePDF_V2,
+    isBulkGeneratingV1, 
+    isBulkGeneratingV2
+  } = useCertificateActions({
+    certificates: certificateData,
+    selectedIds: dummySelectedIds,
+    setSelectedIds: setDummySelectedIds,
+    fetchCertificates: async () => { handleRefresh(); },
+    deleteCertificate, 
+    fetchCertificatesForExport: fetchCertificatesForExportPageSide,
+    showNotification: (msg, type) => handleAlert(msg, type === 'error'),
+    onAlert: handleAlert,
+    setIsLoading: setDummyLoading,
+  });
+
+  // --- Upload Handlers ---
+  
+  // ✅ Fixed Upload Success Handler to capture IDs
+  const handleUploadSuccess = useCallback((message: string, uploadedIds?: string[]) => {
     handleAlert(message, false);
-    setRefreshKey((prev) => prev + 1);
-    setIsRefreshing(true);
-  };
+    handleRefresh();
+    
+    // Check if we received the IDs of the new batch
+    if (uploadedIds && Array.isArray(uploadedIds) && uploadedIds.length > 0) {
+        console.log("New Batch Detected:", uploadedIds.length);
+        setNewBatchIds(uploadedIds);
+    } else {
+        console.warn("Upload succeeded but no IDs were returned to client.");
+    }
+  }, [handleAlert, handleRefresh]);
 
-  const handleUploadError = (message: string) => {
+  const handleUploadError = useCallback((message: string) => {
     if (message) handleAlert(message, true);
-  };
+  }, [handleAlert]);
 
-  const handleRefresh = () => {
-    setRefreshKey((prev) => prev + 1);
-    setIsRefreshing(true);
+  const handleClearBatch = () => {
+    setNewBatchIds([]);
   };
 
   const handleTableDataUpdate = useCallback(
@@ -153,7 +264,6 @@ const CertificateDatabasePage: React.FC = () => {
     }));
   };
 
-  // --- ✅ UPDATED: Submit Data to API ---
   const handleAddCertificate = async (): Promise<boolean> => {
     try {
         if (!newCertificateData.certificateNo || !newCertificateData.name || !newCertificateData.hospital || !newCertificateData.doi) {
@@ -179,9 +289,6 @@ const CertificateDatabasePage: React.FC = () => {
 
         handleAlert("Certificate saved successfully!", false);
         setRefreshKey(prev => prev + 1); 
-        
-        // ✅ Return true to signal success, but DO NOT close the form yet.
-        // The Form component will handle showing the success card.
         return true; 
 
     } catch (error: any) {
@@ -196,7 +303,7 @@ const CertificateDatabasePage: React.FC = () => {
 
   return (
     <div className="min-h-screen bg-[#F8FAFC] text-slate-800 font-sans selection:bg-indigo-500/10 selection:text-indigo-700">
-      
+        
       <AnimatePresence>
         {isHelpCardVisible && <HelpCard onClose={() => setIsHelpCardVisible(false)} />}
         
@@ -270,7 +377,7 @@ const CertificateDatabasePage: React.FC = () => {
                 <span className="text-sm font-medium text-slate-400">entries</span>
               </div>
             </div>
-            <div className="relative h-12 w-12 shrink-0 overflow-hidden rounded-lg bg-emerald-50 border border-emerald-100 p-1">
+            <div className="relative h-12 w-12 shrink-0 overflow-hidden rounded-lg bg-emerald-5 border border-emerald-100 p-1">
               <Image
                 src="/logos/ssilogo.png"
                 alt="SSI Logo"
@@ -369,44 +476,92 @@ const CertificateDatabasePage: React.FC = () => {
         </div>
 
         {/* --- ACTION TOOLBAR --- */}
-        <div className="flex flex-col sm:flex-row items-center justify-end gap-3 pb-2">
-            <div className="w-full sm:w-auto">
-              <UploadButton
-                onUploadSuccess={handleUploadSuccess}
-                onUploadError={handleUploadError}
-              />
+        <div className="flex flex-col gap-4 pb-2">
+            <div className="flex flex-col sm:flex-row items-center justify-end gap-3">
+                
+                {/* ✅ NEW BATCH ACTIONS - Appears Left of Upload Button */}
+                <AnimatePresence mode='wait'>
+                    {newBatchIds.length > 0 && isBatchLoaded && (
+                        <motion.div
+                            key="new-batch-actions"
+                            initial={{ opacity: 0, x: 20 }}
+                            animate={{ opacity: 1, x: 0 }}
+                            exit={{ opacity: 0, x: 20 }}
+                            className="flex flex-col sm:flex-row items-center gap-2 w-full sm:w-auto mr-auto sm:mr-0 p-1 pr-2 bg-indigo-50 border border-indigo-100 rounded-xl"
+                        >
+                            <span className="text-xs font-bold text-indigo-700 uppercase tracking-wider px-2 hidden lg:inline-block">
+                                New Batch ({newBatchIds.length})
+                            </span>
+                            
+                            <button
+                                onClick={() => handleBulkGeneratePDF_V2(newBatchIds)}
+                                disabled={isBulkGeneratingV2}
+                                title="Download New Training Certificates"
+                                className="flex items-center gap-2 px-3 py-1.5 bg-indigo-600 text-white text-xs font-medium rounded-lg hover:bg-indigo-700 transition-colors shadow-sm whitespace-nowrap"
+                            >
+                                {isBulkGeneratingV2 ? <FiRefreshCw className="animate-spin" /> : <FiDownload />}
+                                <span>Training</span>
+                            </button>
+                            
+                            <button
+                                onClick={() => handleBulkGeneratePDF_V1(newBatchIds)}
+                                disabled={isBulkGeneratingV1}
+                                title="Download New Proctoring Certificates"
+                                className="flex items-center gap-2 px-3 py-1.5 bg-white text-indigo-700 border border-indigo-200 text-xs font-medium rounded-lg hover:bg-indigo-50 transition-colors shadow-sm whitespace-nowrap"
+                            >
+                                {isBulkGeneratingV1 ? <FiRefreshCw className="animate-spin" /> : <FiDownload />}
+                                <span>Proctoring</span>
+                            </button>
+
+                            <button 
+                                onClick={handleClearBatch}
+                                className="ml-1 p-1.5 text-slate-400 hover:text-red-500 hover:bg-red-50 rounded-full transition-colors"
+                                title="Clear Batch Selection"
+                            >
+                                <FiX className="w-3.5 h-3.5" />
+                            </button>
+                        </motion.div>
+                    )}
+                </AnimatePresence>
+
+                <div className="w-full sm:w-auto">
+                    <UploadButton
+                        onUploadSuccess={handleUploadSuccess}
+                        onUploadError={handleUploadError}
+                    />
+                </div>
+
+                <button
+                    onClick={handleRefresh}
+                    disabled={isRefreshing}
+                    className={`
+                        w-full sm:w-auto flex items-center justify-center gap-2 px-4 py-2.5 
+                        rounded-lg text-sm font-medium border transition-all duration-200
+                        ${isRefreshing 
+                        ? 'bg-slate-50 text-slate-400 border-slate-200 cursor-not-allowed' 
+                        : 'bg-white text-slate-700 border-slate-200 hover:bg-slate-50 hover:text-slate-900 shadow-sm'
+                        }
+                    `}
+                >
+                    <FiRefreshCw 
+                        className={`w-4 h-4 ${isRefreshing ? 'animate-spin' : ''}`} 
+                    />
+                    <span>Sync</span>
+                </button>
+
+                <button
+                    onClick={() => setIsHelpCardVisible(true)}
+                    className="
+                        w-full sm:w-auto flex items-center justify-center gap-2 px-4 py-2.5 
+                        rounded-lg text-sm font-medium border border-transparent
+                        bg-slate-800 text-white shadow-sm hover:bg-slate-900 
+                        transition-all duration-200 focus:ring-2 focus:ring-slate-500 focus:ring-offset-2
+                    "
+                >
+                    <FiHelpCircle className="w-4 h-4" />
+                    <span>Guide</span>
+                </button>
             </div>
-
-            <button
-              onClick={handleRefresh}
-              disabled={isRefreshing}
-              className={`
-                w-full sm:w-auto flex items-center justify-center gap-2 px-4 py-2.5 
-                rounded-lg text-sm font-medium border transition-all duration-200
-                ${isRefreshing 
-                  ? 'bg-slate-50 text-slate-400 border-slate-200 cursor-not-allowed' 
-                  : 'bg-white text-slate-700 border-slate-200 hover:bg-slate-50 hover:text-slate-900 shadow-sm'
-                }
-              `}
-            >
-              <FiRefreshCw 
-                className={`w-4 h-4 ${isRefreshing ? 'animate-spin' : ''}`} 
-              />
-              <span>Sync</span>
-            </button>
-
-            <button
-              onClick={() => setIsHelpCardVisible(true)}
-              className="
-                w-full sm:w-auto flex items-center justify-center gap-2 px-4 py-2.5 
-                rounded-lg text-sm font-medium border border-transparent
-                bg-slate-800 text-white shadow-sm hover:bg-slate-900 
-                transition-all duration-200 focus:ring-2 focus:ring-slate-500 focus:ring-offset-2
-              "
-            >
-              <FiHelpCircle className="w-4 h-4" />
-              <span>Guide</span>
-            </button>
         </div>
 
         {/* --- CONTENT AREA: Charts & Table --- */}
