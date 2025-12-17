@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import * as XLSX from 'xlsx';
 import { ICertificateClient, CertificateTableProps, NotificationType } from '../utils/constants';
-import { sortCertificates } from '../utils/helpers';
+import { sortCertificates, formatName } from '../utils/helpers'; // Ensure formatName is imported
 import { generateCertificatePDF } from '../utils/pdfGenerator';
 
 type GeneratePDFType = (
@@ -12,7 +12,6 @@ type GeneratePDFType = (
     isBulk?: boolean
 ) => Promise<{ filename: string, blob: Blob } | null>;
 
-// Cast the imported generator to our typed version
 const generateCertificatePDFTyped = generateCertificatePDF as unknown as GeneratePDFType;
 
 interface UseCertificateActionsProps {
@@ -22,6 +21,7 @@ interface UseCertificateActionsProps {
     fetchCertificates: (resetPage?: boolean) => Promise<void>;
     fetchCertificatesForExport: (isBulkPdfExport?: boolean, idsToFetch?: string[]) => Promise<ICertificateClient[]>;
     deleteCertificate: (id: string) => Promise<boolean>;
+    updateCertificate: (id: string, data: Partial<ICertificateClient>) => Promise<boolean>;
     showNotification: (message: string, type: NotificationType) => void;
     onAlert: CertificateTableProps['onAlert'];
     setIsLoading: React.Dispatch<React.SetStateAction<boolean>>;
@@ -34,12 +34,13 @@ export const useCertificateActions = ({
     fetchCertificates,
     fetchCertificatesForExport,
     deleteCertificate,
+    updateCertificate,
     showNotification,
     onAlert: oldOnAlert,
     setIsLoading,
 }: UseCertificateActionsProps) => {
      
-    // --- Row Actions State (Edit/Delete/PDF) ---
+    // --- Row Actions State ---
     const [editingId, setEditingId] = useState<string | null>(null);
     const [editFormData, setEditFormData] = useState<Partial<ICertificateClient>>({});
     const [flashId, setFlashId] = useState<string | null>(null);
@@ -136,15 +137,31 @@ export const useCertificateActions = ({
         setEditFormData({ ...certificate }); 
     };
      
+    // --- SAVE HANDLER ---
     const handleSave = async (id: string) => { 
         if(!editFormData) return;
-        // In a real app, call update API here
+        
+        // Optimistic Feedback
         setFlashId(id);
-        setEditingId(null);
-        showNotification("Edit saved locally (Refresh to reset)", "success");
-        // fetchCertificates(false); // Uncomment when update API is connected
+
+        // ✅ Apply formatName BEFORE saving to Database
+        const dataToSave = { ...editFormData };
+        if (dataToSave.name) {
+            dataToSave.name = formatName(dataToSave.name);
+        }
+
+        const success = await updateCertificate(id, dataToSave);
+
+        if (success) {
+            setEditingId(null);
+            showNotification("Edit saved successfully", "success");
+            setEditFormData({});
+            await fetchCertificates(false); 
+        }
     };
 
+    // ✅ CHANGED: Removed auto-formatting here. 
+    // This allows you to type freely. Formatting happens on Save or PDF Generation.
     const handleChange = (field: keyof ICertificateClient, value: string) => { 
         setEditFormData(prev => ({ ...prev, [field]: value })); 
     };
@@ -153,25 +170,31 @@ export const useCertificateActions = ({
 
     const handleGeneratePDF_V2 = async (cert: ICertificateClient) => {
         if (generatingPdfId === cert._id) return;
-        const result = await generateCertificatePDFTyped(cert, oldOnAlert, 'certificate2.pdf', setGeneratingPdfId, true);
+        
+        // ✅ Format Name specificially for the PDF
+        const formattedCert = { ...cert, name: formatName(cert.name) };
+
+        const result = await generateCertificatePDFTyped(formattedCert, oldOnAlert, 'certificate2.pdf', setGeneratingPdfId, true);
         if (result && result.blob) triggerFileDownload(result.blob, `${formatForFilename(cert.name)}_${formatForFilename(cert.hospital)}.pdf`);
     };
 
     const handleGeneratePDF_V1 = async (cert: ICertificateClient) => {
         if (generatingPdfV1Id === cert._id) return;
-        const result = await generateCertificatePDFTyped(cert, oldOnAlert, 'certificate1.pdf', setGeneratingPdfV1Id, true);
+
+        // ✅ Format Name specificially for the PDF
+        const formattedCert = { ...cert, name: formatName(cert.name) };
+
+        const result = await generateCertificatePDFTyped(formattedCert, oldOnAlert, 'certificate1.pdf', setGeneratingPdfV1Id, true);
         if (result && result.blob) triggerFileDownload(result.blob, `${formatForFilename(cert.name)}_${formatForFilename(cert.hospital)}.pdf`);
     };
 
     // --- BULK GENERATION LOGIC ---
-    // Updated to accept 'specificIds' to override table selection (for "New Batch" feature)
     const handleBulkGenerate = async (
         template: 'certificate1.pdf' | 'certificate2.pdf' | 'certificate3.pdf', 
         setBulkState: React.Dispatch<React.SetStateAction<boolean>>, 
         typeLabel: string,
         specificIds?: string[]
     ) => {
-        // Use specificIds if provided (e.g. from new upload), otherwise use selectedIds from table
         const idsToProcess = specificIds && specificIds.length > 0 ? specificIds : selectedIds;
 
         if (idsToProcess.length === 0) {
@@ -183,21 +206,19 @@ export const useCertificateActions = ({
         showNotification(`Preparing ${idsToProcess.length} ${typeLabel} certificates...`, 'info');
 
         try {
-            // Fetch the full data for the IDs (whether selected or specific)
-            // We pass 'true' for isBulkPdfExport and the list of IDs
             let selectedCertificates = await fetchCertificatesForExport(true, idsToProcess);
              
-            // Filter locally to ensure we only process exactly what was requested
-            // (The API might return all if ids param fails, so this is a safety check)
             selectedCertificates = selectedCertificates.filter(cert => idsToProcess.includes(cert._id));
 
             if (selectedCertificates.length === 0) {
                 throw new Error(`Could not retrieve data for ${typeLabel} export.`);
             }
 
-            const pdfPromises = selectedCertificates.map(cert =>
-                generateCertificatePDFTyped(cert, oldOnAlert, template, setBulkState as any, true)
-            );
+            const pdfPromises = selectedCertificates.map(cert => {
+                // ✅ Format Name specificially for the Bulk PDF
+                const formattedCert = { ...cert, name: formatName(cert.name) };
+                return generateCertificatePDFTyped(formattedCert, oldOnAlert, template, setBulkState as any, true);
+            });
 
             const results = await Promise.all(pdfPromises);
             let successCount = 0;
@@ -207,15 +228,12 @@ export const useCertificateActions = ({
                 if (result && result.blob) {
                     triggerFileDownload(result.blob, result.filename);
                     successCount++;
-                    // Small delay to prevent browser throttling downloads
                     await new Promise(resolve => setTimeout(resolve, 300));
                 }
             }
 
             if (successCount > 0) {
                 triggerSuccess(`${successCount} Downloaded`);
-                // Only clear selection if we were using the table selection
-                // If we used a specific batch, we keep the table selection intact
                 if (!specificIds) {
                     setSelectedIds([]);
                 }
@@ -230,13 +248,8 @@ export const useCertificateActions = ({
         }
     };
 
-    // V1 Bulk (Proctorship) - supports specific ID override
     const handleBulkGeneratePDF_V1 = (ids?: string[]) => handleBulkGenerate('certificate1.pdf', setIsBulkGeneratingV1, 'Proctorship', ids);
-     
-    // V2 Bulk (Training) - supports specific ID override
     const handleBulkGeneratePDF_V2 = (ids?: string[]) => handleBulkGenerate('certificate2.pdf', setIsBulkGeneratingV2, 'Training', ids);
-     
-    // V3 Bulk (Others) - supports specific ID override
     const handleBulkGeneratePDF_V3 = (ids?: string[]) => handleBulkGenerate('certificate3.pdf', setIsBulkGeneratingV3, '100+ Others', ids);
 
     // --- Excel Export Handler ---
@@ -251,7 +264,7 @@ export const useCertificateActions = ({
         const dataToExport = sortedExportData.map((cert, index) => ({
             'S. No.': index + 1,
             'Certificate No.': cert.certificateNo,
-            'Name': cert.name,
+            'Name': formatName(cert.name), // ✅ Format name for Excel Export too
             'Hospital': cert.hospital,
             'DOI': cert.doi,
         }));

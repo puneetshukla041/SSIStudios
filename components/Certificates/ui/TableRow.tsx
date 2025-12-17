@@ -11,7 +11,7 @@ import {
     User,
 } from 'lucide-react';
 import { ICertificateClient, PAGE_LIMIT } from '../utils/constants';
-import { getHospitalColor, doiToDateInput, dateInputToDoi } from '../utils/helpers';
+import { getHospitalColor, doiToDateInput, dateInputToDoi, formatName } from '../utils/helpers'; // ✅ Import formatName
 import clsx from 'clsx';
 
 interface TableRowProps {
@@ -32,7 +32,6 @@ interface TableRowProps {
     handleDelete: (id: string) => Promise<void>;
     handleChange: (field: keyof ICertificateClient, value: string) => void;
     setEditingId: React.Dispatch<React.SetStateAction<string | null>>;
-    // These props are no longer used in the row, but kept in interface to avoid breaking parent
     handleGeneratePDF_V1: (cert: ICertificateClient) => void;
     handleGeneratePDF_V2: (cert: ICertificateClient) => void;
     handleMailCertificate: (cert: ICertificateClient, template: 'certificate1.pdf' | 'certificate2.pdf') => void;
@@ -51,7 +50,6 @@ const TableRow: React.FC<TableRowProps> = ({
     isAnyActionLoading,
     editFormData,
     handleSelectOne,
-    
     handleEdit,
     handleSave,
     handleDelete,
@@ -63,7 +61,6 @@ const TableRow: React.FC<TableRowProps> = ({
     const isPdfGenerating = generatingPdfId === cert._id || generatingPdfV1Id === cert._id;
     const isDisabled = isPdfGenerating || isAnyActionLoading || (isEditing && !editFormData);
 
-    // Common mobile label style
     const MobileLabel = ({ children }: { children: React.ReactNode }) => (
         <span className="md:hidden text-[10px] font-bold text-slate-400 uppercase tracking-wider mr-2 min-w-[80px]">
             {children}
@@ -73,14 +70,12 @@ const TableRow: React.FC<TableRowProps> = ({
     return (
         <tr
             className={clsx(
-                // Base & Mobile: Card Layout
                 "block md:table-row mb-4 md:mb-0 bg-white md:bg-transparent rounded-xl md:rounded-none shadow-[0_2px_8px_-2px_rgba(0,0,0,0.1)] md:shadow-none border border-slate-200 md:border-0 md:border-b md:border-slate-100",
-                // States
                 isSelected ? "md:bg-indigo-50/60 ring-1 ring-indigo-500 md:ring-0" : "hover:bg-slate-50",
                 isDeleting && "opacity-0 -translate-x-4 pointer-events-none transition-all duration-300",
                 isEditing && "bg-amber-50/50"
             )}
-            style={isFlashing ? { backgroundColor: 'rgba(240, 253, 244, 1)', transition: 'background-color 0.5s ease' } : {}}                                                          
+            style={isFlashing ? { backgroundColor: 'rgba(240, 253, 244, 1)', transition: 'background-color 0.5s ease' } : {}}                                                                 
         >
             {/* CHECKBOX */}
             <td className="flex md:table-cell items-center justify-between p-3 md:px-4 md:py-4 border-b border-slate-100 md:border-0">
@@ -105,14 +100,12 @@ const TableRow: React.FC<TableRowProps> = ({
                 </div>
             </td>
 
-            {/* SERIAL NUMBER - Hidden on Mobile */}
+            {/* SERIAL NUMBER */}
             <td className="hidden md:table-cell px-4 py-4 text-center">
                 <span className="text-xs font-medium text-slate-400 font-mono">
                     {String(serialNumber).padStart(2, '0')}
                 </span>
             </td>
-
-            {/* DATA COLUMNS */}
 
             {/* Certificate No */}
             <td className="flex md:table-cell items-center justify-between p-3 md:px-4 md:py-4 border-b border-slate-100 md:border-0">
@@ -138,7 +131,8 @@ const TableRow: React.FC<TableRowProps> = ({
                     )}
                 </div>
             </td>
-            {/* Name */}
+
+            {/* Name - ✅ Using formatName here */}
             <td className="flex md:table-cell items-center justify-between p-3 md:px-4 md:py-4 border-b border-slate-100 md:border-0">
                 <MobileLabel>Name</MobileLabel>
                 <div className="w-full md:w-auto text-right md:text-left">
@@ -150,14 +144,13 @@ const TableRow: React.FC<TableRowProps> = ({
                             className="w-full md:w-auto px-3 py-1.5 text-sm bg-white border border-amber-300 rounded-md focus:outline-none focus:ring-2 focus:ring-amber-500/30 shadow-sm cursor-text text-right md:text-left"
                             placeholder="Name"
                         />
-
                     ) : (
                         <div className="flex items-center justify-end md:justify-start gap-2.5">
                             <div className="w-8 h-8 rounded-full bg-slate-100 hidden md:flex items-center justify-center text-slate-400 shrink-0">
                                 <User className="w-4 h-4" />
                             </div>
                             <span className="text-sm font-semibold text-slate-900 line-clamp-1">
-                                {cert.name}
+                                {formatName(cert.name)} {/* Formatted for display */}
                             </span>
                         </div>
                     )}
@@ -232,9 +225,6 @@ const TableRow: React.FC<TableRowProps> = ({
                         </div>
                     ) : (
                         <div className="flex items-center justify-end gap-2">
-                            {/* Removed SmartActionMenu and Divider */}
-                            
-                            {/* Edit Button */}
                             <button
                                 onClick={() => handleEdit(cert)}
                                 disabled={isDisabled}
@@ -249,7 +239,6 @@ const TableRow: React.FC<TableRowProps> = ({
                                 <Edit3 className="w-4 h-4" />
                             </button>
 
-                            {/* Delete Button */}
                             <button
                                 onClick={() => handleDelete(cert._id)}
                                 disabled={isDisabled}

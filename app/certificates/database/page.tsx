@@ -7,7 +7,7 @@ import { AnimatePresence, motion } from 'framer-motion';
 
 // --- IMPORTS ---
 import HelpCard from '@/components/Certificates/ui/HelpCard'; 
-import UploadButton from '@/components/UploadButton'; // Ensure this path is correct
+import UploadButton from '@/components/UploadButton'; 
 import CertificateTable from '@/components/Certificates/CertificateTable';
 import HospitalPieChart from '@/components/Certificates/analysis/HospitalPieChart';
 import AddCertificateForm from '@/components/Certificates/ui/AddCertificateForm';
@@ -54,7 +54,6 @@ const CertificateDatabasePage: React.FC = () => {
 
   // Save Batch IDs to LocalStorage whenever they change
   useEffect(() => {
-    // Prevent saving/clearing until we have confirmed load status to avoid overwriting with empty on init
     if (!isBatchLoaded) return; 
 
     if (newBatchIds.length > 0) {
@@ -205,6 +204,29 @@ const CertificateDatabasePage: React.FC = () => {
       }
   }, [handleAlert]);
 
+  // ✅ UPDATE Function (Required by Hook, even if only used for bulk actions here)
+  const updateCertificate = useCallback(async (id: string, data: Partial<ICertificateClient>): Promise<boolean> => {
+    try {
+        const response = await fetch(`/api/certificates/${id}`, {
+            method: 'PUT',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(data),
+        });
+        
+        const result = await response.json();
+
+        if (!response.ok) {
+            throw new Error(result.message || "Failed to update certificate");
+        }
+
+        return true;
+    } catch (error: any) {
+        console.error("Update error:", error);
+        handleAlert(error.message || "Failed to update certificate", true);
+        return false;
+    }
+  }, [handleAlert]);
+
   // --- Initialize Actions Hook ---
   const { 
     handleBulkGeneratePDF_V1, 
@@ -217,6 +239,7 @@ const CertificateDatabasePage: React.FC = () => {
     setSelectedIds: setDummySelectedIds,
     fetchCertificates: async () => { handleRefresh(); },
     deleteCertificate, 
+    updateCertificate, // <--- ✅ ADDED THIS TO FIX THE ERROR
     fetchCertificatesForExport: fetchCertificatesForExportPageSide,
     showNotification: (msg, type) => handleAlert(msg, type === 'error'),
     onAlert: handleAlert,

@@ -9,6 +9,7 @@ interface PdfFileResult {
   blob: Blob;
 }
 
+// Kept for Hospital names if needed, but NOT used for Doctor Name anymore
 const toTitleCase = (str: string) => {
   if (!str) return "";
   return str.toLowerCase().replace(/(?:^|\s)\w/g, (match) => {
@@ -24,8 +25,10 @@ export const generateCertificatePDF = async (
   isBulk: boolean = false
 ): Promise<PdfFileResult | null | void> => { 
 
-  const rawName = certData.name || "Unknown Name";
-  const fullName = toTitleCase(rawName);
+  // ✅ FIX: Use rawName directly. 
+  // We trust the Hook/UI to have formatted it correctly (Dr. H.S Nagpal)
+  // We do NOT use toTitleCase() here because it breaks "H.S" by lowercasing the 'S'.
+  const fullName = certData.name || "Unknown Name";
   
   // Start loading state (only for single)
   if (!isBulk) {
@@ -89,6 +92,8 @@ export const generateCertificatePDF = async (
         const rawHospital = certData.hospital || "Unknown Hospital";
         const doiDDMMYYYY = certData.doi || "01-01-2025"; 
         const certificateNo = certData.certificateNo || "NO-ID";
+        
+        // We still title-case the hospital as it usually doesn't have complex dots like names
         const hospitalName = toTitleCase(rawHospital);
         const doi = doiDDMMYYYY.replace(/-/g, '/');
 
@@ -133,12 +138,11 @@ export const generateCertificatePDF = async (
     const pdfBytes = await pdfDoc.save();
     const blob = new Blob([new Uint8Array(pdfBytes)], { type: "application/pdf" });
     
-    const safeName = fullName.trim() || "Unknown";
-    const safeHospital = certData.hospital ? toTitleCase(certData.hospital) : "Hospital"; 
+    // Clean filename for download (remove illegal chars)
+    const safeName = fullName.replace(/[\\/:*?"<>|]/g, '').trim() || "Unknown";
+    const safeHospital = certData.hospital ? certData.hospital.replace(/[\\/:*?"<>|]/g, '').trim() : "Hospital"; 
     
-    // ✅ MODIFIED: Filename logic
-    // If it's the Fortis template (certificate3), use ONLY the name.
-    // Otherwise, use Name_Hospital.pdf
+    // Filename logic
     const fileName = template === 'certificate3.pdf' 
         ? `${safeName}.pdf` 
         : `${safeName}_${safeHospital}.pdf`;

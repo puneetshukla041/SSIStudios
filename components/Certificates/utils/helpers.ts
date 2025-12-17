@@ -2,6 +2,15 @@
 
 import { ICertificateClient, SortKey, SortConfig } from './constants';
 
+// --- NEW: Name Formatting Algorithm ---
+export const formatName = (name: string): string => {
+    if (!name) return '';
+    return name
+        .toLowerCase() // Normalize to lowercase first
+        .replace(/(?:^|[\s.])\w/g, (match) => match.toUpperCase()); 
+        // Logic: Find character at (Start OR Space OR Dot) AND ensure it is a word char, then uppercase it.
+};
+
 // Helper to convert DD-MM-YYYY to YYYY-MM-DD for date input type
 export const doiToDateInput = (doi: string): string => {
     const parts = doi.split('-');
@@ -42,22 +51,17 @@ export const getHospitalColor = (hospital: string): string => {
 /**
  * 💡 NEW HELPER: Defines the required column widths for Excel export.
  * Assumes the order: Certificate No., Name, Hospital, DOI.
- * This object is typically assigned to the `!cols` property of a SheetJS worksheet.
  */
 export const getCertificateColumnConfig = () => {
     return [
-        // Column A (Index 0): certificateNo - width 14
         { wch: 14 },
-        // Column B (Index 1): name - width 30
         { wch: 30 },
-        // Column C (Index 2): hospital - width 55
         { wch: 55 },
-        // Column D (Index 3): doi - width 15
         { wch: 15 },
     ];
 };
 
-// Helper for sorting (UNCHANGED)
+// Helper for sorting
 export const sortCertificates = (
     certificates: ICertificateClient[],
     sortConfig: SortConfig | null

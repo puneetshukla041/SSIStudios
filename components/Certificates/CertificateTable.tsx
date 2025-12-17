@@ -109,6 +109,7 @@ const CertificateTable: React.FC<CertificateTableExtendedProps> = ({
         fetchCertificates,
         fetchCertificatesForExport,
         deleteCertificate,
+        updateCertificate, // <--- Destructured here
         setCurrentPage,
         setSelectedIds,
         requestSort,
@@ -125,7 +126,6 @@ const CertificateTable: React.FC<CertificateTableExtendedProps> = ({
     ); 
 
     // --- Action Hooks ---
-    // ✅ REMOVED: isAddFormVisible, handleAddCertificate etc. from here to prevent conflict
     const {
         editingId,
         editFormData,
@@ -161,6 +161,7 @@ const CertificateTable: React.FC<CertificateTableExtendedProps> = ({
         fetchCertificates,
         fetchCertificatesForExport,
         deleteCertificate,
+        updateCertificate, // <--- Passed here
         showNotification, 
         onAlert: pdfOnAlert, 
         setIsLoading,
@@ -225,7 +226,7 @@ const CertificateTable: React.FC<CertificateTableExtendedProps> = ({
                     selectedIds={selectedIds}
                     uniqueHospitals={uniqueHospitals}
                     hospitalFilter={hospitalFilter}
-                    setIsAddFormVisible={setIsAddFormVisible} // ✅ Passes Parent Trigger
+                    setIsAddFormVisible={setIsAddFormVisible} 
                     setHospitalFilter={setHospitalFilter}
                     handleBulkDelete={handleBulkDelete}
                     handleDownload={handleDownload}
@@ -247,8 +248,6 @@ const CertificateTable: React.FC<CertificateTableExtendedProps> = ({
                     handleBulkMail_V3={handleBulkMail_V3}
                 />
             </motion.div>
-
-            {/* ✅ REMOVED: Internal AddCertificateForm. The Parent Page now handles this. */}
 
             {/* Main Content Area */}
             <motion.div 
@@ -362,7 +361,7 @@ const CertificateTable: React.FC<CertificateTableExtendedProps> = ({
                                                     {page}
                                                 </button>
                                             </React.Fragment>
-                                        ))}
+                                    ))}
                                 </div>
 
                                 <button

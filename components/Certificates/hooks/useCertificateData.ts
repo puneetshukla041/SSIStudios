@@ -23,6 +23,7 @@ interface UseCertificateDataResult {
     fetchCertificatesForExport: (isBulkPdfExport?: boolean, idsToFetch?: string[]) => Promise<ICertificateClient[]>;
     createCertificate: (data: Omit<ICertificateClient, '_id'>) => Promise<boolean>;
     deleteCertificate: (id: string) => Promise<boolean>;
+    updateCertificate: (id: string, data: Partial<ICertificateClient>) => Promise<boolean>; // <--- Added Type
     setCurrentPage: React.Dispatch<React.SetStateAction<number>>;
     setSelectedIds: React.Dispatch<React.SetStateAction<string[]>>;
     requestSort: (key: SortKey) => void;
@@ -45,7 +46,7 @@ export const useCertificateData = (
     const [currentPage, setCurrentPage] = useState(1);
     const [totalPages, setTotalPages] = useState(1);
     const [uniqueHospitals, setUniqueHospitals] = useState<string[]>([]);
-     
+    
     // UI State
     const [isLoading, setIsLoading] = useState(true);
     const [isCreating, setIsCreating] = useState(false);
@@ -81,13 +82,11 @@ export const useCertificateData = (
                 onRefresh(result.data, result.total, result.filters.hospitals);
             } else {
                 showNotification(result.message || 'Failed to fetch certificates.', 'error');
-                // IMPORTANT: Call onRefresh even on error so parent doesn't stay "refreshing" forever
                 onRefresh([], 0, []); 
             }
         } catch (error) {
             console.error('Fetch error:', error);
             showNotification('Network error while fetching data.', 'error');
-            // IMPORTANT: Call onRefresh even on error
             onRefresh([], 0, []);
         } finally {
             const duration = Date.now() - start;
@@ -122,7 +121,32 @@ export const useCertificateData = (
         }
     }, [fetchCertificates, showNotification]);
 
-    // --- 3. DELETE Logic ---
+    // --- 3. UPDATE Logic (NEW) ---
+    const updateCertificate = useCallback(async (id: string, data: Partial<ICertificateClient>): Promise<boolean> => {
+        // We don't set global isLoading to true to prevent full table flicker, 
+        // the row handles its own loading state via the actions hook
+        try {
+            const response = await fetch(`/api/certificates/${id}`, {
+                method: 'PUT',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(data),
+            });
+            
+            const result = await response.json();
+
+            if (!response.ok) {
+                throw new Error(result.message || "Failed to update certificate");
+            }
+
+            return true;
+        } catch (error: any) {
+            console.error("Update error:", error);
+            showNotification(error.message || "Failed to update certificate", "error");
+            return false;
+        }
+    }, [showNotification]);
+
+    // --- 4. DELETE Logic ---
     const deleteCertificate = useCallback(async (id: string): Promise<boolean> => {
         try {
             const response = await fetch(`/api/certificates/${id}`, {
@@ -141,14 +165,14 @@ export const useCertificateData = (
         }
     }, [showNotification]);
 
-    // --- 4. Export Logic ---
+    // --- 5. Export Logic ---
     const fetchCertificatesForExport = useCallback(async (isBulkPdfExport = false, idsToFetch: string[] = []) => {
         try {
             const params = new URLSearchParams({ q: searchQuery, all: 'true' });
             if (hospitalFilter) params.append('hospital', hospitalFilter);
             if (isBulkPdfExport && idsToFetch.length > 0) {
                 params.append('ids', idsToFetch.join(','));
-                params.delete('q'); // If fetching specific IDs, ignore search query
+                params.delete('q');
             }
             const response = await fetch(`/api/certificates?${params.toString()}`);
             const result = await response.json();
@@ -184,6 +208,7 @@ export const useCertificateData = (
         isCreating,
         createCertificate,
         deleteCertificate,
+        updateCertificate, // <--- Exported here
         totalItems,
         currentPage,
         totalPages,
