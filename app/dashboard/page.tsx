@@ -159,7 +159,7 @@ export default function DashboardPage() {
                 initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.2 }}
                 className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-white/10 border border-white/20 backdrop-blur-md text-white/90 text-xs font-medium"
               >
-                <span>A SSI MAYA APPLICATION</span>
+                <span>A SSI APPLICATION</span>
               </motion.div>
 
               <h1 className="text-3xl sm:text-5xl lg:text-6xl font-bold tracking-tight text-white drop-shadow-sm leading-[1.1]">
