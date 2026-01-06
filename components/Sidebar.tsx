@@ -456,7 +456,7 @@ export default function Sidebar({ forceActive, isOpen, toggleSidebar }: SidebarP
           {/* Replaced Text with Professional Styling */}
           <div className="flex items-center justify-center pt-2">
              <span className="text-[10px] font-bold tracking-[0.2em] text-transparent bg-clip-text bg-gradient-to-r from-gray-500 via-gray-200 to-gray-500 uppercase hover:from-white hover:to-white transition-all duration-500">
-               A SSI APPLICATION
+               A CREATIVE OPERATIONS APPLICATION
              </span>
           </div>
         </div>
