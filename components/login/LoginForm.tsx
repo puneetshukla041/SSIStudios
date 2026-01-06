@@ -144,7 +144,7 @@ export default function LoginForm({
 
         {/* SSI Maya Product line */}
         <div className="absolute bottom-4 left-1/2 -translate-x-1/2 text-gray-400 text-xs italic opacity-80">
-          A SSI Maya Application
+          A Creative Operations Application
         </div>
       </motion.div>
     );
